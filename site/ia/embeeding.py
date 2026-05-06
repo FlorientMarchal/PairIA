@@ -1,15 +1,15 @@
-# ia/embeddings.py
-# Script d'indexation : lit les produits depuis MySQL et les stocke dans Chroma DB
-# À lancer UNE SEULE FOIS au départ, puis à relancer quand le catalogue change
-# Commande : py embeddings.py
+# ia/embeeding.py
+# Script d'indexation : lit les produits depuis MySQL et les stocke dans Qdrant
+# Commande : py embeeding.py
 
 import ollama
-import chromadb
 import mysql.connector
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct
 
-# ── Config MySQL (même que bd.php) ──
+# ── Config MySQL ──
 DB_CONFIG = {
-    "host":     "localhost",
+    "host":     "127.0.0.1",
     "user":     "root",
     "password": "root",
     "database": "e_commmerce",
@@ -17,60 +17,82 @@ DB_CONFIG = {
 }
 
 def indexer_produits():
+    # ── Connexion MySQL ──
     print("Connexion à MySQL...")
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor(dictionary=True)
-
-    # Récupérer tous les produits
-    cursor.execute("SELECT id, nom, categorie, description, prix, emoji FROM produits")
+    cursor.execute("""
+        SELECT id_shoes, nom, categorie, marque, genre,
+               Prix, description, mots_cles, url_image
+        FROM articles
+        ORDER BY id_shoes
+    """)
     produits = cursor.fetchall()
     cursor.close()
     conn.close()
-
     print(f"{len(produits)} produits trouvés.")
 
-    # ── Connexion à Chroma DB ──
-    print("Connexion à Chroma DB...")
-    client = chromadb.PersistentClient(path="./chroma_db")
+    # ── Connexion Qdrant (fichier local) ──
+    print("Connexion à Qdrant...")
+    client = QdrantClient(path="./qdrant_db")
 
-    # Supprimer et recréer la collection pour repartir propre
+    # Supprimer et recréer la collection
     try:
         client.delete_collection("produits")
-    except:
+        print("Ancienne collection supprimée.")
+    except Exception:
         pass
 
-    collection = client.create_collection(name="produits")
+    client.create_collection(
+        collection_name="produits",
+        vectors_config=VectorParams(size=768, distance=Distance.COSINE)
+    )
 
     # ── Indexation ──
     print("Indexation en cours...")
+    nb_ok = 0
+    nb_err = 0
 
     for produit in produits:
-        # Texte à vectoriser : nom + catégorie + description
-        texte = f"{produit['nom']}. Catégorie : {produit['categorie']}. {produit.get('description', '')}"
-
-        # Vectoriser avec nomic-embed-text via Ollama
-        embed = ollama.embeddings(
-            model="nomic-embed-text",
-            prompt=texte
+        texte = (
+            f"{produit['nom']}. "
+            f"Marque : {produit['marque']}. "
+            f"Catégorie : {produit['categorie']}. "
+            f"Genre : {produit['genre']}. "
+            f"{produit.get('description', '')} "
+            f"Mots clés : {produit.get('mots_cles', '')}."
         )
 
-        # Stocker dans Chroma DB
-        collection.add(
-            ids=[str(produit["id"])],
-            embeddings=[embed["embedding"]],
-            documents=[texte],
-            metadatas={
-                "id":    produit["id"],
-                "nom":   produit["nom"],
-                "prix":  float(produit["prix"]),
-                "emoji": produit.get("emoji", "👟"),
-                "categorie": produit["categorie"]
-            }
-        )
+        try:
+            embed = ollama.embeddings(
+                model="nomic-embed-text",
+                prompt=texte
+            )
 
-        print(f"  ✓ {produit['nom']}")
+            client.upsert(
+                collection_name="produits",
+                points=[PointStruct(
+                    id=produit["id_shoes"],
+                    vector=embed["embedding"],
+                    payload={
+                        "nom":       produit["nom"],
+                        "prix":      float(produit["Prix"]),
+                        "categorie": str(produit["categorie"] or ""),
+                        "marque":    str(produit["marque"] or ""),
+                        "genre":     str(produit["genre"] or ""),
+                        "url_image": str(produit.get("url_image") or "")
+                    }
+                )]
+            )
 
-    print(f"\nIndexation terminée — {len(produits)} produits indexés dans Chroma DB.")
+            print(f"  ✓ {produit['nom']} ({produit['Prix']} €)")
+            nb_ok += 1
+
+        except Exception as e:
+            print(f"  ✗ Erreur sur {produit['nom']} : {e}")
+            nb_err += 1
+
+    print(f"\nIndexation terminée — {nb_ok} produits indexés, {nb_err} erreurs.")
 
 if __name__ == "__main__":
     indexer_produits()

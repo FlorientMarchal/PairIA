@@ -1,8 +1,6 @@
 # ia/prompt.py
 # Prompt système et construction du prompt final envoyé à Mistral
 
-# ── Prompt système ──
-# Instructions fixes données à Mistral à chaque échange
 SYSTEM_PROMPT = """
 Tu es un assistant e-commerce spécialisé en chaussures pour le site PairIA.
 
@@ -19,33 +17,27 @@ Tes règles :
 
 
 def build_prompt(question: str, produits: list, product_id: int = None) -> str:
-    """
-    Construit le prompt final envoyé à Mistral.
-    Structure : contexte produit (si fiche article) + produits RAG + question
-    """
-
     prompt_parts = []
 
-    # ── Contexte fiche produit (si on est sur article.php) ──
+    # Contexte fiche produit si on est sur article.php
     if product_id and produits:
         produit_actuel = next((p for p in produits if p["id"] == product_id), None)
         if produit_actuel:
             prompt_parts.append(
-                f"L'utilisateur consulte actuellement ce produit :\n"
+                f"L'utilisateur consulte actuellement :\n"
                 f"- {produit_actuel['name']} à {produit_actuel['price']}€\n"
-                f"  {produit_actuel['description']}\n"
             )
 
-    # ── Produits trouvés par le RAG ──
+    # Produits trouvés par le RAG
     if produits:
-        prompt_parts.append("Produits disponibles dans le catalogue correspondant à la demande :")
+        prompt_parts.append("Produits disponibles dans le catalogue :")
         for p in produits:
             prompt_parts.append(
-                f"- {p['name']} ({p['price']}€) — {p['description']}"
+                f"- {p['name']} ({p['price']}€) — {p['categorie']} — {p['marque']}"
             )
-        prompt_parts.append("")  # ligne vide
+        prompt_parts.append("")
 
-    # ── Question de l'utilisateur ──
-    prompt_parts.append(f"Question de l'utilisateur : {question}")
+    # Question utilisateur
+    prompt_parts.append(f"Question : {question}")
 
     return "\n".join(prompt_parts)

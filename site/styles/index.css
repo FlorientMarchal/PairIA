@@ -334,3 +334,17 @@
   .catalog-area { padding: 2rem 2.5rem; }
   .catalog-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 }
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero {
+  flex-shrink: 0;
+}
+
+.layout {
+  flex: 1;
+  min-height: 0;
+}
