@@ -1,6 +1,6 @@
 <?php
 $host     = 'localhost';
-$dbname   = 'pairia';       
+$dbname   = 'e_commerce';       
 $user     = 'root';          // utilisateur MySQL (MAMP = root)
 $password = 'root';          // mot de passe MySQL (MAMP = root)
 $charset  = 'utf8mb4';

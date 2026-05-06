@@ -12,7 +12,7 @@ DB_CONFIG = {
     "host":     "localhost",
     "user":     "root",
     "password": "root",
-    "database": "pairia",
+    "database": "e_commerce",
     "port":     3306
 }
 
