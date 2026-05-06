@@ -1,6 +1,6 @@
 <?php
 $host     = 'localhost';
-$dbname   = 'e_commerce';       
+$dbname   = 'e_commmerce';       
 $user     = 'root';          // utilisateur MySQL (MAMP = root)
 $password = 'root';          // mot de passe MySQL (MAMP = root)
 $charset  = 'utf8mb4';

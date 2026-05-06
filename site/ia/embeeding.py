@@ -12,7 +12,7 @@ DB_CONFIG = {
     "host":     "localhost",
     "user":     "root",
     "password": "root",
-    "database": "e_commerce",
+    "database": "e_commmerce",
     "port":     3306
 }
 
