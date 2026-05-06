@@ -26,11 +26,11 @@ def get_response(question: str, product_id: int = None) -> dict:
     question_vector = embed_response["embedding"]
 
     # ── Étape 2 : chercher dans Qdrant ──
-    results = qdrant.search(
+    results = qdrant.query_points(
         collection_name="produits",
-        query_vector=question_vector,
+        query=question_vector,
         limit=3
-    )
+    ).points
 
     produits_trouves = []
     for r in results:
