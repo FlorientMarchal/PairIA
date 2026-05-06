@@ -1,21 +1,20 @@
 <?php
-require_once 'bd.php';
+require_once 'includes/bd.php';
 
-// Récupération des produits depuis MySQL
-// avec filtre par catégorie si demandé
+// Filtre par catégorie
 $categorie = $_GET['categorie'] ?? 'tous';
 
 if ($categorie === 'tous') {
-    $stmt = $pdo->query('SELECT * FROM produits ORDER BY id');
+    $stmt = $pdo->query('SELECT * FROM articles ORDER BY id_shoes');
 } else {
-    $stmt = $pdo->prepare('SELECT * FROM produits WHERE categorie = ? ORDER BY id');
+    $stmt = $pdo->prepare('SELECT * FROM articles WHERE categorie = ? ORDER BY id_shoes');
     $stmt->execute([$categorie]);
 }
 
-$produits = $stmt->fetchAll();
+$articles = $stmt->fetchAll();
 
-// Catégories disponibles pour les filtres
-$cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie')->fetchAll();
+// Catégories distinctes pour les filtres
+$cats = $pdo->query('SELECT DISTINCT categorie FROM articles ORDER BY categorie')->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -25,8 +24,8 @@ $cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie'
   <title>PairIA — Catalogue</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/global.css">
-  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="styles/global.css">
+  <link rel="stylesheet" href="styles/index.css">
 </head>
 <body>
 
@@ -54,9 +53,9 @@ $cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie'
     <div class="hero-chips">
       <button class="hero-chip" onclick="heroQuestion('Chaussures imperméables')">Imperméables</button>
       <button class="hero-chip" onclick="heroQuestion('Moins de 100€')">− 100 €</button>
-      <button class="hero-chip" onclick="heroQuestion('Pour la randonnée')">Randonnée</button>
+      <button class="hero-chip" onclick="heroQuestion('Pour le running')">Running</button>
       <button class="hero-chip" onclick="heroQuestion('Style casual')">Casual</button>
-      <button class="hero-chip" onclick="heroQuestion('Soirée formelle')">Formel</button>
+      <button class="hero-chip" onclick="heroQuestion('Chaussures de sport')">Sport</button>
     </div>
   </div>
 </div>
@@ -67,7 +66,7 @@ $cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie'
   <div class="main">
     <div class="catalog-area">
 
-      <!-- Filtres -->
+      <!-- Filtres par catégorie -->
       <div class="cat-top">
         <div class="cat-title">
           <small>Notre sélection</small>
@@ -81,7 +80,7 @@ $cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie'
           <?php foreach ($cats as $cat): ?>
             <a href="index.php?categorie=<?= urlencode($cat['categorie']) ?>"
                class="filter-btn <?= $categorie === $cat['categorie'] ? 'active' : '' ?>">
-              <?= htmlspecialchars(ucfirst($cat['categorie'])) ?>
+              <?= htmlspecialchars($cat['categorie']) ?>
             </a>
           <?php endforeach; ?>
         </div>
@@ -89,45 +88,36 @@ $cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie'
 
       <!-- Grille produits -->
       <div class="catalog-grid">
-        <?php if (empty($produits)): ?>
+        <?php if (empty($articles)): ?>
           <div class="no-results">Aucun produit trouvé.</div>
         <?php else: ?>
-          <?php foreach ($produits as $p): ?>
-            <div class="card" data-id="<?= $p['id'] ?>">
+          <?php foreach ($articles as $a): ?>
+            <div class="card" data-id="<?= $a['id_shoes'] ?>">
+              <a href="article.php?id=<?= $a['id_shoes'] ?>" class="card-link">
 
-              <a href="article.php?id=<?= $p['id'] ?>" class="card-link">
-                <div class="card-img" style="background: <?= htmlspecialchars($p['couleur_bg'] ?? '#EEE8DC') ?>">
-                  <?php if (!empty($p['badge'])): ?>
-                    <span class="badge badge-<?= htmlspecialchars($p['badge']) ?>">
-                      <?= $p['badge'] === 'new' ? 'Nouveau' : '−' . $p['remise'] . '%' ?>
-                    </span>
-                  <?php endif; ?>
-                  <?php if (!empty($p['image'])): ?>
-                    <img src="<?= htmlspecialchars($p['image']) ?>" alt="<?= htmlspecialchars($p['nom']) ?>">
+                <div class="card-img">
+                  <?php if (!empty($a['url_image'])): ?>
+                    <img
+                      src="<?= htmlspecialchars($a['url_image']) ?>"
+                      alt="<?= htmlspecialchars($a['nom']) ?>"
+                      onerror="this.style.display='none'"
+                    >
                   <?php else: ?>
-                    <span class="card-emoji"><?= htmlspecialchars($p['emoji'] ?? '👟') ?></span>
+                    <span class="card-emoji">👟</span>
                   <?php endif; ?>
                 </div>
 
                 <div class="card-body">
-                  <div class="card-cat"><?= htmlspecialchars($p['categorie']) ?></div>
-                  <div class="card-name"><?= htmlspecialchars($p['nom']) ?></div>
+                  <div class="card-cat"><?= htmlspecialchars($a['categorie']) ?></div>
+                  <div class="card-name"><?= htmlspecialchars($a['nom']) ?></div>
+                  <div class="card-meta"><?= htmlspecialchars($a['marque']) ?> · <?= htmlspecialchars($a['genre']) ?></div>
                   <div class="card-foot">
-                    <div>
-                      <span class="card-price"><?= number_format($p['prix'], 0, ',', ' ') ?> €</span>
-                      <?php if (!empty($p['prix_ancien'])): ?>
-                        <span class="card-old"><?= number_format($p['prix_ancien'], 0, ',', ' ') ?> €</span>
-                      <?php endif; ?>
-                      <div class="card-stars">
-                        <?= str_repeat('★', round($p['note'] ?? 4)) ?>
-                        <?= str_repeat('☆', 5 - round($p['note'] ?? 4)) ?>
-                      </div>
-                    </div>
-                    <button class="add-btn" onclick="ajouterPanier(<?= $p['id'] ?>, event)">+</button>
+                    <span class="card-price"><?= number_format($a['Prix'], 2, ',', ' ') ?> €</span>
+                    <button class="add-btn" onclick="ajouterPanier(<?= $a['id_shoes'] ?>, event)">+</button>
                   </div>
                 </div>
-              </a>
 
+              </a>
             </div>
           <?php endforeach; ?>
         <?php endif; ?>
@@ -143,7 +133,6 @@ $cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie'
 <script src="js/global.js"></script>
 <script src="js/chat.js"></script>
 <script>
-  // Envoi depuis le hero vers le chat
   function heroSend() {
     const input = document.getElementById('hero-input');
     const text = input?.value.trim();
@@ -158,7 +147,6 @@ $cats = $pdo->query('SELECT DISTINCT categorie FROM produits ORDER BY categorie'
     document.querySelector('.layout').scrollIntoView({ behavior: 'smooth' });
   }
 
-  // Ajout au panier depuis la grille
   async function ajouterPanier(id, event) {
     event.preventDefault();
     event.stopPropagation();

@@ -1,8 +1,11 @@
 <?php
+// bd.php — Connexion à la base de données
+// À inclure dans toutes les pages qui ont besoin de MySQL
+
 $host     = 'localhost';
-$dbname   = 'e_commmerce';       
-$user     = 'root';          // utilisateur MySQL (MAMP = root)
-$password = 'root';          // mot de passe MySQL (MAMP = root)
+$dbname   = 'e_commmerce';
+$user     = 'root';
+$password = 'root';
 $charset  = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
