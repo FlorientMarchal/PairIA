@@ -1,20 +1,19 @@
 # ia/rag.py
-# Pipeline RAG : question → Chroma DB → prompt → Ollama → réponse
+# Pipeline RAG : question → Qdrant → prompt → Ollama → réponse
 
 import ollama
-import chromadb
+from qdrant_client import QdrantClient
 from prompt import build_prompt, SYSTEM_PROMPT
 
-# Connexion à Chroma DB (fichier local dans le dossier ia/)
-chroma_client = chromadb.PersistentClient(path="./chroma_db")
-collection = chroma_client.get_or_create_collection(name="produits")
+# Connexion à Qdrant (fichier local)
+qdrant = QdrantClient(path="./qdrant_db")
 
 def get_response(question: str, product_id: int = None) -> dict:
     """
     Pipeline RAG complet :
     1. Vectorise la question avec nomic-embed-text
-    2. Cherche les produits pertinents dans Chroma DB
-    3. Construit le prompt avec les résultats
+    2. Cherche les produits pertinents dans Qdrant
+    3. Construit le prompt
     4. Envoie à Mistral via Ollama
     5. Retourne la réponse structurée
     """
@@ -26,24 +25,25 @@ def get_response(question: str, product_id: int = None) -> dict:
     )
     question_vector = embed_response["embedding"]
 
-    # ── Étape 2 : chercher dans Chroma DB ──
-    results = collection.query(
-        query_embeddings=[question_vector],
-        n_results=3,  # top 3 produits les plus pertinents
-        include=["documents", "metadatas"]
+    # ── Étape 2 : chercher dans Qdrant ──
+    results = qdrant.search(
+        collection_name="produits",
+        query_vector=question_vector,
+        limit=3
     )
 
     produits_trouves = []
-    if results["documents"] and results["documents"][0]:
-        for i, doc in enumerate(results["documents"][0]):
-            meta = results["metadatas"][0][i] if results["metadatas"] else {}
-            produits_trouves.append({
-                "id":    meta.get("id", 0),
-                "name":  meta.get("nom", ""),
-                "price": meta.get("prix", 0),
-                "emoji": meta.get("emoji", "👟"),
-                "description": doc
-            })
+    for r in results:
+        produits_trouves.append({
+            "id":    r.id,
+            "name":  r.payload.get("nom", ""),
+            "price": r.payload.get("prix", 0),
+            "emoji": "👟",
+            "categorie": r.payload.get("categorie", ""),
+            "marque":    r.payload.get("marque", ""),
+            "url_image": r.payload.get("url_image", ""),
+            "description": ""
+        })
 
     # ── Étape 3 : construire le prompt ──
     prompt = build_prompt(
@@ -63,19 +63,18 @@ def get_response(question: str, product_id: int = None) -> dict:
 
     message = response["message"]["content"]
 
-    # ── Étape 5 : détecter une intention d'ajout au panier ──
-    action     = None
+    # ── Étape 5 : détecter intention ajout panier ──
+    action            = None
     product_id_action = None
-    quantity   = None
+    quantity          = None
 
     message_lower = message.lower()
     if any(kw in message_lower for kw in ["ajouté", "ajouter", "panier"]):
         if produits_trouves:
-            action = "add_to_cart"
+            action            = "add_to_cart"
             product_id_action = produits_trouves[0]["id"]
-            quantity = 1
+            quantity          = 1
 
-    # ── Réponse finale ──
     return {
         "message":    message,
         "products":   produits_trouves[:3],
