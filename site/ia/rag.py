@@ -30,15 +30,24 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
 
     produits_trouves = []
     for r in results:
+        # Récupérer tailles et couleurs stockées en payload
+        tailles_raw  = r.payload.get("tailles",  "")
+        couleurs_raw = r.payload.get("couleurs", "")
+
+        tailles  = [t.strip() for t in tailles_raw.split(",")  if t.strip()] if tailles_raw  else []
+        couleurs = [c.strip() for c in couleurs_raw.split(",") if c.strip()] if couleurs_raw else []
+
         produits_trouves.append({
             "id":          r.id,
-            "name":        r.payload.get("nom", ""),
-            "price":       r.payload.get("prix", 0),
+            "name":        r.payload.get("nom",         ""),
+            "price":       r.payload.get("prix",        0),
             "emoji":       "👟",
-            "categorie":   r.payload.get("categorie", ""),
-            "marque":      r.payload.get("marque", ""),
-            "url_image":   r.payload.get("url_image", ""),
-            "description": r.payload.get("description", "")
+            "categorie":   r.payload.get("categorie",   ""),
+            "marque":      r.payload.get("marque",      ""),
+            "url_image":   r.payload.get("url_image",   ""),
+            "description": r.payload.get("description", ""),
+            "tailles":     tailles,
+            "couleurs":    couleurs,
         })
 
     # construction du prompt RAG
@@ -82,7 +91,7 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
 
     # appel au modèle
     response = ollama.chat(model="mistral", messages=messages)
-    message = response["message"]["content"]
+    message  = response["message"]["content"]
 
     # ── Détection intention ajout panier ──
     action = None
