@@ -1,0 +1,16 @@
+# Qdrant
+ia/qdrant_db/
+
+# Chroma DB (ancien)
+ia/chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# MAMP / environnement local
+.env
+
+# VS Code
+.vscode/
