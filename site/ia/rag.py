@@ -1,7 +1,6 @@
 # ia/rag.py
 # Pipeline RAG : question → Qdrant → prompt → Ollama → réponse
 
-# ia/rag.py
 import ollama
 from qdrant_client import QdrantClient
 from prompt import build_prompt, SYSTEM_PROMPT
@@ -11,18 +10,17 @@ qdrant = QdrantClient(path="./qdrant_db")
 
 def get_response(question: str, product_id: int = None, history: list = None) -> dict:
 
-    #  réation d'une nouvelle liste vide à chaque appel si rien n'est passé
     if history is None:
         history = []
 
-    #  vectorisation la question 
+    # Vectorisation de la question
     embed_response = ollama.embeddings(
         model="nomic-embed-text",
         prompt=question
     )
     question_vector = embed_response["embedding"]
 
-    #  chercher dans Qdrant 
+    # Recherche dans Qdrant
     results = qdrant.query_points(
         collection_name="produits",
         query=question_vector,
@@ -31,28 +29,36 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
 
     produits_trouves = []
     for r in results:
+        # Récupérer tailles et couleurs stockées en payload
+        tailles_raw  = r.payload.get("tailles",  "")
+        couleurs_raw = r.payload.get("couleurs", "")
+
+        tailles  = [t.strip() for t in tailles_raw.split(",")  if t.strip()] if tailles_raw  else []
+        couleurs = [c.strip() for c in couleurs_raw.split(",") if c.strip()] if couleurs_raw else []
+
         produits_trouves.append({
             "id":          r.id,
-            "name":        r.payload.get("nom", ""),
-            "price":       r.payload.get("prix", 0),
+            "name":        r.payload.get("nom",         ""),
+            "price":       r.payload.get("prix",        0),
             "emoji":       "👟",
-            "categorie":   r.payload.get("categorie", ""),
-            "marque":      r.payload.get("marque", ""),
-            "url_image":   r.payload.get("url_image", ""),
-            "description": r.payload.get("description", "")
+            "categorie":   r.payload.get("categorie",   ""),
+            "marque":      r.payload.get("marque",      ""),
+            "url_image":   r.payload.get("url_image",   ""),
+            "description": r.payload.get("description", ""),
+            "tailles":     tailles,
+            "couleurs":    couleurs,
         })
 
-    #  construction du prompt 
+    # Construction du prompt
     prompt = build_prompt(
         question=question,
         produits=produits_trouves,
         product_id=product_id
     )
 
-    # Étape 4 : construction des messages avec l'historique
+    # Messages avec historique
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    # max 10 messages = 5 échangesentre le chat et l'utilisateur
     MAX_HISTORY = 10
     for msg in history[-MAX_HISTORY:]:
         messages.append({
@@ -60,13 +66,12 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
             "content": msg["content"]
         })
 
-    
     messages.append({"role": "user", "content": prompt})
 
     response = ollama.chat(model="mistral", messages=messages)
-    message = response["message"]["content"]
+    message  = response["message"]["content"]
 
-    # ── Étape 5 : détecter intention ajout panier ──
+    # Détecter intention ajout panier
     action            = None
     product_id_action = None
     quantity          = None
