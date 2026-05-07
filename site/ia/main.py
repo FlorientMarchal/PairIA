@@ -16,9 +16,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#ajout pour la memoire de conversation
+# Pydantic valide automatiquement que role est bien l'un des deux
+
+class HistoryMessage(BaseModel):
+    role: str  # "user" ou "assistant"
+    content: str  #le texte du message
+
 class ChatRequest(BaseModel):
     question: str
     product_id: int | None = None
+    history: list[HistoryMessage] = []
 
 class Product(BaseModel):
     id: int
@@ -42,7 +50,8 @@ def root():
 def chat(request: ChatRequest):
     result = get_response(
         question=request.question,
-        product_id=request.product_id
+        product_id=request.product_id,
+        history=[{"role": m.role, "content": m.content} for m in request.history]
     )
     return result
 
