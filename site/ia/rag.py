@@ -1,31 +1,28 @@
 # ia/rag.py
 # Pipeline RAG : question → Qdrant → prompt → Ollama → réponse
 
+# ia/rag.py
 import ollama
 from qdrant_client import QdrantClient
 from prompt import build_prompt, SYSTEM_PROMPT
 
-# Connexion à Qdrant (fichier local)
 qdrant = QdrantClient(path="./qdrant_db")
 
-def get_response(question: str, product_id: int = None) -> dict:
-    """
-    Pipeline RAG complet :
-    1. Vectorise la question avec nomic-embed-text
-    2. Cherche les produits pertinents dans Qdrant
-    3. Construit le prompt
-    4. Envoie à Mistral via Ollama
-    5. Retourne la réponse structurée
-    """
 
-    # ── Étape 1 : vectoriser la question ──
+def get_response(question: str, product_id: int = None, history: list = None) -> dict:
+
+    #  réation d'une nouvelle liste vide à chaque appel si rien n'est passé
+    if history is None:
+        history = []
+
+    #  vectorisation la question 
     embed_response = ollama.embeddings(
         model="nomic-embed-text",
         prompt=question
     )
     question_vector = embed_response["embedding"]
 
-    # ── Étape 2 : chercher dans Qdrant ──
+    #  chercher dans Qdrant 
     results = qdrant.query_points(
         collection_name="produits",
         query=question_vector,
@@ -35,32 +32,38 @@ def get_response(question: str, product_id: int = None) -> dict:
     produits_trouves = []
     for r in results:
         produits_trouves.append({
-            "id":    r.id,
-            "name":  r.payload.get("nom", ""),
-            "price": r.payload.get("prix", 0),
-            "emoji": "👟",
-            "categorie": r.payload.get("categorie", ""),
-            "marque":    r.payload.get("marque", ""),
-            "url_image": r.payload.get("url_image", ""),
-             "description": r.payload.get("description", "")
+            "id":          r.id,
+            "name":        r.payload.get("nom", ""),
+            "price":       r.payload.get("prix", 0),
+            "emoji":       "👟",
+            "categorie":   r.payload.get("categorie", ""),
+            "marque":      r.payload.get("marque", ""),
+            "url_image":   r.payload.get("url_image", ""),
+            "description": r.payload.get("description", "")
         })
 
-    # ── Étape 3 : construire le prompt ──
+    #  construction du prompt 
     prompt = build_prompt(
         question=question,
         produits=produits_trouves,
         product_id=product_id
     )
 
-    # ── Étape 4 : appel à Mistral via Ollama ──
-    response = ollama.chat(
-        model="mistral",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": prompt}
-        ]
-    )
+    # Étape 4 : construction des messages avec l'historique
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
+    # max 10 messages = 5 échangesentre le chat et l'utilisateur
+    MAX_HISTORY = 10
+    for msg in history[-MAX_HISTORY:]:
+        messages.append({
+            "role":    msg["role"],
+            "content": msg["content"]
+        })
+
+    
+    messages.append({"role": "user", "content": prompt})
+
+    response = ollama.chat(model="mistral", messages=messages)
     message = response["message"]["content"]
 
     # ── Étape 5 : détecter intention ajout panier ──
