@@ -42,7 +42,7 @@ def get_response(question: str, product_id: int = None) -> dict:
             "categorie": r.payload.get("categorie", ""),
             "marque":    r.payload.get("marque", ""),
             "url_image": r.payload.get("url_image", ""),
-            "description": ""
+             "description": r.payload.get("description", "")
         })
 
     # ── Étape 3 : construire le prompt ──

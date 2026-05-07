@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from rag import get_response
 
-app = FastAPI(title="PairIA — API Chatbot")
+app = FastAPI(title="API Chatbot")
 
 app.add_middleware(
     CORSMiddleware,
