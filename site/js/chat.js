@@ -120,39 +120,62 @@ function showCartSelector(produit) {
 }
 
 function chatSelectOption(btn) {
-  const group = btn.closest('.chat-sel-group');
-  group.querySelectorAll('.chat-sel-btn').forEach(b => b.classList.remove('active'));
+
+  const group = btn.closest('.chat-option-group');
+
+  group.querySelectorAll('.chat-option-btn')
+    .forEach(b => b.classList.remove('active'));
+
   btn.classList.add('active');
 
-  // Vérifier si tout est sélectionné pour activer le bouton
-  const bubble    = btn.closest('.chat-bubble');
-  const groups    = bubble.querySelectorAll('.chat-sel-group');
-  const allOk     = [...groups].every(g => g.querySelector('.chat-sel-btn.active'));
-  const confirmBtn = bubble.querySelector('.chat-sel-confirm');
-  if (confirmBtn) confirmBtn.disabled = !allOk;
+  const card = btn.closest('.chat-product-card');
+
+  const groups = card.querySelectorAll('.chat-option-group');
+
+  const allSelected = [...groups].every(group =>
+    group.querySelector('.chat-option-btn.active')
+  );
+
+  const cartBtn = card.querySelector('.chat-cart-btn');
+
+  if (cartBtn) {
+    cartBtn.disabled = !allSelected;
+  }
 }
 
 async function confirmChatCart(productId, btn) {
-  const bubble  = btn.closest('.chat-bubble');
-  const errEl   = bubble.querySelector('.chat-sel-error');
 
-  const taille  = bubble.querySelector('.chat-sel-group[data-type="taille"] .chat-sel-btn.active')?.textContent.trim()  || null;
-  const couleur = bubble.querySelector('.chat-sel-group[data-type="couleur"] .chat-sel-btn.active')?.textContent.trim() || null;
+  const card = btn.closest('.chat-product-card');
 
-  btn.disabled    = true;
-  btn.textContent = '…';
-  if (errEl) errEl.textContent = '';
+  const taille =
+    card.querySelector('[data-type="taille"] .chat-option-btn.active')
+      ?.textContent.trim() || null;
 
-  const result = await addToCart(productId, 1, taille, couleur);
+  const couleur =
+    card.querySelector('[data-type="couleur"] .chat-option-btn.active')
+      ?.textContent.trim() || null;
+
+  btn.disabled = true;
+  btn.textContent = 'Ajout...';
+
+  const result = await addToCart(
+    productId,
+    1,
+    taille,
+    couleur
+  );
 
   if (result?.success) {
-    btn.textContent       = '✓ Ajouté !';
-    btn.style.background  = '#4CAF50';
-    btn.style.borderColor = '#4CAF50';
+
+    btn.textContent = '✓ Ajouté';
+
+    btn.style.background = '#4CAF50';
+
   } else {
-    btn.disabled    = false;
+
+    btn.disabled = false;
+
     btn.textContent = 'Ajouter au panier';
-    if (errEl) errEl.textContent = result?.error || "Erreur lors de l'ajout.";
   }
 }
 
@@ -173,37 +196,105 @@ function appendUserMessage(text) {
 
 function appendBotMessage(data) {
   const container = document.getElementById('messages');
+
   const div = document.createElement('div');
   div.className = 'chat-msg bot';
 
-  let html = `<div class="chat-bubble">${escapeHtml(data.message)}</div>`;
+  let html = `
+    <div class="chat-bubble">
+      ${escapeHtml(data.message)}
+    </div>
+  `;
 
+  // UNE SEULE RECOMMANDATION
   if (data.products && data.products.length > 0) {
-    data.products.forEach(p => {
-      // Sérialiser le produit pour le passer à showCartSelector
-      const produitJson = escapeHtml(JSON.stringify(p));
-      html += `
-        <div class="chat-reco" onclick="window.location.href='article.php?id=${p.id}'">
-          <div class="chat-reco-img">
-            ${p.url_image
-              ? `<img src="${escapeHtml(p.url_image)}" alt="${escapeHtml(p.name)}" onerror="this.style.display='none'">`
-              : '👟'
+
+    const p = data.products[0];
+
+    const taillesHtml = (p.tailles || []).map(t =>
+      `<button class="chat-option-btn" onclick="chatSelectOption(this)">
+        ${escapeHtml(t)}
+      </button>`
+    ).join('');
+
+    const couleursHtml = (p.couleurs || []).map(c =>
+      `<button class="chat-option-btn" onclick="chatSelectOption(this)">
+        ${escapeHtml(c)}
+      </button>`
+    ).join('');
+
+    html += `
+      <div class="chat-product-card">
+
+        <div class="chat-product-top">
+          <div class="chat-product-img">
+            ${
+              p.url_image
+                ? `<img src="${escapeHtml(p.url_image)}"
+                        alt="${escapeHtml(p.name)}">`
+                : '👟'
             }
           </div>
-          <div class="chat-reco-info">
-            <div class="chat-reco-name">${escapeHtml(p.name)}</div>
-            <div class="chat-reco-price">${p.price} €</div>
-            <button class="chat-reco-add" onclick="event.stopPropagation(); showCartSelector(JSON.parse(this.dataset.produit))" data-produit='${produitJson}'>
-              + Panier
-            </button>
+
+          <div class="chat-product-info">
+            <div class="chat-product-name">
+              ${escapeHtml(p.name)}
+            </div>
+
+            <div class="chat-product-price">
+              ${p.price} €
+            </div>
           </div>
-        </div>`;
-    });
+        </div>
+
+        ${
+          p.tailles?.length
+            ? `
+            <div class="chat-option-title">
+              Pointure
+            </div>
+
+            <div class="chat-option-group"
+                 data-type="taille">
+              ${taillesHtml}
+            </div>
+          `
+            : ''
+        }
+
+        ${
+          p.couleurs?.length
+            ? `
+            <div class="chat-option-title">
+              Couleur
+            </div>
+
+            <div class="chat-option-group"
+                 data-type="couleur">
+              ${couleursHtml}
+            </div>
+          `
+            : ''
+        }
+
+        <button
+          class="chat-cart-btn"
+          onclick="confirmChatCart(${p.id}, this)"
+          disabled
+        >
+          Ajouter au panier
+        </button>
+
+      </div>
+    `;
   }
 
   html += `<div class="chat-time">maintenant</div>`;
+
   div.innerHTML = html;
+
   container.appendChild(div);
+
   container.scrollTop = container.scrollHeight;
 }
 

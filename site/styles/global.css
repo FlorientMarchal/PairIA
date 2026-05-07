@@ -525,3 +525,97 @@ nav {
   :root { --chat-w: 360px; }
 }
 .chat-fab.hidden { display: none !important; }
+
+.chat-product-card{
+  margin-top:14px;
+  padding:14px;
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:#fff;
+}
+
+.chat-product-top{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-bottom:14px;
+}
+
+.chat-product-img{
+  width:72px;
+  height:72px;
+  border-radius:14px;
+  overflow:hidden;
+  background:#f6f6f6;
+  flex-shrink:0;
+}
+
+.chat-product-img img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.chat-product-name{
+  font-size:14px;
+  font-weight:600;
+  line-height:1.3;
+  margin-bottom:4px;
+}
+
+.chat-product-price{
+  font-size:15px;
+  font-weight:700;
+  color:var(--accent);
+}
+
+.chat-option-title{
+  font-size:12px;
+  font-weight:600;
+  margin-bottom:8px;
+  margin-top:12px;
+}
+
+.chat-option-group{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.chat-option-btn{
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:999px;
+  padding:8px 12px;
+  cursor:pointer;
+  font-size:13px;
+  transition:.2s;
+}
+
+.chat-option-btn:hover{
+  border-color:var(--accent);
+}
+
+.chat-option-btn.active{
+  background:var(--accent);
+  border-color:var(--accent);
+  color:#fff;
+}
+
+.chat-cart-btn{
+  width:100%;
+  margin-top:16px;
+  border:none;
+  background:#111;
+  color:#fff;
+  border-radius:14px;
+  padding:12px;
+  font-weight:600;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.chat-cart-btn:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
