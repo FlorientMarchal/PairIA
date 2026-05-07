@@ -1,0 +1,13 @@
+# Qdrant - base de données vectorielle locale
+ia/qdrant_db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# MAMP / environnement local
+.env
+
+# VS Code
+.vscode/
