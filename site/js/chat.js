@@ -4,6 +4,9 @@
 
 const API_URL = 'http://localhost:8000';
 
+// Historique de conversation (max 20 messages = 10 échanges)
+let conversationHistory = [];
+
 /* ══════════════════════════════════════
    CHAT
 ══════════════════════════════════════ */
@@ -15,7 +18,10 @@ async function sendMessage(text) {
   const typing = appendTyping();
 
   try {
-    const body = { question: text };
+    const body = {
+      question: text,
+      history: conversationHistory
+    };
 
     // Sur la fiche article, envoyer le product_id pour contextualiser
     if (typeof PRODUCT_ID !== 'undefined') {
@@ -32,6 +38,15 @@ async function sendMessage(text) {
     typing.remove();
     appendBotMessage(data);
 
+    // Mettre à jour l'historique
+    conversationHistory.push({ role: 'user',      content: text });
+    conversationHistory.push({ role: 'assistant', content: data.message });
+
+    // Limiter à 20 messages pour ne pas surcharger le contexte Mistral
+    if (conversationHistory.length > 20) {
+      conversationHistory = conversationHistory.slice(-20);
+    }
+
     // Si le LLM veut ajouter au panier
     if (data.action === 'add_to_cart' && data.product_id) {
       await addToCart(data.product_id, data.quantity || 1);
@@ -39,7 +54,6 @@ async function sendMessage(text) {
 
   } catch (error) {
     typing.remove();
-    appendUserMessage('');
     appendBotMessageText("Désolé, je suis temporairement indisponible. Réessayez dans un instant.");
     console.error('Erreur API chat :', error);
   }
@@ -51,6 +65,10 @@ function sendFromInput() {
   if (!text) return;
   input.value = '';
   sendMessage(text);
+}
+
+function resetConversation() {
+  conversationHistory = [];
 }
 
 /* ══════════════════════════════════════
@@ -179,42 +197,3 @@ function escapeHtml(text) {
 
 // Initialisation — charger le compteur panier
 document.addEventListener('DOMContentLoaded', () => updateCartCount());
-//  tableau qui stocke tout l'historique de la conversation
-
-let conversationHistory = [];
-
-async function sendMessage(question, productId = null) {
-  try {
-    const response = await fetch("http://localhost:8000/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question: question,
-        product_id: productId,
-        history: conversationHistory,
-      }),
-    });
-
-    const data = await response.json();
-
-    conversationHistory.push({ role: "user", content: question });
-    conversationHistory.push({ role: "assistant", content: data.message });
-
-    // Limite à 20 messages pour ne pas surcharger le contexte Mistral
-    if (conversationHistory.length > 20) {
-      conversationHistory = conversationHistory.slice(-20);
-    }
-
-    afficherMessage(data.message);
-
-    if (data.action === "add_to_cart") {
-      ajouterAuPanier(data.product_id, data.quantity);
-    }
-  } catch (error) {
-    console.error("Erreur chatbot :", error);
-  }
-}
-
-function resetConversation() {
-  conversationHistory = [];
-}
