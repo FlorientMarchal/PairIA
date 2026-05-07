@@ -98,17 +98,20 @@ def indexer_produits():
                     id=produit["id_shoes"],
                     vector=embed["embedding"],
                     payload={
-                        "nom":         produit["nom"],
-                        "prix":        float(produit["Prix"]),
-                        "categorie":   str(produit["categorie"] or ""),
-                        "marque":      str(produit["marque"] or ""),
-                        "genre":       str(produit["genre"] or ""),
-                        "usage":       str(produit.get("usage") or ""),
-                        "tailles":     str(produit.get("tailles") or ""),
-                        "couleurs":    str(produit.get("couleurs") or ""),
-                        "url_image":   str(produit.get("url_image") or ""),
-                        "description": str(produit.get("description") or ""),
-                        "caracteristiques": str(produit.get("caracteristiques") or "")
+                        "nom":              produit["nom"],
+                        "prix":             float(produit["Prix"]),
+                        "categorie":        str(produit["categorie"] or ""),
+                        "marque":           str(produit["marque"] or ""),
+                        "genre":            str(produit["genre"] or ""),
+                        "usage":            str(produit.get("usage") or ""),
+                        "tailles":          str(produit.get("tailles") or ""),
+                        "couleurs":         str(produit.get("couleurs") or ""),
+                        "url_image":        str(produit.get("url_image") or ""),
+                        "description":      str(produit.get("description") or ""),
+                        "caracteristiques": str(produit.get("caracteristiques") or ""),
+                        "materiaux":        str(produit.get("materiaux") or ""),
+                        "mots_cles":        str(produit.get("mots_cles") or ""),
+                        "stock_total":      int(produit.get("stock_total") or 0)
                     }
                 )]
             )
