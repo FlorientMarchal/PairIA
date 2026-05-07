@@ -13,6 +13,9 @@ Tes règles :
 - Tu peux recommander, comparer, conseiller sur la taille ou l'usage.
 - Si l'utilisateur veut ajouter un produit au panier, confirme-le.
 - Tu ne discutes pas de sujets hors du catalogue de chaussures.
+- Ne dis JAMAIS qu'un produit n'est pas dans le catalogue sans en être certain.
+- Tu ne dois JAMAIS dire qu'un produit n'existe pas — tu ne connais que les produits fournis.
+
 """.strip()
 
 
