@@ -21,22 +21,39 @@ def indexer_produits():
     print("Connexion à MySQL...")
     conn = mysql.connector.connect(**DB_CONFIG)
     cursor = conn.cursor(dictionary=True)
+
+    # Jointure articles + size_color
+    # GROUP_CONCAT regroupe toutes les tailles et couleurs en une seule ligne par produit
     cursor.execute("""
-        SELECT id_shoes, nom, categorie, marque, genre,
-               Prix, description, mots_cles, url_image
-        FROM articles
-        ORDER BY id_shoes
+        SELECT
+            a.id_shoes,
+            a.nom,
+            a.categorie,
+            a.marque,
+            a.genre,
+            a.Prix,
+            a.description,
+            a.mots_cles,
+            a.usage,
+            a.caracteristiques,
+            a.materiaux,
+            a.url_image,
+            GROUP_CONCAT(DISTINCT sc.taille ORDER BY sc.taille SEPARATOR ', ') AS tailles,
+            GROUP_CONCAT(DISTINCT sc.couleur ORDER BY sc.couleur SEPARATOR ', ') AS couleurs
+        FROM articles a
+        LEFT JOIN size_color sc ON sc.id_shoes = a.id_shoes
+        GROUP BY a.id_shoes
+        ORDER BY a.id_shoes
     """)
     produits = cursor.fetchall()
     cursor.close()
     conn.close()
     print(f"{len(produits)} produits trouvés.")
 
-    # ── Connexion Qdrant (fichier local) ──
+    # ── Connexion Qdrant ──
     print("Connexion à Qdrant...")
     client = QdrantClient(path="./qdrant_db")
 
-    # Supprimer et recréer la collection
     try:
         client.delete_collection("produits")
         print("Ancienne collection supprimée.")
@@ -50,17 +67,23 @@ def indexer_produits():
 
     # ── Indexation ──
     print("Indexation en cours...")
-    nb_ok = 0
+    nb_ok  = 0
     nb_err = 0
 
     for produit in produits:
+        # Texte riche à vectoriser — plus il est complet, meilleures sont les recherches
         texte = (
             f"{produit['nom']}. "
             f"Marque : {produit['marque']}. "
             f"Catégorie : {produit['categorie']}. "
             f"Genre : {produit['genre']}. "
+            f"Usage : {produit.get('usage', '')}. "
+            f"Caractéristiques : {produit.get('caracteristiques', '')}. "
+            f"Matériaux : {produit.get('materiaux', '')}. "
             f"{produit.get('description', '')} "
-            f"Mots clés : {produit.get('mots_cles', '')}."
+            f"Mots clés : {produit.get('mots_cles', '')}. "
+            f"Tailles disponibles : {produit.get('tailles', 'non précisé')}. "
+            f"Couleurs disponibles : {produit.get('couleurs', 'non précisé')}."
         )
 
         try:
@@ -80,12 +103,15 @@ def indexer_produits():
                         "categorie": str(produit["categorie"] or ""),
                         "marque":    str(produit["marque"] or ""),
                         "genre":     str(produit["genre"] or ""),
+                        "usage":     str(produit.get("usage") or ""),
+                        "tailles":   str(produit.get("tailles") or ""),
+                        "couleurs":  str(produit.get("couleurs") or ""),
                         "url_image": str(produit.get("url_image") or "")
                     }
                 )]
             )
 
-            print(f"  ✓ {produit['nom']} ({produit['Prix']} €)")
+            print(f"  ✓ {produit['nom']} | Tailles : {produit.get('tailles', '?')} | Couleurs : {produit.get('couleurs', '?')}")
             nb_ok += 1
 
         except Exception as e:
