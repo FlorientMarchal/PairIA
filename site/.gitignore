@@ -1,5 +1,8 @@
-# Qdrant - base de données vectorielle locale
+# Qdrant
 ia/qdrant_db/
+
+# Chroma DB (ancien)
+ia/chroma_db/
 
 # Python
 __pycache__/
