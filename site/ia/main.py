@@ -1,6 +1,6 @@
 # ia/main.py
 # Serveur FastAPI
-# Lancer avec : py -m uvicorn main:app --reload --port 8000
+# Lancer avec : uvicorn main:app --reload --port 8000
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,12 +16,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#ajout pour la memoire de conversation
-# Pydantic valide automatiquement que role est bien l'un des deux
-
 class HistoryMessage(BaseModel):
-    role: str  # "user" ou "assistant"
-    content: str  #le texte du message
+    role: str       # "user" ou "assistant"
+    content: str
 
 class ChatRequest(BaseModel):
     question: str
@@ -34,6 +31,8 @@ class Product(BaseModel):
     price: float
     emoji: str | None = None
     url_image: str | None = None
+    tailles: list[str] = []
+    couleurs: list[str] = []
 
 class ChatResponse(BaseModel):
     message: str
