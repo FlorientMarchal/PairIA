@@ -3,7 +3,7 @@
 
 import sys
 import os
-import json
+
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -105,18 +105,10 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
         print(f"[{msg['role']}] {msg['content']}")
     print("==================================\n")
 
-    response = ollama.chat(model="mistral", messages=messages)
 
-    # Appel Mistral + parsing JSON
+    # Appel Mistral
     response = ollama.chat(model="mistral", messages=messages)
-    raw      = response["message"]["content"]
-
-    try:
-        parsed  = json.loads(raw)
-        message = parsed.get("message", raw)
-        # nb_produits reste celui de _nb_produits_from_history — Mistral n'est pas fiable là-dessus
-    except (json.JSONDecodeError, KeyError):
-        message = raw
+    message  = response["message"]["content"]
 
     # Détection intention panier UNIQUEMENT sur la question utilisateur
     action            = None
