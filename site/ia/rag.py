@@ -1,27 +1,63 @@
 # ia/rag.py
 # Pipeline RAG : question → Qdrant → prompt → Ollama → réponse
 
+import sys
+import os
+import json
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import ollama
 from qdrant_client import QdrantClient
-from prompt import build_prompt, SYSTEM_PROMPT
+from llm_prompt import build_prompt, SYSTEM_PROMPT
 
-qdrant = QdrantClient(path="./qdrant_db")
+qdrant = QdrantClient(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "qdrant_db"))
+
+_CART_KEYWORDS = [
+    "ajoute au panier", "ajouter au panier", "mets au panier",
+    "mettre au panier", "ajoute-le", "ajoute-la", "je le veux",
+    "je la veux", "je veux l'acheter", "commande", "achète",
+    "acheter", "je prends", "je veux celui", "je veux celle"
+]
+
+
+def _user_wants_cart(question: str) -> bool:
+    q = question.lower().strip()
+    return any(kw in q for kw in _CART_KEYWORDS)
+
+
+def _nb_produits_from_history(history: list) -> int:
+    """
+    Décide combien de produits afficher selon l'avancement de la conversation.
+    - 0 échange  → 3 produits (découverte)
+    - 1-2 échanges → 2 produits (affinage)
+    - 3+ échanges  → 1 produit  (sélection)
+    """
+    nb_echanges = len(history) // 2  # 1 échange = 1 user + 1 assistant
+    if nb_echanges == 0:
+        return 3
+    elif nb_echanges <= 2:
+        return 2
+    else:
+        return 1
 
 
 def get_response(question: str, product_id: int = None, history: list = None) -> dict:
 
-    # création d'une nouvelle liste vide à chaque appel si rien n'est passé
     if history is None:
         history = []
-
-    # vectorisation de la question
+    print(f"\n=== HISTORY ({len(history)} msgs) ===")
+    for msg in history:
+        print(f"  [{msg['role']}] {msg['content'][:80]}")
+    print("=====================================\n")
+    # Vectorisation de la question
     embed_response = ollama.embeddings(
         model="nomic-embed-text",
         prompt=question
     )
     question_vector = embed_response["embedding"]
 
-    # chercher dans Qdrant
+    # Qdrant récupère toujours 3 candidats
     results = qdrant.query_points(
         collection_name="produits",
         query=question_vector,
@@ -30,7 +66,6 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
 
     produits_trouves = []
     for r in results:
-        # Récupérer tailles et couleurs stockées en payload
         tailles_raw  = r.payload.get("tailles",  "")
         couleurs_raw = r.payload.get("couleurs", "")
 
@@ -50,65 +85,51 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
             "couleurs":    couleurs,
         })
 
-    # construction du prompt RAG
+    # Nombre de produits à afficher selon l'historique
+    nb_produits = _nb_produits_from_history(history)
+
+    # Construction du prompt
     prompt = build_prompt(
         question=question,
         produits=produits_trouves,
         product_id=product_id
     )
 
-    # ── Construction des messages ──
-    messages = [
-        {
-            "role": "system",
-            "content": SYSTEM_PROMPT
-        },
-        {
-            "role": "system",
-            "content": "Historique de conversation entre l'utilisateur et l'assistant :"
-        }
-    ]
+    # Messages avec historique
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    # historique (limité)
     MAX_HISTORY = 10
     for msg in history[-MAX_HISTORY:]:
-        messages.append({
-            "role": msg["role"],
-            "content": msg["content"]
-        })
+        messages.append({"role": msg["role"], "content": msg["content"]})
 
-    # contexte RAG injecté comme system
-    messages.append({
-        "role": "system",
-        "content": prompt
-    })
+    messages.append({"role": "user", "content": prompt})
 
-    # vraie question utilisateur
-    messages.append({
-        "role": "user",
-        "content": question
-    })
-
-    # appel au modèle
+    # Appel Mistral + parsing JSON
     response = ollama.chat(model="mistral", messages=messages)
-    message  = response["message"]["content"]
+    raw      = response["message"]["content"]
 
-    # ── Détection intention ajout panier ──
-    action = None
+    try:
+        parsed  = json.loads(raw)
+        message = parsed.get("message", raw)
+        # nb_produits reste celui de _nb_produits_from_history — Mistral n'est pas fiable là-dessus
+    except (json.JSONDecodeError, KeyError):
+        message = raw
+
+    # Détection intention panier UNIQUEMENT sur la question utilisateur
+    action            = None
     product_id_action = None
-    quantity = None
+    quantity          = None
 
-    message_lower = message.lower()
-    if any(kw in message_lower for kw in ["ajouté", "ajouter", "panier"]):
-        if produits_trouves:
-            action = "add_to_cart"
-            product_id_action = produits_trouves[0]["id"]
-            quantity = 1
+    if _user_wants_cart(question) and produits_trouves:
+        action            = "add_to_cart"
+        product_id_action = produits_trouves[0]["id"]
+        quantity          = 1
 
     return {
-        "message": message,
-        "products": produits_trouves[:3],
-        "action": action,
+        "message":    message,
+        "products":   produits_trouves[:nb_produits],
+        "action":     action,
         "product_id": product_id_action,
-        "quantity": quantity
+        "quantity":   quantity
     }
+
