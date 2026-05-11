@@ -3,9 +3,9 @@ const API_URL = "http://localhost:8000";
 
 let conversationHistory = [];
 
-/* ══════════════════════════════════════
+/* 
    CHAT
-══════════════════════════════════════ */
+ */
 async function sendMessage(text) {
   const container = document.getElementById("messages");
   if (!container || !text.trim()) return;
@@ -63,9 +63,9 @@ function resetConversation() {
   if (container) container.innerHTML = "";
 }
 
-/* ══════════════════════════════════════
+/*
    BULLES
-══════════════════════════════════════ */
+ */
 function appendUserMessage(text) {
   const container = document.getElementById("messages");
   const div = document.createElement("div");
@@ -127,9 +127,9 @@ function appendTyping() {
   container.scrollTop = container.scrollHeight;
   return div;
 }
-/* ══════════════════════════════════════
+/* 
    CARTE MULTI-PRODUITS (picker)
-══════════════════════════════════════ */
+ */
 function showProductPicker(produits, container) {
   if (!container) container = document.getElementById("messages");
 
@@ -272,9 +272,9 @@ async function confirmChatCartFromPicker(productId, btn) {
     if (errEl) errEl.textContent = result?.error || "Erreur lors de l'ajout.";
   }
 }
-/* ══════════════════════════════════════
+/* 
    CARTE SÉLECTEUR TAILLE / COULEUR
-══════════════════════════════════════ */
+*/
 function showCartSelector(produit, container) {
   if (!container) container = document.getElementById("messages");
 
@@ -393,9 +393,9 @@ async function confirmChatCart(productId, btn) {
   }
 }
 
-/* ══════════════════════════════════════
+/* 
    PANIER
-══════════════════════════════════════ */
+ */
 async function addToCart(
   productId,
   quantity = 1,
@@ -441,9 +441,9 @@ async function updateCartCount(count) {
   }
 }
 
-/* ══════════════════════════════════════
+/*
    UTILITAIRES
-══════════════════════════════════════ */
+*/
 function escapeHtml(text) {
   if (!text) return "";
   const d = document.createElement("div");
