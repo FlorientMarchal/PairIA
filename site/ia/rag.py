@@ -1,9 +1,6 @@
 # ia/rag.py
-# Pipeline RAG : question → Qdrant → prompt → Ollama → réponse
-
 import sys
 import os
-
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -11,13 +8,20 @@ import ollama
 from qdrant_client import QdrantClient
 from llm_prompt import build_prompt, SYSTEM_PROMPT
 
+# Connexion Qdrant locale
 qdrant = QdrantClient(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "qdrant_db"))
 
+# ✅ AMÉLIORATION 3 : liste étendue de mots-clés panier
+# Couvre plus de formulations naturelles françaises
 _CART_KEYWORDS = [
     "ajoute au panier", "ajouter au panier", "mets au panier",
     "mettre au panier", "ajoute-le", "ajoute-la", "je le veux",
     "je la veux", "je veux l'acheter", "commande", "achète",
-    "acheter", "je prends", "je veux celui", "je veux celle"
+    "acheter", "je prends", "je veux celui", "je veux celle",
+    "je veux commander", "je veux prendre", "ça me convient",
+    "je le prends", "je la prends", "mets-le", "mets-la",
+    "ajoute ce produit", "je suis intéressé", "comment acheter",
+    "je veux celui-ci", "je veux celle-ci", "parfait je le veux"
 ]
 
 
@@ -28,12 +32,13 @@ def _user_wants_cart(question: str) -> bool:
 
 def _nb_produits_from_history(history: list) -> int:
     """
-    Décide combien de produits afficher selon l'avancement de la conversation.
+    Adapte le nombre de produits affichés selon l'avancement
+    de la conversation :
     - 0 échange  → 3 produits (découverte)
     - 1-2 échanges → 2 produits (affinage)
-    - 3+ échanges  → 1 produit  (sélection)
+    - 3+ échanges  → 1 produit  (sélection finale)
     """
-    nb_echanges = len(history) // 2  # 1 échange = 1 user + 1 assistant
+    nb_echanges = len(history) // 2
     if nb_echanges == 0:
         return 3
     elif nb_echanges <= 2:
@@ -46,19 +51,29 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
 
     if history is None:
         history = []
-    
-    # Vectorisation de la question
-    embed_response = ollama.embeddings(
-        model="nomic-embed-text",
-        prompt=question
-    )
+
+    # ── Étape 1 : vectoriser la question ──
+    # Si Ollama est éteint, on retourne un message clair au lieu d'un crash 500
+    try:
+        embed_response = ollama.embeddings(
+            model="nomic-embed-text",
+            prompt=question
+        )
+    except Exception:
+        raise RuntimeError(
+            "Le serveur Ollama est inaccessible. "
+            "Lance 'ollama serve' dans un terminal."
+        )
+
     question_vector = embed_response["embedding"]
 
-    # Qdrant récupère toujours 3 candidats
+    # ── Étape 2 : chercher dans Qdrant ──
+
+    # Récupère plus de candidats pour mieux filtrer par taille/couleur/prix
     results = qdrant.query_points(
         collection_name="produits",
         query=question_vector,
-        limit=3
+        limit=5
     ).points
 
     produits_trouves = []
@@ -82,35 +97,47 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
             "couleurs":    couleurs,
         })
 
-    # Nombre de produits à afficher selon l'historique
+    # Nombre de produits à afficher selon l'avancement de la conversation
     nb_produits = _nb_produits_from_history(history)
 
-    # Construction du prompt
+    # ── Étape 3 : construire le prompt ──
     prompt = build_prompt(
         question=question,
         produits=produits_trouves,
         product_id=product_id
     )
 
-    # Messages avec historique
+    # ── Étape 4 : construire les messages avec historique ──
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
+    # Injection des échanges précédents (max 10 = 5 échanges user/assistant)
+    # Limite la taille du contexte envoyé à Mistral
     MAX_HISTORY = 10
     for msg in history[-MAX_HISTORY:]:
-        messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({
+            "role":    msg["role"],
+            "content": msg["content"]
+        })
 
     messages.append({"role": "user", "content": prompt})
-    print("\n=== MESSAGES ENVOYÉS À MISTRAL ===")
-    for msg in messages:
-        print(f"[{msg['role']}] {msg['content']}")
-    print("==================================\n")
 
+    # ── Appel Mistral ──
 
-    # Appel Mistral
-    response = ollama.chat(model="mistral", messages=messages)
-    message  = response["message"]["content"]
+    # Protège contre les timeouts ou erreurs de génération
+    try:
+        response = ollama.chat(model="mistral", messages=messages)
+    except Exception:
+        raise RuntimeError(
+            "Erreur lors de la génération Mistral. "
+            "Vérifie qu'Ollama tourne et que le modèle 'mistral' est installé."
+        )
 
-    # Détection intention panier UNIQUEMENT sur la question utilisateur
+    # Mistral répond en texte brut depuis la correction de llm_prompt.py
+    message = response["message"]["content"]
+
+    # ── Étape 5 : détecter intention ajout panier ──
+
+    # Évite les faux positifs quand Mistral mentionne "panier" dans sa réponse
     action            = None
     product_id_action = None
     quantity          = None
@@ -127,4 +154,3 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
         "product_id": product_id_action,
         "quantity":   quantity
     }
-
