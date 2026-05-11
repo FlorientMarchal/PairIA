@@ -4,7 +4,6 @@
 
 $page = basename($_SERVER['PHP_SELF'], '.php');
 
-// Sur la fiche article, $article est disponible depuis article.php
 $product_name = isset($article['nom'])       ? $article['nom']       : null;
 $categorie    = isset($article['categorie']) ? $article['categorie'] : '';
 
@@ -13,7 +12,6 @@ $categorie    = isset($article['categorie']) ? $article['categorie'] : '';
 ══════════════════════════════════════ */
 if ($page === 'article' && $product_name) {
 
-    // Déterminant selon la catégorie
     $determinants = [
         'Baskets lifestyle'  => 'les',
         'Baskets sport'      => 'les',
@@ -93,8 +91,16 @@ if ($page === 'article' && $product_name) {
     <div class="chat-suggestions-label">Suggestions</div>
     <div class="chat-chips">
       <?php foreach ($chips as $chip): ?>
-        <button class="chat-chip" onclick="sendMessage('<?= htmlspecialchars($chip) ?>')">
-          <?= htmlspecialchars($chip) ?>
+        <?php
+          /*
+           * ✅ CORRECTION : data-msg au lieu de onclick="sendMessage('...')"
+           * Les commentaires HTML ne peuvent PAS être à l'intérieur d'une balise.
+           * On utilise un commentaire PHP ici à la place, sans risque.
+           * ENT_QUOTES échappe ' et " pour éviter les cassures JS.
+           */
+        ?>
+        <button class="chat-chip" data-msg="<?= htmlspecialchars($chip, ENT_QUOTES, 'UTF-8') ?>">
+          <?= htmlspecialchars($chip, ENT_QUOTES, 'UTF-8') ?>
         </button>
       <?php endforeach; ?>
     </div>
@@ -109,15 +115,18 @@ if ($page === 'article' && $product_name) {
   </div>
 
   <!-- Input -->
+  <!-- ✅ CORRECTION : le commentaire HTML était à l'intérieur de la balise input -->
+  <!-- ce qui rendait le champ non interactif et affichait du texte bizarre -->
+  <!-- Les commentaires doivent toujours être EN DEHORS des balises HTML -->
   <div class="chat-input-area">
     <input
       class="chat-input"
       id="chat-input"
       type="text"
       placeholder="Posez votre question..."
-      onkeydown="if(event.key==='Enter') sendFromInput()"
+      onkeydown="if(event.key==='Enter'){ event.preventDefault(); sendFromInput(); }"
     >
-    <button class="chat-send-btn" onclick="sendFromInput()">→</button>
+    <button class="chat-send-btn" type="button" onclick="sendFromInput()">→</button>
   </div>
 
 </div>
