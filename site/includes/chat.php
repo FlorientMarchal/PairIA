@@ -85,6 +85,7 @@ if ($page === 'article' && $product_name) {
       <div class="chat-head-name">Conseiller PairIA</div>
       <div class="chat-head-status">Personal Shopper IA · En ligne</div>
     </div>
+    <button class="chat-reset-btn" onclick="resetConversation()" title="Effacer la conversation">↺</button>
   </div>
 
   <!-- Suggestions rapides -->

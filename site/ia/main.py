@@ -2,6 +2,10 @@
 # Serveur FastAPI
 # Lancer avec : uvicorn main:app --reload --port 8000
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,7 +21,7 @@ app.add_middleware(
 )
 
 class HistoryMessage(BaseModel):
-    role: str       # "user" ou "assistant"
+    role: str
     content: str
 
 class ChatRequest(BaseModel):

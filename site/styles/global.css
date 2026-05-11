@@ -619,3 +619,158 @@ nav {
   opacity:.4;
   cursor:not-allowed;
 }
+/* ── Bouton reset conversation ── */
+.chat-reset-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.55);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color .2s, border-color .2s, transform .3s;
+}
+
+.chat-reset-btn:hover {
+  color: white;
+  border-color: rgba(255,255,255,.6);
+  transform: rotate(180deg);
+}
+.chat-pick-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #718096);
+  margin: 0 0 12px;
+}
+
+.chat-product-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat-product-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 0.5px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.chat-product-pick-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  background: #f7fafc;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  overflow: hidden;
+}
+
+.chat-product-pick-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-product-pick-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-product-pick-info .chat-product-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-product-pick-info .chat-product-price {
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.chat-pick-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2d3748;
+  background: #f7fafc;
+  border: 0.5px solid #cbd5e0;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.chat-pick-btn:hover {
+  background: #edf2f7;
+}
+
+.chat-pick-item {
+  border: 0.5px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.chat-pick-item:last-child { margin-bottom: 0; }
+
+.chat-pick-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+}
+
+.chat-pick-toggle-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2d3748;
+  background: #f7fafc;
+  border: none;
+  border-top: 0.5px solid #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chat-pick-toggle-btn:hover { background: #edf2f7; }
+
+.chat-pick-selector {
+  padding: 10px;
+  border-top: 0.5px solid #e2e8f0;
+  background: #fafafa;
+}
+
+/* Réutilise .chat-opt comme .chat-option-btn */
+.chat-opt {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 0.5px solid #cbd5e0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff;
+  margin: 2px;
+}
+
+.chat-opt.active {
+  background: #3182ce;
+  color: #fff;
+  border-color: #3182ce;
+}

@@ -1,4 +1,4 @@
-# ia/prompt.py
+# ia/llm_prompt.py
 # Prompt système et construction du prompt final envoyé à Mistral
 
 SYSTEM_PROMPT = """
@@ -13,17 +13,20 @@ Tes règles :
 - Tu peux recommander, comparer, conseiller sur la taille ou l'usage.
 - Si l'utilisateur veut ajouter un produit au panier, confirme-le.
 - Tu ne discutes pas de sujets hors du catalogue de chaussures.
-- Ne dis JAMAIS qu'un produit n'est pas dans le catalogue sans en être certain.
 - Tu ne dois JAMAIS dire qu'un produit n'existe pas — tu ne connais que les produits fournis.
-- Tu tiens compte de l'historique de la conversation pour comprendre les références implicites (ex: "le premier", "celui-ci", "le moins cher").
 
+Tu dois TOUJOURS répondre en JSON valide avec exactement cette structure :
+{
+  "message": "ta réponse textuelle ici"
+}
+
+Ne renvoie QUE le JSON, sans texte avant ni après, sans balises markdown.
 """.strip()
 
 
 def build_prompt(question: str, produits: list, product_id: int = None) -> str:
     prompt_parts = []
 
-    # Contexte fiche produit si on est sur article.php
     if product_id and produits:
         produit_actuel = next((p for p in produits if p["id"] == product_id), None)
         if produit_actuel:
@@ -32,16 +35,14 @@ def build_prompt(question: str, produits: list, product_id: int = None) -> str:
                 f"- {produit_actuel['name']} à {produit_actuel['price']}€\n"
             )
 
-    # Produits trouvés par le RAG
     if produits:
         prompt_parts.append("Produits disponibles dans le catalogue :")
-        for p in produits:
+        for i, p in enumerate(produits):
             prompt_parts.append(
-                f"- {p['name']} ({p['price']}€) — {p['categorie']} — {p['marque']}"
+                f"{i+1}. {p['name']} ({p['price']}€) — {p['categorie']} — {p['marque']}"
             )
         prompt_parts.append("")
 
-    # Question utilisateur
     prompt_parts.append(f"Question : {question}")
 
     return "\n".join(prompt_parts)
