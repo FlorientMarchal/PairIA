@@ -13,9 +13,11 @@ Tes règles :
 - Tu peux recommander, comparer, conseiller sur la taille ou l'usage.
 - Si l'utilisateur veut ajouter un produit au panier, confirme-le.
 - Tu ne discutes pas de sujets hors du catalogue de chaussures.
-- Tu ne dois JAMAIS dire qu'un produit n'existe pas — tu ne connais que les produits fournis.
+- Tu ne connais que les produits fournis.
 - Utilises l'historique qu'on te donne quand il est disponible dans [user] et [assistant]
 - Si l'utilisateur pose une question sur un produit spécifique, concentre-toi dessus.
+- Tu utilises le contexte des messages précédents pour répondre.
+- Tu ne dois JAMAIS inventer de tailles, couleurs ou prix.
 """.strip()
 
 
@@ -33,13 +35,26 @@ def build_prompt(question: str, produits: list, product_id: int = None) -> str:
     if produits:
         prompt_parts.append("Produits disponibles dans le catalogue :")
         for i, p in enumerate(produits):
-            # ✅ On ajoute tailles et couleurs dans le prompt pour que Mistral puisse répondre dessus
             tailles_str  = ", ".join(p.get("tailles",  [])) or "non précisé"
             couleurs_str = ", ".join(p.get("couleurs", [])) or "non précisé"
-            prompt_parts.append(
-                f"{i+1}. {p['name']} ({p['price']}€) — {p['categorie']} — {p['marque']}"
-                f" | Tailles : {tailles_str} | Couleurs : {couleurs_str}"
-            )
+
+            # ✅ CORRECTION : on est explicite sur ce qui est disponible ou non
+            ligne = f"{i+1}. {p['name']} ({p['price']}€) — {p['marque']}"
+
+            if tailles_str != "non précisé":
+                # La taille est connue → on l'affiche
+                ligne += f"\n   Tailles disponibles : {tailles_str}"
+            else:
+                # La taille est inconnue → on le dit explicitement à Mistral
+                # pour qu'il ne l'invente pas
+                ligne += f"\n   Tailles : information non disponible"
+
+            if couleurs_str != "non précisé":
+                ligne += f"\n   Couleurs disponibles : {couleurs_str}"
+            else:
+                ligne += f"\n   Couleurs : information non disponible"
+
+            prompt_parts.append(ligne)
         prompt_parts.append("")
 
     prompt_parts.append(f"Question : {question}")
