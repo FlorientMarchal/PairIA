@@ -46,10 +46,7 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
 
     if history is None:
         history = []
-    print(f"\n=== HISTORY ({len(history)} msgs) ===")
-    for msg in history:
-        print(f"  [{msg['role']}] {msg['content'][:80]}")
-    print("=====================================\n")
+    
     # Vectorisation de la question
     embed_response = ollama.embeddings(
         model="nomic-embed-text",
@@ -103,6 +100,12 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
         messages.append({"role": msg["role"], "content": msg["content"]})
 
     messages.append({"role": "user", "content": prompt})
+    print("\n=== MESSAGES ENVOYÉS À MISTRAL ===")
+    for msg in messages:
+        print(f"[{msg['role']}] {msg['content']}")
+    print("==================================\n")
+
+    response = ollama.chat(model="mistral", messages=messages)
 
     # Appel Mistral + parsing JSON
     response = ollama.chat(model="mistral", messages=messages)
