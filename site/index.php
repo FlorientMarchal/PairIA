@@ -42,15 +42,20 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
   <div class="hero-search">
     <input id="hero-input" type="text"
       placeholder="Ex: Chaussures de rando imperméables pas trop chères..."
-      onkeydown="if(event.key==='Enter') heroSend()">
-    <button onclick="heroSend()">Trouver →</button>
+      onkeydown="if(event.key==='Enter'){ event.preventDefault(); heroSend(); }">
+    <button type="button" onclick="heroSend()">Trouver →</button>
   </div>
   <div class="hero-chips">
-    <button class="hero-chip" onclick="heroQuestion('Chaussures imperméables')">Imperméables</button>
-    <button class="hero-chip" onclick="heroQuestion('Moins de 80€')">− 80 €</button>
-    <button class="hero-chip" onclick="heroQuestion('Pour le running')">Running</button>
-    <button class="hero-chip" onclick="heroQuestion('Style casual')">Casual</button>
-    <button class="hero-chip" onclick="heroQuestion('Pointure 42')">Pointure 42</button>
+    <!--
+      ✅ CORRECTION : type="button" sur tous les boutons hero
+      Sans type="button", un bouton dans une page peut déclencher
+      un submit et recharger la page, réinitialisant conversationHistory
+    -->
+    <button class="hero-chip" type="button" onclick="heroQuestion('Chaussures imperméables')">Imperméables</button>
+    <button class="hero-chip" type="button" onclick="heroQuestion('Moins de 80€')">− 80 €</button>
+    <button class="hero-chip" type="button" onclick="heroQuestion('Pour le running')">Running</button>
+    <button class="hero-chip" type="button" onclick="heroQuestion('Style casual')">Casual</button>
+    <button class="hero-chip" type="button" onclick="heroQuestion('Pointure 42')">Pointure 42</button>
   </div>
 </div>
 
@@ -69,7 +74,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 
           <!-- Catégorie -->
           <div class="dropdown" id="dd-categorie">
-            <button class="dd-btn" onclick="toggleDropdown('dd-categorie')">
+            <button class="dd-btn" type="button" onclick="toggleDropdown('dd-categorie')">
               Catégorie <span class="dd-arrow">▾</span>
             </button>
             <div class="dd-menu">
@@ -84,7 +89,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 
           <!-- Genre -->
           <div class="dropdown" id="dd-genre">
-            <button class="dd-btn" onclick="toggleDropdown('dd-genre')">
+            <button class="dd-btn" type="button" onclick="toggleDropdown('dd-genre')">
               Genre <span class="dd-arrow">▾</span>
             </button>
             <div class="dd-menu">
@@ -99,7 +104,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 
           <!-- Marque -->
           <div class="dropdown" id="dd-marque">
-            <button class="dd-btn" onclick="toggleDropdown('dd-marque')">
+            <button class="dd-btn" type="button" onclick="toggleDropdown('dd-marque')">
               Marque <span class="dd-arrow">▾</span>
             </button>
             <div class="dd-menu">
@@ -114,7 +119,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 
           <!-- Prix -->
           <div class="dropdown" id="dd-prix">
-            <button class="dd-btn" onclick="toggleDropdown('dd-prix')">
+            <button class="dd-btn" type="button" onclick="toggleDropdown('dd-prix')">
               Prix <span class="dd-arrow">▾</span>
             </button>
             <div class="dd-menu dd-menu-prix">
@@ -131,7 +136,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 
           <!-- Pointure -->
           <div class="dropdown" id="dd-taille">
-            <button class="dd-btn" onclick="toggleDropdown('dd-taille')">
+            <button class="dd-btn" type="button" onclick="toggleDropdown('dd-taille')">
               Pointure <span class="dd-arrow">▾</span>
             </button>
             <div class="dd-menu">
@@ -146,7 +151,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 
           <!-- Couleur -->
           <div class="dropdown" id="dd-couleur">
-            <button class="dd-btn" onclick="toggleDropdown('dd-couleur')">
+            <button class="dd-btn" type="button" onclick="toggleDropdown('dd-couleur')">
               Couleur <span class="dd-arrow">▾</span>
             </button>
             <div class="dd-menu">
@@ -160,7 +165,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
           </div>
 
           <!-- Reset -->
-          <button class="filter-reset-btn" id="filter-reset-btn" onclick="resetFilters()">
+          <button class="filter-reset-btn" id="filter-reset-btn" type="button" onclick="resetFilters()">
             ✕ Effacer
           </button>
 
@@ -194,7 +199,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
                 <div class="card-name"><?= htmlspecialchars($a['nom']) ?></div>
                 <div class="card-foot">
                   <span class="card-price"><?= number_format($a['Prix'], 2, ',', ' ') ?> €</span>
-                  <button class="card-add" onclick="ajouterPanier(<?= $a['id_shoes'] ?>, event)">+</button>
+                  <button class="card-add" type="button" onclick="ajouterPanier(<?= $a['id_shoes'] ?>, event)">+</button>
                 </div>
               </div>
             </a>
@@ -204,7 +209,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 
       <div class="no-results" id="no-results" style="display:none">
         Aucun produit ne correspond à vos filtres.
-        <button onclick="resetFilters()">Réinitialiser</button>
+        <button type="button" onclick="resetFilters()">Réinitialiser</button>
       </div>
 
     </div>
@@ -341,12 +346,10 @@ function resetFilters() {
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
 
-  // Griser le bouton reset au départ
   const resetBtn = document.getElementById('filter-reset-btn');
   resetBtn.style.opacity       = '0.3';
   resetBtn.style.pointerEvents = 'none';
 
-  // Lire la catégorie dans l'URL (redirection depuis article.php)
   const params    = new URLSearchParams(window.location.search);
   const categorie = params.get('categorie');
   if (categorie) {
@@ -355,13 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     if (checkbox) {
       checkbox.checked = true;
-      applyFilters(); // active le filtre + active le bouton reset
+      applyFilters();
     }
   }
-
 });
 
-/* ── Hero + Panier ── */
+/* ── Hero ── */
 function heroSend() {
   const input = document.getElementById('hero-input');
   const text  = input?.value.trim();
@@ -369,13 +371,18 @@ function heroSend() {
   input.value = '';
   sendMessage(text);
   document.querySelector('.page-layout')?.scrollIntoView({ behavior: 'smooth' });
+  // ✅ AJOUT : focus sur le chat pour que l'utilisateur voie la réponse
+  setTimeout(() => document.getElementById('chat-input')?.focus(), 300);
 }
 
 function heroQuestion(text) {
   sendMessage(text);
   document.querySelector('.page-layout')?.scrollIntoView({ behavior: 'smooth' });
+  // ✅ AJOUT : focus sur le chat après envoi depuis le hero
+  setTimeout(() => document.getElementById('chat-input')?.focus(), 300);
 }
 
+/* ── Panier ── */
 async function ajouterPanier(id, event) {
   event.preventDefault();
   event.stopPropagation();
