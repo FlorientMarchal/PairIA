@@ -8,12 +8,10 @@ $page = basename($_SERVER['PHP_SELF'], '.php');
 $product_name = isset($article['nom'])       ? $article['nom']       : null;
 $categorie    = isset($article['categorie']) ? $article['categorie'] : '';
 
-/* ══════════════════════════════════════
-   MESSAGE D'ACCUEIL
-══════════════════════════════════════ */
+/* 
+   MESSAGE D'ACCUEIL*/
 if ($page === 'article' && $product_name) {
 
-    // Déterminant selon la catégorie
     $determinants = [
         'Baskets lifestyle'  => 'les',
         'Baskets sport'      => 'les',
@@ -46,9 +44,9 @@ if ($page === 'article' && $product_name) {
     $welcome = "Bonjour ! 👋 Je suis votre conseiller personnel. Décrivez-moi le style, l'usage ou le budget que vous recherchez et je trouve la paire parfaite pour vous.";
 }
 
-/* ══════════════════════════════════════
+/* 
    SUGGESTIONS RAPIDES
-══════════════════════════════════════ */
+*/
 if ($page === 'article' && $product_name) {
     $chips = [
         'Tailles disponibles ?',
@@ -93,8 +91,8 @@ if ($page === 'article' && $product_name) {
     <div class="chat-suggestions-label">Suggestions</div>
     <div class="chat-chips">
       <?php foreach ($chips as $chip): ?>
-        <button class="chat-chip" onclick="sendMessage('<?= htmlspecialchars($chip) ?>')">
-          <?= htmlspecialchars($chip) ?>
+        <button class="chat-chip" data-msg="<?= htmlspecialchars($chip, ENT_QUOTES, 'UTF-8') ?>">
+          <?= htmlspecialchars($chip, ENT_QUOTES, 'UTF-8') ?>
         </button>
       <?php endforeach; ?>
     </div>
@@ -115,9 +113,15 @@ if ($page === 'article' && $product_name) {
       id="chat-input"
       type="text"
       placeholder="Posez votre question..."
-      onkeydown="if(event.key==='Enter') sendFromInput()"
+      <!--
+         CORRECTION : onkeydown utilise maintenant sendFromInput()
+        Avant : onkeydown="if(event.key==='Enter') sendFromInput()" — correct
+        On garde le même comportement mais on s'assure que le Enter
+        ne soumet pas un éventuel formulaire parent
+      -->
+      onkeydown="if(event.key==='Enter'){ event.preventDefault(); sendFromInput(); }"
     >
-    <button class="chat-send-btn" onclick="sendFromInput()">→</button>
+    <button class="chat-send-btn" type="button" onclick="sendFromInput()">→</button>
   </div>
 
 </div>
