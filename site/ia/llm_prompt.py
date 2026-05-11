@@ -15,12 +15,7 @@ Tes règles :
 - Tu ne discutes pas de sujets hors du catalogue de chaussures.
 - Tu ne dois JAMAIS dire qu'un produit n'existe pas — tu ne connais que les produits fournis.
 - Utilises l'historique qu'on te donne quand il est disponible dans [user] et [assistant]
-Tu dois TOUJOURS répondre en JSON valide avec exactement cette structure :
-{
-  "message": "ta réponse textuelle ici"
-}
-
-Ne renvoie QUE le JSON, sans texte avant ni après, sans balises markdown.
+- Si l'utilisateur pose une question sur un produit spécifique, concentre-toi dessus.
 """.strip()
 
 
@@ -38,11 +33,14 @@ def build_prompt(question: str, produits: list, product_id: int = None) -> str:
     if produits:
         prompt_parts.append("Produits disponibles dans le catalogue :")
         for i, p in enumerate(produits):
+            # ✅ On ajoute tailles et couleurs dans le prompt pour que Mistral puisse répondre dessus
+            tailles_str  = ", ".join(p.get("tailles",  [])) or "non précisé"
+            couleurs_str = ", ".join(p.get("couleurs", [])) or "non précisé"
             prompt_parts.append(
                 f"{i+1}. {p['name']} ({p['price']}€) — {p['categorie']} — {p['marque']}"
+                f" | Tailles : {tailles_str} | Couleurs : {couleurs_str}"
             )
         prompt_parts.append("")
 
     prompt_parts.append(f"Question : {question}")
-
     return "\n".join(prompt_parts)
