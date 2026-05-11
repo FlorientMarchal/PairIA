@@ -461,4 +461,15 @@ function escapeAttr(text) {
     .replace(/>/g, "&gt;");
 }
 
-document.addEventListener("DOMContentLoaded", () => updateCartCount());
+document.addEventListener("DOMContentLoaded", () => {
+  updateCartCount();
+
+  // ✅ AJOUT : listener pour les chips via data-msg
+  // Remplace les onclick PHP qui cassaient avec les apostrophes
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chat-chip");
+    if (chip && chip.dataset.msg) {
+      sendMessage(chip.dataset.msg);
+    }
+  });
+});
