@@ -125,7 +125,16 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
 
     # Protège contre les timeouts ou erreurs de génération
     try:
-        response = ollama.chat(model="mistral", messages=messages)
+        response = ollama.chat(
+        model="mistral",
+        messages=messages,
+        options={
+            "num_ctx": 2048,
+            "num_predict": 150,
+            "num_threads": 8,
+            "temperature": 0.7
+            }
+        )
     except Exception:
         raise RuntimeError(
             "Erreur lors de la génération Mistral. "
@@ -154,3 +163,69 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
         "product_id": product_id_action,
         "quantity":   quantity
     }
+
+def get_response_stream(question: str, product_id: int = None, history: list = None):
+    if history is None:
+        history = []
+
+    embed_response = ollama.embeddings(model="nomic-embed-text", prompt=question)
+    question_vector = embed_response["embedding"]
+
+    results = qdrant.query_points(
+        collection_name="produits",
+        query=question_vector,
+        limit=5
+    ).points
+
+    produits_trouves = []
+    for r in results:
+        tailles_raw  = r.payload.get("tailles",  "")
+        couleurs_raw = r.payload.get("couleurs", "")
+        tailles  = [t.strip() for t in tailles_raw.split(",") if t.strip()] if tailles_raw else []
+        couleurs = [c.strip() for c in couleurs_raw.split(",") if c.strip()] if couleurs_raw else []
+        produits_trouves.append({
+            "id":        r.id,
+            "name":      r.payload.get("nom", ""),
+            "price":     r.payload.get("prix", 0),
+            "emoji":     "👟",
+            "categorie": r.payload.get("categorie", ""),
+            "marque":    r.payload.get("marque", ""),
+            "url_image": r.payload.get("url_image", ""),
+            "description": r.payload.get("description", ""),
+            "tailles":   tailles,
+            "couleurs":  couleurs,
+        })
+
+    nb_produits = _nb_produits_from_history(history)
+    prompt = build_prompt(question=question, produits=produits_trouves, product_id=product_id)
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in history[-10:]:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": prompt})
+
+    action            = None
+    product_id_action = None
+    quantity          = None
+    if _user_wants_cart(question) and produits_trouves:
+        action            = "add_to_cart"
+        product_id_action = produits_trouves[0]["id"]
+        quantity          = 1
+
+    metadata = {
+        "products":   produits_trouves[:nb_produits],
+        "action":     action,
+        "product_id": product_id_action,
+        "quantity":   quantity
+    }
+
+    stream = ollama.chat(
+        model="mistral",
+        messages=messages,
+        stream=True,
+        options={"num_ctx": 2048, "num_predict": 150, "num_threads": 8, "temperature": 0.7}
+    )
+
+    yield metadata
+    for chunk in stream:
+        yield chunk["message"]["content"]
