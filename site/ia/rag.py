@@ -182,7 +182,7 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
         messages=messages,
         options={
             "num_ctx": 2048,
-            "num_predict": 500,
+            "num_predict": 150,
             "num_threads": 8,
             "temperature": 0.7
             }
