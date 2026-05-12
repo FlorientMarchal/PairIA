@@ -45,8 +45,12 @@ def _extraire_budget(question: str):
     return None
 
 
-def build_prompt(question: str, produits: list, product_id: int = None) -> str:
+def build_prompt(question: str, produits: list, product_id: int = None, genre: str = None) -> str:
     prompt_parts = []
+
+    #Detection du genre pour contextualiser la réponse (si mentionné dans les échanges précédents)
+    if genre:
+        prompt_parts.append(f"Contexte : l'utilisateur recherche des chaussures pour {genre}.\n")
 
     # Contexte fiche produit si on est sur article.php
     if product_id and produits:
