@@ -10,8 +10,6 @@ async function sendMessage(text) {
   const container = document.getElementById("messages");
   if (!container || !text.trim()) return;
 
-  // bloquer l'input pendant que Mistral réfléchit
-
   const input = document.getElementById("chat-input");
   const sendBtn = document.querySelector(".chat-send-btn");
   if (input) input.disabled = true;
@@ -24,29 +22,80 @@ async function sendMessage(text) {
     const body = { question: text, history: conversationHistory };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
 
-    const response = await fetch(`${API_URL}/chat`, {
+    const response = await fetch(`${API_URL}/chat/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    typing.remove();
+    let typingRemoved = false;
+    let bubbleDiv = null;
+    let bubble = null;
+    const time = document.createElement("div");
 
-    appendBotMessage(data);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let message = "";
+    let products = [];
+    let action = null;
+    let product_id = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const lines = decoder.decode(value).split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (raw === "[DONE]") break;
+
+        try {
+          const data = JSON.parse(raw);
+          if (data.products !== undefined) {
+            products   = data.products || [];
+            action     = data.action;
+            product_id = data.product_id;
+          } else if (data.chunk !== undefined) {
+            if (!typingRemoved) {
+              typing.remove();
+              typingRemoved = true;
+              bubbleDiv = document.createElement("div");
+              bubbleDiv.className = "chat-msg bot";
+              bubble = document.createElement("div");
+              bubble.className = "chat-bubble";
+              time.className = "chat-time";
+              time.textContent = "maintenant";
+              bubbleDiv.appendChild(bubble);
+              bubbleDiv.appendChild(time);
+              container.appendChild(bubbleDiv);
+            }
+            message += data.chunk;
+            bubble.textContent = message;
+            container.scrollTop = container.scrollHeight;
+          }
+        } catch (e) {}
+      }
+    }
 
     conversationHistory.push({ role: "user", content: text });
-    conversationHistory.push({ role: "assistant", content: data.message });
+    conversationHistory.push({ role: "assistant", content: message });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
-    // Ajout panier explicite
-    if (data.action === "add_to_cart" && data.product_id) {
-      const produit =
-        (data.products || []).find((p) => p.id === data.product_id) ||
-        data.products?.[0];
+    if (products.length === 1) {
+      showCartSelector(products[0], container);
+    } else if (products.length > 1) {
+      showProductPicker(products, container);
+    }
+
+    if (action === "add_to_cart" && product_id) {
+      const produit = products.find((p) => p.id === product_id) || products[0];
       if (produit) showCartSelector(produit);
     }
+
+    container.scrollTop = container.scrollHeight;
+
   } catch (error) {
     typing.remove();
     appendBotMessageText(
@@ -54,12 +103,7 @@ async function sendMessage(text) {
     );
     console.error("Erreur API chat :", error);
   } finally {
-    // réactiver l'input dans tous les cas (succès ou erreur)
-
-    if (input) {
-      input.disabled = false;
-      input.focus();
-    }
+    if (input) { input.disabled = false; input.focus(); }
     if (sendBtn) sendBtn.disabled = false;
   }
 }
