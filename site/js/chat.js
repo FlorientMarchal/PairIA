@@ -5,10 +5,17 @@ let conversationHistory = [];
 
 /* 
    CHAT
- */
+*/
 async function sendMessage(text) {
   const container = document.getElementById("messages");
   if (!container || !text.trim()) return;
+
+  // bloquer l'input pendant que Mistral réfléchit
+
+  const input = document.getElementById("chat-input");
+  const sendBtn = document.querySelector(".chat-send-btn");
+  if (input) input.disabled = true;
+  if (sendBtn) sendBtn.disabled = true;
 
   appendUserMessage(text);
   const typing = appendTyping();
@@ -17,90 +24,43 @@ async function sendMessage(text) {
     const body = { question: text, history: conversationHistory };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
 
-    const response = await fetch(`${API_URL}/chat/stream`, {
+    const response = await fetch(`${API_URL}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
-    let typingRemoved = false;
-    let bubbleDiv = null;
-    let bubble = null;
+    const data = await response.json();
+    typing.remove();
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let message = "";
-    let products = [];
-    let action = null;
-    let product_id = null;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const lines = decoder.decode(value).split("\n");
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
-        if (raw === "[DONE]") break;
-
-        try {
-        const data = JSON.parse(raw);
-        if (data.products !== undefined) {
-            products   = data.products || [];
-            action     = data.action;
-            product_id = data.product_id;
-        } else if (data.chunk !== undefined) {
-        if (!typingRemoved) {
-            typing.remove();
-            typingRemoved = true;
-            // Crée la bulle au premier chunk
-            bubbleDiv = document.createElement("div");
-            bubbleDiv.className = "chat-msg bot";
-            bubble = document.createElement("div");
-            bubble.className = "chat-bubble";
-            const time = document.createElement("div");
-            time.className = "chat-time";
-            time.textContent = "maintenant";
-            bubbleDiv.appendChild(bubble);
-            bubbleDiv.appendChild(time);
-            container.appendChild(bubbleDiv);
-        }
-        message += data.chunk;
-        bubble.textContent = message;
-        container.scrollTop = container.scrollHeight;
-        }
-        } catch (e) {}
-      }
-    }
-
-    
+    appendBotMessage(data);
 
     conversationHistory.push({ role: "user", content: text });
-    conversationHistory.push({ role: "assistant", content: message });
-
+    conversationHistory.push({ role: "assistant", content: data.message });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
-    if (products.length === 1) {
-      showCartSelector(products[0], container);
-    } else if (products.length > 1) {
-      showProductPicker(products, container);
-    }
-
-    if (action === "add_to_cart" && product_id) {
-      const produit = products.find((p) => p.id === product_id) || products[0];
+    // Ajout panier explicite
+    if (data.action === "add_to_cart" && data.product_id) {
+      const produit =
+        (data.products || []).find((p) => p.id === data.product_id) ||
+        data.products?.[0];
       if (produit) showCartSelector(produit);
     }
-
-    container.scrollTop = container.scrollHeight;
-
   } catch (error) {
     typing.remove();
     appendBotMessageText(
       "Désolé, je suis temporairement indisponible. Réessayez dans un instant.",
     );
     console.error("Erreur API chat :", error);
+  } finally {
+    // réactiver l'input dans tous les cas (succès ou erreur)
+
+    if (input) {
+      input.disabled = false;
+      input.focus();
+    }
+    if (sendBtn) sendBtn.disabled = false;
   }
 }
 
@@ -118,9 +78,9 @@ function resetConversation() {
   if (container) container.innerHTML = "";
 }
 
-/*
+/* ══════════════════════════════════════
    BULLES
- */
+══════════════════════════════════════ */
 function appendUserMessage(text) {
   const container = document.getElementById("messages");
   const div = document.createElement("div");
@@ -135,7 +95,6 @@ function appendUserMessage(text) {
 function appendBotMessage(data) {
   const container = document.getElementById("messages");
 
-  // Bulle texte
   const bubbleDiv = document.createElement("div");
   bubbleDiv.className = "chat-msg bot";
   bubbleDiv.innerHTML = `
@@ -146,10 +105,8 @@ function appendBotMessage(data) {
   const products = data.products || [];
 
   if (products.length === 1) {
-    // Carte directe avec pointure/couleur
     showCartSelector(products[0], container);
   } else if (products.length > 1) {
-    // Carte multi-produits : on choisit d'abord le produit
     showProductPicker(products, container);
   }
 
@@ -172,19 +129,37 @@ function appendTyping() {
   const div = document.createElement("div");
   div.className = "chat-msg bot";
   div.id = "typing-indicator";
+
+  // message de patience affiché après 5 secondes
+
   div.innerHTML = `
     <div class="chat-typing">
       <div class="chat-typing-dot"></div>
       <div class="chat-typing-dot"></div>
       <div class="chat-typing-dot"></div>
+    </div>
+    <div class="chat-typing-msg"
+         id="typing-msg"
+         style="font-size:11px;color:#999;margin-top:4px;display:none">
+      Analyse en cours...
     </div>`;
+
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
+
+  //  Affiche le message uniquement si la réponse prend plus de 5 secondes
+
+  setTimeout(() => {
+    const msg = document.getElementById("typing-msg");
+    if (msg) msg.style.display = "block";
+  }, 5000);
+
   return div;
 }
-/* 
+
+/* ══════════════════════════════════════
    CARTE MULTI-PRODUITS (picker)
- */
+══════════════════════════════════════ */
 function showProductPicker(produits, container) {
   if (!container) container = document.getElementById("messages");
 
@@ -327,9 +302,10 @@ async function confirmChatCartFromPicker(productId, btn) {
     if (errEl) errEl.textContent = result?.error || "Erreur lors de l'ajout.";
   }
 }
-/* 
+
+/* ══════════════════════════════════════
    CARTE SÉLECTEUR TAILLE / COULEUR
-*/
+══════════════════════════════════════ */
 function showCartSelector(produit, container) {
   if (!container) container = document.getElementById("messages");
 
@@ -448,9 +424,9 @@ async function confirmChatCart(productId, btn) {
   }
 }
 
-/* 
+/* ══════════════════════════════════════
    PANIER
- */
+══════════════════════════════════════ */
 async function addToCart(
   productId,
   quantity = 1,
@@ -496,9 +472,9 @@ async function updateCartCount(count) {
   }
 }
 
-/*
+/* ══════════════════════════════════════
    UTILITAIRES
-*/
+══════════════════════════════════════ */
 function escapeHtml(text) {
   if (!text) return "";
   const d = document.createElement("div");
@@ -519,7 +495,7 @@ function escapeAttr(text) {
 document.addEventListener("DOMContentLoaded", () => {
   updateCartCount();
 
-  // ✅ AJOUT : listener pour les chips via data-msg
+  // ✅ Listener pour les chips via data-msg
   // Remplace les onclick PHP qui cassaient avec les apostrophes
   document.addEventListener("click", (e) => {
     const chip = e.target.closest(".chat-chip");
