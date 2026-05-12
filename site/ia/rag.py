@@ -6,13 +6,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import ollama
 from qdrant_client import QdrantClient
-from llm_prompt import build_prompt, SYSTEM_PROMPT
+from llm_prompt import build_prompt, SYSTEM_PROMPT, _extraire_budget
 
 # Connexion Qdrant locale
 qdrant = QdrantClient(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "qdrant_db"))
 
-
-# Couvre plus de formulations naturelles françaises
+#  Liste de mots-clés panier
 _CART_KEYWORDS = [
     "ajoute au panier", "ajouter au panier", "mets au panier",
     "mettre au panier", "ajoute-le", "ajoute-la", "je le veux",
@@ -47,13 +46,33 @@ def _nb_produits_from_history(history: list) -> int:
         return 1
 
 
+def _extraire_genre(history: list, question: str) -> str | None:
+    """
+    Détecte si l'utilisateur parle de chaussures homme ou femme.
+    Analyse à la fois la question actuelle ET tout l'historique
+    pour ne pas perdre l'info si elle a été donnée dans un échange précédent.
+    """
+    # On concatène question + tout l'historique pour chercher le genre
+    # même s'il a été mentionné 3 messages avant
+    texte_complet = question.lower()
+    for msg in history:
+        texte_complet += " " + msg["content"].lower()
+
+    if any(kw in texte_complet for kw in ["femme", "féminin", "dame", "elle"]):
+        return "Femme"
+    if any(kw in texte_complet for kw in ["homme", "masculin", "monsieur", "il"]):
+        return "Homme"
+    return None
+
+
 def get_response(question: str, product_id: int = None, history: list = None) -> dict:
 
     if history is None:
         history = []
 
     # ── Étape 1 : vectoriser la question ──
-    # Si Ollama est éteint, on retourne un message clair au lieu d'un crash 500
+
+    # Si Ollama est éteint, message clair au lieu d'un crash 500
     try:
         embed_response = ollama.embeddings(
             model="nomic-embed-text",
@@ -68,12 +87,11 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
     question_vector = embed_response["embedding"]
 
     # ── Étape 2 : chercher dans Qdrant ──
-
-    # Récupère plus de candidats pour mieux filtrer par taille/couleur/prix
     results = qdrant.query_points(
         collection_name="produits",
         query=question_vector,
-        limit=5
+        limit=5,
+        score_threshold=0.65
     ).points
 
     produits_trouves = []
@@ -97,6 +115,38 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
             "couleurs":    couleurs,
         })
 
+    # Retour d'un message clair si aucun produit ne passe le seuil de similarité
+    if not produits_trouves:
+        return {
+            "message":    "Je n'ai trouvé aucun produit correspondant à votre recherche. Pouvez-vous reformuler ou préciser votre demande ?",
+            "products":   [],
+            "action":     None,
+            "product_id": None,
+            "quantity":   None
+        }
+
+    # Filtre en Python, Mistral ne voit que les produits dans le budget
+    budget = _extraire_budget(question)
+    if budget:
+        produits_filtres = [p for p in produits_trouves if p["price"] <= budget]
+        if produits_filtres:
+            # Des produits passent le filtre → on remplace la liste complète
+            produits_trouves = produits_filtres
+     
+
+    # Filtre du genre côté Python
+    genre = _extraire_genre(history, question)
+    if genre:
+        produits_filtres_genre = [
+            p for p in produits_trouves
+            if genre.lower() in p.get("categorie", "").lower()
+            or genre.lower() in p.get("marque", "").lower()
+        ]
+        # On filtre seulement si des résultats passent
+        # sinon on garde tous les produits pour ne pas retourner une liste vide
+        if produits_filtres_genre:
+            produits_trouves = produits_filtres_genre
+
     # Nombre de produits à afficher selon l'avancement de la conversation
     nb_produits = _nb_produits_from_history(history)
 
@@ -104,14 +154,14 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
     prompt = build_prompt(
         question=question,
         produits=produits_trouves,
-        product_id=product_id
+        product_id=product_id,
+        genre=genre
     )
 
     # ── Étape 4 : construire les messages avec historique ──
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     # Injection des échanges précédents (max 10 = 5 échanges user/assistant)
-    # Limite la taille du contexte envoyé à Mistral
     MAX_HISTORY = 10
     for msg in history[-MAX_HISTORY:]:
         messages.append({
@@ -119,25 +169,29 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
             "content": msg["content"]
         })
 
+    # La question actuelle enrichie avec les produits vient toujours en dernier
     messages.append({"role": "user", "content": prompt})
 
     # ── Appel Mistral ──
 
-    # Protège contre les timeouts ou erreurs de génération
+    # ✅ num_predict=300 : limite la longueur de réponse pour aller plus vite
+    # Protège aussi contre les timeouts ou erreurs de génération
     try:
-        response = ollama.chat(model="mistral", messages=messages)
+        response = ollama.chat(
+            model="mistral",
+            messages=messages,
+            options={"num_predict": 300}
+        )
     except Exception:
         raise RuntimeError(
             "Erreur lors de la génération Mistral. "
             "Vérifie qu'Ollama tourne et que le modèle 'mistral' est installé."
         )
 
-    # Mistral répond en texte brut depuis la correction de llm_prompt.py
     message = response["message"]["content"]
 
     # ── Étape 5 : détecter intention ajout panier ──
 
-    # Évite les faux positifs quand Mistral mentionne "panier" dans sa réponse
     action            = None
     product_id_action = None
     quantity          = None
