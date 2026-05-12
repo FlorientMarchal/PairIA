@@ -774,3 +774,16 @@ nav {
   color: #fff;
   border-color: #3182ce;
 }
+.chat-image-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 8px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.chat-image-btn:hover {
+  opacity: 1;
+}

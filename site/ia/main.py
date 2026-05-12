@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from rag import get_response, get_response_stream
+from fastapi import File, UploadFile
+from image_search import rechercher_produits_similaires
 
 app = FastAPI(title="API Chatbot")
 
@@ -81,3 +83,9 @@ def chat_stream(request: ChatRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+@app.post("/search-image")
+async def search_image(file: UploadFile = File(...)):
+    image_bytes = await file.read()
+    result = rechercher_produits_similaires(image_bytes)
+    return result

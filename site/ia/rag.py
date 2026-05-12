@@ -178,11 +178,6 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
     # Protège aussi contre les timeouts ou erreurs de génération
     try:
         response = ollama.chat(
-<<<<<<< HEAD
-            model="mistral",
-            messages=messages,
-            options={"num_predict": 300}
-=======
         model="mistral",
         messages=messages,
         options={
@@ -191,7 +186,6 @@ def get_response(question: str, product_id: int = None, history: list = None) ->
             "num_threads": 8,
             "temperature": 0.7
             }
->>>>>>> 3c563a22e16b1640bcae920ebc358fbaa7435241
         )
     except Exception:
         raise RuntimeError(

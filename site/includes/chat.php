@@ -126,6 +126,7 @@ if ($page === 'article' && $product_name) {
       placeholder="Posez votre question..."
       onkeydown="if(event.key==='Enter'){ event.preventDefault(); sendFromInput(); }"
     >
+    <button class="chat-image-btn" type="button" onclick="openImageSearch()" title="Rechercher par image">📷</button>
     <button class="chat-send-btn" type="button" onclick="sendFromInput()">→</button>
   </div>
 
