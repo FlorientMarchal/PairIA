@@ -88,4 +88,8 @@ def health():
 async def search_image(file: UploadFile = File(...)):
     image_bytes = await file.read()
     result = rechercher_produits_similaires(image_bytes)
-    return result
+    return {
+        "message": "Voici les produits qui ressemblent à votre photo :",
+        "products": result.get("products", []),
+        "action": "show_products"
+    }
