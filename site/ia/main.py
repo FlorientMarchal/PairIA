@@ -4,12 +4,14 @@
 
 import sys
 import os
+import json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from rag import get_response
+from rag import get_response, get_response_stream
 
 app = FastAPI(title="API Chatbot")
 
@@ -57,6 +59,24 @@ def chat(request: ChatRequest):
         history=[{"role": m.role, "content": m.content} for m in request.history]
     )
     return result
+
+@app.post("/chat/stream")
+def chat_stream(request: ChatRequest):
+    history = [{"role": m.role, "content": m.content} for m in request.history]
+
+    def generate():
+        generator = get_response_stream(
+            question=request.question,
+            product_id=request.product_id,
+            history=history
+        )
+        metadata = next(generator)
+        yield f"data: {json.dumps(metadata)}\n\n"
+        for chunk in generator:
+            yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 @app.get("/health")
 def health():
