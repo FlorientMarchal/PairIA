@@ -11,7 +11,7 @@ from llm_prompt import build_prompt, SYSTEM_PROMPT
 # Connexion Qdrant locale
 qdrant = QdrantClient(path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "qdrant_db"))
 
-# ✅ AMÉLIORATION 3 : liste étendue de mots-clés panier
+
 # Couvre plus de formulations naturelles françaises
 _CART_KEYWORDS = [
     "ajoute au panier", "ajouter au panier", "mets au panier",
