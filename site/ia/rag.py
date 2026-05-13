@@ -739,10 +739,12 @@ def get_response_stream(question: str, product_id: int = None, history: list = N
 
     # 2. Recherche Qdrant
     try:
+        filtres_preview = _extraire_filtres(question, history)
+        limit_qdrant = 15 if filtres_preview.get("categorie") else 5
         results_qdrant = qdrant.query_points(
             collection_name="produits_image",
             query=question_vector,
-            limit=5,
+            limit=limit_qdrant,
             score_threshold=0.10
         ).points
         print("[NB RESULTATS]", len(results_qdrant))
