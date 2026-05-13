@@ -15,6 +15,10 @@ __pycache__/
 # VS Code
 .vscode/
 
+
+# VENV
+venv/
+
 #pycache
 
 ia/__pycache__/
