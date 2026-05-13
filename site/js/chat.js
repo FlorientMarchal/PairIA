@@ -23,8 +23,10 @@ async function sendMessage(text) {
   console.group("[CHAT TEXTE] Envoi");
   console.log("question :", text);
   console.log("session_id :", sessionId);
-  console.log("history (" + conversationHistory.length + " msgs) :",
-    JSON.parse(JSON.stringify(conversationHistory)));
+  console.log(
+    "history (" + conversationHistory.length + " msgs) :",
+    JSON.parse(JSON.stringify(conversationHistory)),
+  );
   console.groupEnd();
 
   try {
@@ -65,37 +67,38 @@ async function sendMessage(text) {
 
         try {
           // Remplace le bloc de parsing data dans les deux fonctions
-            const data = JSON.parse(raw);
+          const data = JSON.parse(raw);
 
-            if (data.type === "products_final") {
-                // Produits filtrés reçus après le texte complet
-                products   = data.products || [];
-                action     = data.action;
-                product_id = data.product_id;
-
-            } else if (data.products !== undefined && data.products.length === 0) {
-                // Metadata initiale vide — on ignore
-                
-            } else if (data.chunk !== undefined) {
-                // Token texte — streaming normal
-                if (!typingRemoved) {
-                    typing.remove();
-                    typingRemoved = true;
-                    const bubbleDiv = document.createElement("div");
-                    bubbleDiv.className = "chat-msg bot";
-                    bubble = document.createElement("div");
-                    bubble.className = "chat-bubble";
-                    const time = document.createElement("div");
-                    time.className = "chat-time";
-                    time.textContent = "maintenant";
-                    bubbleDiv.appendChild(bubble);
-                    bubbleDiv.appendChild(time);
-                    container.appendChild(bubbleDiv);
-                }
-                message += data.chunk;
-                bubble.textContent = message;
-                container.scrollTop = container.scrollHeight;
+          if (data.type === "products_final") {
+            // Produits filtrés reçus après le texte complet
+            products = data.products || [];
+            action = data.action;
+            product_id = data.product_id;
+          } else if (
+            data.products !== undefined &&
+            data.products.length === 0
+          ) {
+            // Metadata initiale vide — on ignore
+          } else if (data.chunk !== undefined) {
+            // Token texte — streaming normal
+            if (!typingRemoved) {
+              typing.remove();
+              typingRemoved = true;
+              const bubbleDiv = document.createElement("div");
+              bubbleDiv.className = "chat-msg bot";
+              bubble = document.createElement("div");
+              bubble.className = "chat-bubble";
+              const time = document.createElement("div");
+              time.className = "chat-time";
+              time.textContent = "maintenant";
+              bubbleDiv.appendChild(bubble);
+              bubbleDiv.appendChild(time);
+              container.appendChild(bubbleDiv);
             }
+            message += data.chunk;
+            bubble.textContent = message;
+            container.scrollTop = container.scrollHeight;
+          }
         } catch (e) {}
       }
     }
@@ -105,8 +108,10 @@ async function sendMessage(text) {
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
-    console.log("[HISTORIQUE MIS À JOUR]",
-      JSON.parse(JSON.stringify(conversationHistory)));
+    console.log(
+      "[HISTORIQUE MIS À JOUR]",
+      JSON.parse(JSON.stringify(conversationHistory)),
+    );
 
     if (products.length === 1) {
       showCartSelector(products[0], container);
@@ -120,7 +125,6 @@ async function sendMessage(text) {
     }
 
     container.scrollTop = container.scrollHeight;
-
   } catch (error) {
     typing.remove();
     appendBotMessageText(
@@ -128,7 +132,10 @@ async function sendMessage(text) {
     );
     console.error("Erreur API chat :", error);
   } finally {
-    if (input) { input.disabled = false; input.focus(); }
+    if (input) {
+      input.disabled = false;
+      input.focus();
+    }
     if (sendBtn) sendBtn.disabled = false;
   }
 }
@@ -184,8 +191,10 @@ async function sendImageWithText(file, text) {
   console.group("[CHAT IMAGE] Envoi");
   console.log("question :", text);
   console.log("session_id :", sessionId);
-  console.log("history (" + conversationHistory.length + " msgs) :",
-    JSON.parse(JSON.stringify(conversationHistory)));
+  console.log(
+    "history (" + conversationHistory.length + " msgs) :",
+    JSON.parse(JSON.stringify(conversationHistory)),
+  );
   console.groupEnd();
 
   try {
@@ -222,56 +231,61 @@ async function sendImageWithText(file, text) {
 
         try {
           // Remplace le bloc de parsing data dans les deux fonctions
-            const data = JSON.parse(raw);
+          const data = JSON.parse(raw);
 
-            if (data.type === "products_final") {
-                // Produits filtrés reçus après le texte complet
-                products   = data.products || [];
-                action     = data.action;
-                product_id = data.product_id;
-
-            } else if (data.products !== undefined && data.products.length === 0) {
-                // Metadata initiale vide — on ignore
-                
-            } else if (data.chunk !== undefined) {
-                // Token texte — streaming normal
-                if (!typingRemoved) {
-                    typing.remove();
-                    typingRemoved = true;
-                    const bubbleDiv = document.createElement("div");
-                    bubbleDiv.className = "chat-msg bot";
-                    bubble = document.createElement("div");
-                    bubble.className = "chat-bubble";
-                    const time = document.createElement("div");
-                    time.className = "chat-time";
-                    time.textContent = "maintenant";
-                    bubbleDiv.appendChild(bubble);
-                    bubbleDiv.appendChild(time);
-                    container.appendChild(bubbleDiv);
-                }
-                message += data.chunk;
-                bubble.textContent = message;
-                container.scrollTop = container.scrollHeight;
+          if (data.type === "products_final") {
+            // Produits filtrés reçus après le texte complet
+            products = data.products || [];
+            action = data.action;
+            product_id = data.product_id;
+          } else if (
+            data.products !== undefined &&
+            data.products.length === 0
+          ) {
+            // Metadata initiale vide — on ignore
+          } else if (data.chunk !== undefined) {
+            // Token texte — streaming normal
+            if (!typingRemoved) {
+              typing.remove();
+              typingRemoved = true;
+              const bubbleDiv = document.createElement("div");
+              bubbleDiv.className = "chat-msg bot";
+              bubble = document.createElement("div");
+              bubble.className = "chat-bubble";
+              const time = document.createElement("div");
+              time.className = "chat-time";
+              time.textContent = "maintenant";
+              bubbleDiv.appendChild(bubble);
+              bubbleDiv.appendChild(time);
+              container.appendChild(bubbleDiv);
             }
+            message += data.chunk;
+            bubble.textContent = message;
+            container.scrollTop = container.scrollHeight;
+          }
         } catch (e) {}
       }
     }
 
     // Historique : description textuelle de l'image + produits trouvés
-    const productContext = products.length > 0
-      ? products.map(p => `${p.name} (${p.price}€)`).join(", ")
-      : "aucun produit trouvé";
+    const productContext =
+      products.length > 0
+        ? products.map((p) => `${p.name} (${p.price}€)`).join(", ")
+        : "aucun produit trouvé";
 
-    const imageContext = `[Recherche par image${text ? ` avec message : "${text}"` : ""}] `
-      + `Produits suggérés : ${productContext}`;
+    const imageContext =
+      `[Recherche par image${text ? ` avec message : "${text}"` : ""}] ` +
+      `Produits suggérés : ${productContext}`;
 
-    conversationHistory.push({ role: "user",      content: imageContext });
+    conversationHistory.push({ role: "user", content: imageContext });
     conversationHistory.push({ role: "assistant", content: message });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
-    console.log("[HISTORIQUE MIS À JOUR]",
-      JSON.parse(JSON.stringify(conversationHistory)));
+    console.log(
+      "[HISTORIQUE MIS À JOUR]",
+      JSON.parse(JSON.stringify(conversationHistory)),
+    );
 
     if (products.length === 1) {
       showCartSelector(products[0], container);
@@ -285,13 +299,17 @@ async function sendImageWithText(file, text) {
     }
 
     container.scrollTop = container.scrollHeight;
-
   } catch (error) {
     typing.remove();
-    appendBotMessageText("Désolé, la recherche par image est temporairement indisponible.");
+    appendBotMessageText(
+      "Désolé, la recherche par image est temporairement indisponible.",
+    );
     console.error("Erreur image+texte :", error);
   } finally {
-    if (input)   { input.disabled = false; input.focus(); }
+    if (input) {
+      input.disabled = false;
+      input.focus();
+    }
     if (sendBtn) sendBtn.disabled = false;
   }
 }
@@ -648,6 +666,7 @@ async function confirmChatCart(productId, btn) {
 /* ══════════════════════════════════════
    PANIER
 ══════════════════════════════════════ */
+
 async function addToCart(
   productId,
   quantity = 1,
@@ -655,10 +674,12 @@ async function addToCart(
   couleur = null,
 ) {
   try {
-    const basePath = window.location.pathname.includes("/site/")
-      ? "/site/"
-      : "/";
-    const res = await fetch(basePath + "cart/add.php", {
+    // On calcule le dossier de la page courante
+    const currentDir = window.location.pathname.substring(
+      0,
+      window.location.pathname.lastIndexOf("/") + 1,
+    );
+    const res = await fetch(currentDir + "cart/add.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
