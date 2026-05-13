@@ -1,6 +1,4 @@
 // js/image_search.js
-// Recherche de produits par image
-
 function initImageSearch() {
   const input = document.createElement("input");
   input.type = "file";
@@ -13,72 +11,43 @@ function initImageSearch() {
     const file = e.target.files[0];
     if (!file) return;
     input.value = "";
-    await sendImageMessage(file);
+    // Avant : await sendImageMessage(file)  ← déclenchait immédiatement
+    // Après : on stocke juste et on ouvre le prompt
+    pendingImageFile = file;
+    openImageTextPrompt(file);
   });
 }
 
-async function sendImageMessage(file) {
-  const container = document.getElementById("messages");
-  if (!container) return;
+// Fichier image en attente d'envoi
+let pendingImageFile = null;
 
-  // Affiche l'image dans le chat comme message utilisateur
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const imageUrl = e.target.result;
+function openImageTextPrompt(file) {
+  // Affiche la preview + input texte dans la zone de saisie
+  const preview = document.getElementById("image-preview-bar");
+  if (preview) {
+    const url = URL.createObjectURL(file);
+    preview.innerHTML = `
+      <div class="image-preview-inner">
+        <img src="${url}" alt="preview" style="height:48px;border-radius:6px;">
+        <span class="image-preview-name">${escapeHtml(file.name)}</span>
+        <button onclick="cancelPendingImage()" title="Annuler">✕</button>
+      </div>`;
+    preview.style.display = "flex";
+  }
+  // Focus sur l'input texte pour que l'utilisateur puisse ajouter un message
+  const input = document.getElementById("chat-input");
+  if (input) {
+    input.placeholder = "Décrivez ce que vous cherchez (optionnel)...";
+    input.focus();
+  }
+}
 
-    const userDiv = document.createElement("div");
-    userDiv.className = "chat-msg user";
-    userDiv.innerHTML = `
-      <div class="chat-bubble chat-bubble-image">
-        <img src="${imageUrl}" alt="Image recherche" style="max-width:200px;max-height:200px;border-radius:8px;">
-      </div>
-      <div class="chat-time">maintenant</div>`;
-    container.appendChild(userDiv);
-    container.scrollTop = container.scrollHeight;
-
-    // Indicateur de chargement
-    const typing = appendTyping();
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch(`${API_URL}/search-image`, {
-        method: "POST",
-        body: formData
-      });
-
-      const data = await response.json();
-      typing.remove();
-
-      // Bulle réponse bot
-      const botDiv = document.createElement("div");
-      botDiv.className = "chat-msg bot";
-      botDiv.innerHTML = `
-        <div class="chat-bubble">J'ai trouvé des chaussures similaires à votre photo :</div>
-        <div class="chat-time">maintenant</div>`;
-      container.appendChild(botDiv);
-
-      // Affiche les produits
-      const products = data.products || [];
-      if (products.length === 1) {
-        showCartSelector(products[0], container);
-      } else if (products.length > 1) {
-        showProductPicker(products, container);
-      } else {
-        appendBotMessageText("Aucun produit similaire trouvé. Essayez avec une autre photo.");
-      }
-
-      container.scrollTop = container.scrollHeight;
-
-    } catch (error) {
-      typing.remove();
-      appendBotMessageText("Désolé, la recherche par image est temporairement indisponible.");
-      console.error("Erreur recherche image :", error);
-    }
-  };
-
-  reader.readAsDataURL(file);
+function cancelPendingImage() {
+  pendingImageFile = null;
+  const preview = document.getElementById("image-preview-bar");
+  if (preview) preview.style.display = "none";
+  const input = document.getElementById("chat-input");
+  if (input) input.placeholder = "Posez votre question...";
 }
 
 function openImageSearch() {

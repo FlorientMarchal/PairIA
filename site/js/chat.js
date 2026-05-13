@@ -2,9 +2,10 @@
 const API_URL = "http://localhost:8000";
 
 let conversationHistory = [];
+let sessionId = crypto.randomUUID();
 
-/* 
-   CHAT
+/*
+   CHAT TEXTE
 */
 async function sendMessage(text) {
   const container = document.getElementById("messages");
@@ -18,8 +19,20 @@ async function sendMessage(text) {
   appendUserMessage(text);
   const typing = appendTyping();
 
+  // ── DEBUG ──
+  console.group("[CHAT TEXTE] Envoi");
+  console.log("question :", text);
+  console.log("session_id :", sessionId);
+  console.log("history (" + conversationHistory.length + " msgs) :",
+    JSON.parse(JSON.stringify(conversationHistory)));
+  console.groupEnd();
+
   try {
-    const body = { question: text, history: conversationHistory };
+    const body = {
+      question: text,
+      history: conversationHistory,
+      session_id: sessionId,
+    };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
 
     const response = await fetch(`${API_URL}/chat/stream`, {
@@ -51,29 +64,38 @@ async function sendMessage(text) {
         if (raw === "[DONE]") break;
 
         try {
-          const data = JSON.parse(raw);
-          if (data.products !== undefined) {
-            products   = data.products || [];
-            action     = data.action;
-            product_id = data.product_id;
-          } else if (data.chunk !== undefined) {
-            if (!typingRemoved) {
-              typing.remove();
-              typingRemoved = true;
-              bubbleDiv = document.createElement("div");
-              bubbleDiv.className = "chat-msg bot";
-              bubble = document.createElement("div");
-              bubble.className = "chat-bubble";
-              time.className = "chat-time";
-              time.textContent = "maintenant";
-              bubbleDiv.appendChild(bubble);
-              bubbleDiv.appendChild(time);
-              container.appendChild(bubbleDiv);
+          // Remplace le bloc de parsing data dans les deux fonctions
+            const data = JSON.parse(raw);
+
+            if (data.type === "products_final") {
+                // Produits filtrés reçus après le texte complet
+                products   = data.products || [];
+                action     = data.action;
+                product_id = data.product_id;
+
+            } else if (data.products !== undefined && data.products.length === 0) {
+                // Metadata initiale vide — on ignore
+                
+            } else if (data.chunk !== undefined) {
+                // Token texte — streaming normal
+                if (!typingRemoved) {
+                    typing.remove();
+                    typingRemoved = true;
+                    const bubbleDiv = document.createElement("div");
+                    bubbleDiv.className = "chat-msg bot";
+                    bubble = document.createElement("div");
+                    bubble.className = "chat-bubble";
+                    const time = document.createElement("div");
+                    time.className = "chat-time";
+                    time.textContent = "maintenant";
+                    bubbleDiv.appendChild(bubble);
+                    bubbleDiv.appendChild(time);
+                    container.appendChild(bubbleDiv);
+                }
+                message += data.chunk;
+                bubble.textContent = message;
+                container.scrollTop = container.scrollHeight;
             }
-            message += data.chunk;
-            bubble.textContent = message;
-            container.scrollTop = container.scrollHeight;
-          }
         } catch (e) {}
       }
     }
@@ -82,6 +104,9 @@ async function sendMessage(text) {
     conversationHistory.push({ role: "assistant", content: message });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
+
+    console.log("[HISTORIQUE MIS À JOUR]",
+      JSON.parse(JSON.stringify(conversationHistory)));
 
     if (products.length === 1) {
       showCartSelector(products[0], container);
@@ -110,14 +135,170 @@ async function sendMessage(text) {
 
 function sendFromInput() {
   const input = document.getElementById("chat-input");
-  const text = input?.value.trim();
-  if (!text) return;
-  input.value = "";
-  sendMessage(text);
+  const text = input?.value.trim() || "";
+
+  if (pendingImageFile) {
+    input.value = "";
+    input.placeholder = "Posez votre question...";
+    const file = pendingImageFile;
+    pendingImageFile = null;
+    const preview = document.getElementById("image-preview-bar");
+    if (preview) preview.style.display = "none";
+    sendImageWithText(file, text);
+  } else {
+    if (!text) return;
+    input.value = "";
+    sendMessage(text);
+  }
+}
+
+/*
+   CHAT IMAGE + TEXTE
+*/
+async function sendImageWithText(file, text) {
+  const container = document.getElementById("messages");
+  if (!container) return;
+
+  const input = document.getElementById("chat-input");
+  const sendBtn = document.querySelector(".chat-send-btn");
+  if (input) input.disabled = true;
+  if (sendBtn) sendBtn.disabled = true;
+
+  // Bulle utilisateur : image + texte éventuel
+  const imageUrl = URL.createObjectURL(file);
+  const userDiv = document.createElement("div");
+  userDiv.className = "chat-msg user";
+  userDiv.innerHTML = `
+    <div class="chat-bubble chat-bubble-image">
+      <img src="${imageUrl}" alt="Image recherche"
+           style="max-width:200px;max-height:200px;border-radius:8px;display:block;">
+      ${text ? `<div style="margin-top:6px">${escapeHtml(text)}</div>` : ""}
+    </div>
+    <div class="chat-time">maintenant</div>`;
+  container.appendChild(userDiv);
+  container.scrollTop = container.scrollHeight;
+
+  const typing = appendTyping();
+
+  // ── DEBUG ──
+  console.group("[CHAT IMAGE] Envoi");
+  console.log("question :", text);
+  console.log("session_id :", sessionId);
+  console.log("history (" + conversationHistory.length + " msgs) :",
+    JSON.parse(JSON.stringify(conversationHistory)));
+  console.groupEnd();
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("question", text || "");
+    formData.append("history", JSON.stringify(conversationHistory));
+    formData.append("session_id", sessionId);
+
+    const response = await fetch(`${API_URL}/chat/stream-image`, {
+      method: "POST",
+      body: formData,
+    });
+
+    let typingRemoved = false;
+    let bubble = null;
+    let message = "";
+    let products = [];
+    let action = null;
+    let product_id = null;
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const lines = decoder.decode(value).split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (raw === "[DONE]") break;
+
+        try {
+          // Remplace le bloc de parsing data dans les deux fonctions
+            const data = JSON.parse(raw);
+
+            if (data.type === "products_final") {
+                // Produits filtrés reçus après le texte complet
+                products   = data.products || [];
+                action     = data.action;
+                product_id = data.product_id;
+
+            } else if (data.products !== undefined && data.products.length === 0) {
+                // Metadata initiale vide — on ignore
+                
+            } else if (data.chunk !== undefined) {
+                // Token texte — streaming normal
+                if (!typingRemoved) {
+                    typing.remove();
+                    typingRemoved = true;
+                    const bubbleDiv = document.createElement("div");
+                    bubbleDiv.className = "chat-msg bot";
+                    bubble = document.createElement("div");
+                    bubble.className = "chat-bubble";
+                    const time = document.createElement("div");
+                    time.className = "chat-time";
+                    time.textContent = "maintenant";
+                    bubbleDiv.appendChild(bubble);
+                    bubbleDiv.appendChild(time);
+                    container.appendChild(bubbleDiv);
+                }
+                message += data.chunk;
+                bubble.textContent = message;
+                container.scrollTop = container.scrollHeight;
+            }
+        } catch (e) {}
+      }
+    }
+
+    // Historique : description textuelle de l'image + produits trouvés
+    const productContext = products.length > 0
+      ? products.map(p => `${p.name} (${p.price}€)`).join(", ")
+      : "aucun produit trouvé";
+
+    const imageContext = `[Recherche par image${text ? ` avec message : "${text}"` : ""}] `
+      + `Produits suggérés : ${productContext}`;
+
+    conversationHistory.push({ role: "user",      content: imageContext });
+    conversationHistory.push({ role: "assistant", content: message });
+    if (conversationHistory.length > 20)
+      conversationHistory = conversationHistory.slice(-20);
+
+    console.log("[HISTORIQUE MIS À JOUR]",
+      JSON.parse(JSON.stringify(conversationHistory)));
+
+    if (products.length === 1) {
+      showCartSelector(products[0], container);
+    } else if (products.length > 1) {
+      showProductPicker(products, container);
+    }
+
+    if (action === "add_to_cart" && product_id) {
+      const produit = products.find((p) => p.id === product_id) || products[0];
+      if (produit) showCartSelector(produit);
+    }
+
+    container.scrollTop = container.scrollHeight;
+
+  } catch (error) {
+    typing.remove();
+    appendBotMessageText("Désolé, la recherche par image est temporairement indisponible.");
+    console.error("Erreur image+texte :", error);
+  } finally {
+    if (input)   { input.disabled = false; input.focus(); }
+    if (sendBtn) sendBtn.disabled = false;
+  }
 }
 
 function resetConversation() {
   conversationHistory = [];
+  sessionId = crypto.randomUUID();
   const container = document.getElementById("messages");
   if (container) container.innerHTML = "";
 }
@@ -174,8 +355,6 @@ function appendTyping() {
   div.className = "chat-msg bot";
   div.id = "typing-indicator";
 
-  // message de patience affiché après 5 secondes
-
   div.innerHTML = `
     <div class="chat-typing">
       <div class="chat-typing-dot"></div>
@@ -190,8 +369,6 @@ function appendTyping() {
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
-
-  //  Affiche le message uniquement si la réponse prend plus de 5 secondes
 
   setTimeout(() => {
     const msg = document.getElementById("typing-msg");
@@ -539,8 +716,6 @@ function escapeAttr(text) {
 document.addEventListener("DOMContentLoaded", () => {
   updateCartCount();
 
-  // ✅ Listener pour les chips via data-msg
-  // Remplace les onclick PHP qui cassaient avec les apostrophes
   document.addEventListener("click", (e) => {
     const chip = e.target.closest(".chat-chip");
     if (chip && chip.dataset.msg) {

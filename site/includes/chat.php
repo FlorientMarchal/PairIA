@@ -118,7 +118,9 @@ if ($page === 'article' && $product_name) {
   <!-- ✅ CORRECTION : le commentaire HTML était à l'intérieur de la balise input -->
   <!-- ce qui rendait le champ non interactif et affichait du texte bizarre -->
   <!-- Les commentaires doivent toujours être EN DEHORS des balises HTML -->
-  <div class="chat-input-area">
+<div class="chat-input-area">
+  <div id="image-preview-bar"></div>
+  <div class="chat-input-row">
     <input
       class="chat-input"
       id="chat-input"
@@ -129,6 +131,7 @@ if ($page === 'article' && $product_name) {
     <button class="chat-image-btn" type="button" onclick="openImageSearch()" title="Rechercher par image">📷</button>
     <button class="chat-send-btn" type="button" onclick="sendFromInput()">→</button>
   </div>
+</div>
 
 </div>
 
