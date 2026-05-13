@@ -86,21 +86,23 @@ def get_response(question: str, product_id: int = None, history: list = None, im
         history = []
 
     # REMPLACE l'étape 1 (vectorisation) par ceci :
-        try:
-            is_image_search = False
-            if image_path and os.path.exists(image_path):
-                is_image_search = True
-                image_vec = model.encode(Image.open(image_path))
-                if question and _user_wants_cart(question) and produits_trouves:
-                    # Fusion Image (70%) + Texte (30%)
-                    question_vector = ((image_vec * 0.7) + (model.encode(question) * 0.3)).tolist()
-                else:
-                    question_vector = image_vec.tolist()
+    try:
+        is_image_search = False
+        if image_path and os.path.exists(image_path):
+            is_image_search = True
+            image_vec = model.encode(Image.open(image_path))
+
+            if question and _user_wants_cart(question):
+                # Fusion Image (70%) + Texte (30%)
+                question_vector = ((image_vec * 0.7) + (model.encode(question) * 0.3)).tolist()
             else:
-                question_vector = model.encode(question).tolist()
-        except Exception as e:
-            print(f"Erreur CLIP : {e}")
-            question_vector = [0] * 512
+                question_vector = image_vec.tolist()
+        else:
+            question_vector = model.encode(question).tolist()
+
+    except Exception as e:
+        print(f"Erreur CLIP : {e}")
+        question_vector = [0] * 512
 
     # MODIFIE l'étape 2 (La collection Qdrant) :
     results = qdrant.query_points(
