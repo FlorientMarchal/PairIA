@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer
-from rag import qdrant
+from database import qdrant
 from image_preprocessing import preprocess_image
 
 # chargement modèle une seule fois

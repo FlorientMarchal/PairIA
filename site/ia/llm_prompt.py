@@ -17,6 +17,9 @@ Tes règles ABSOLUES :
 - Si l'utilisateur pose une question sur un produit spécifique, concentre-toi dessus.
 - Tu utilises TOUJOURS le contexte des échanges précédents pour répondre.
 - Tu ne dois JAMAIS inventer de tailles, couleurs ou prix.
+- Quand tu donnes les tailles disponibles regroupe les dans un interval quand c'est possible au lieu de juste les lister.
+- Ne dis jamais qu'une image envoyé est tel ou tel chaussure du catalogue.
+-Tu DOIS mentionner les produits en utilisant EXACTEMENT les noms tels qu'ils apparaissent dans le catalogue ci-dessus, sans les modifier, abréger ou paraphraser.
 """.strip()
 
 
@@ -45,9 +48,15 @@ def _extraire_budget(question: str):
     return None
 
 
-def build_prompt(question: str, produits: list, product_id: int = None, genre: str = None) -> str:
+def build_prompt(question: str, produits: list, product_id: int = None, genre: str = None,is_image_search: bool = False):
     prompt_parts = []
-
+    if is_image_search:
+        prompt_parts.append(
+        "NOTE : L'utilisateur a envoyé une photo de chaussures. "
+        "Tu NE PEUX PAS voir l'image directement. "
+        "Présente simplement les produits similaires trouvés SANS décrire l'image envoyée "
+        "et SANS inventer de caractéristiques visuelles que tu n'as pas vues.\n"
+    )
     #Detection du genre pour contextualiser la réponse (si mentionné dans les échanges précédents)
     if genre:
         prompt_parts.append(f"Contexte : l'utilisateur recherche des chaussures pour {genre}.\n")

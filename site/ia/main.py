@@ -5,15 +5,17 @@
 import sys
 import os
 import json
+import time
+import tempfile
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from rag import get_response, get_response_stream
-from fastapi import File, UploadFile
-from image_search import rechercher_produits_similaires
+from image_search import model as clip_model, rechercher_produits_similaires
+from PIL import Image
 
 app = FastAPI(title="API Chatbot")
 
@@ -24,6 +26,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Stockage temporaire des vecteurs image par session ──
+# { session_id: {"vector": [...], "ts": timestamp} }
+_image_vectors: dict = {}
+
+def _clean_old_vectors(max_age_seconds: int = 3600):
+    """Supprime les vecteurs de plus d'1h"""
+    now = time.time()
+    expired = [sid for sid, v in _image_vectors.items()
+               if now - v["ts"] > max_age_seconds]
+    for sid in expired:
+        del _image_vectors[sid]
+    if expired:
+        print(f"[SESSION] {len(expired)} vecteur(s) expirés supprimés")
+
+
+# ── Modèles Pydantic ──
+
 class HistoryMessage(BaseModel):
     role: str
     content: str
@@ -32,6 +51,7 @@ class ChatRequest(BaseModel):
     question: str
     product_id: int | None = None
     history: list[HistoryMessage] = []
+    session_id: str | None = None
 
 class Product(BaseModel):
     id: int
@@ -49,9 +69,16 @@ class ChatResponse(BaseModel):
     product_id: int | None = None
     quantity: int | None = None
 
+
+# ── Endpoints ──
+
 @app.get("/")
 def root():
     return {"status": "PairIA API en ligne"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
@@ -66,23 +93,79 @@ def chat(request: ChatRequest):
 def chat_stream(request: ChatRequest):
     history = [{"role": m.role, "content": m.content} for m in request.history]
 
+    # Récupère le vecteur image de la session si disponible
+    entry = _image_vectors.get(request.session_id)
+    image_vector = entry["vector"] if entry else None
+    if image_vector:
+        print(f"[SESSION] vecteur image récupéré pour {request.session_id}")
+
     def generate():
         generator = get_response_stream(
             question=request.question,
             product_id=request.product_id,
-            history=history
+            history=history,
+            image_vector=image_vector,
         )
-        metadata = next(generator)
-        yield f"data: {json.dumps(metadata)}\n\n"
         for chunk in generator:
-            yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+            if isinstance(chunk, dict):
+                yield f"data: {json.dumps(chunk)}\n\n"
+            else:
+                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+@app.post("/chat/stream-image")
+async def chat_stream_image(
+    file: UploadFile = File(...),
+    question: str    = Form(default=""),
+    history: str     = Form(default="[]"),
+    session_id: str  = Form(default=""),
+):
+    history_parsed = json.loads(history)
+
+    print(f"[ENDPOINT] question   : {question!r}")
+    print(f"[ENDPOINT] session_id : {session_id!r}")
+    print(f"[ENDPOINT] history    : {len(history_parsed)} messages")
+
+    # Sauvegarde temporaire de l'image
+    suffix = os.path.splitext(file.filename)[-1] or ".jpg"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    # Vectorisation + stockage en session
+    try:
+        image_vec = clip_model.encode(Image.open(tmp_path)).tolist()
+        if session_id:
+            _clean_old_vectors()
+            _image_vectors[session_id] = {
+                "vector": image_vec,
+                "ts": time.time()
+            }
+            print(f"[SESSION] vecteur image stocké pour {session_id}")
+    except Exception as e:
+        print(f"[SESSION] erreur vectorisation : {e}")
+
+    def generate():
+        try:
+            generator = get_response_stream(
+                question=question,
+                history=history_parsed,
+                image_path=tmp_path,
+            )
+            for chunk in generator:
+                if isinstance(chunk, dict):
+                    # Injecte session_id dans le products_final
+                    if chunk.get("type") == "products_final":
+                        chunk["session_id"] = session_id
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                else:
+                    yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+            yield "data: [DONE]\n\n"
+        finally:
+            os.unlink(tmp_path)
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 @app.post("/search-image")
 async def search_image(file: UploadFile = File(...)):
