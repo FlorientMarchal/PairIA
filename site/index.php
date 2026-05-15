@@ -221,6 +221,7 @@ $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchCol
 <script src="js/global.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/image_search.js"></script>
+<script src="js/voice.js"></script>
 <script>
 
 const prixMaxAbsolu = <?= $prix_max ?>;

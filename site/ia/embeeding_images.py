@@ -16,19 +16,18 @@ from image_preprocessing import preprocess_image
 DB_CONFIG = {
     "host": "127.0.0.1",
     "user": "root",
-    "password": "root", # Remplace par ton mot de passe (ex: "" ou "root")
+    "password": "root",  # Remplace par ton mot de passe si besoin
     "database": "e_commmerce",
     "port": 3306
 }
 
-DOSSIER_IMAGES = "../"
 COLLECTION_NAME = "produits_image"
 
 # On utilise Qdrant en local (dossier persistant)
 qdrant = QdrantClient(path="./qdrant_db")
 
 qdrant.recreate_collection(
-    collection_name="produits_image", # Vérifie que c'est le même nom partout
+    collection_name=COLLECTION_NAME,
     vectors_config=VectorParams(size=512, distance=Distance.COSINE)
 )
 
@@ -47,7 +46,6 @@ def indexer_images():
         conn = mysql.connector.connect(**DB_CONFIG)
         cursor = conn.cursor(dictionary=True)
 
-        # Requête optimisée avec GROUP_CONCAT pour les variantes
         cursor.execute("""
             SELECT 
                 a.id_shoes, a.nom, a.categorie, a.marque, a.genre, 
@@ -86,7 +84,12 @@ def indexer_images():
             nb_err += 1
             continue
 
-        image_path = os.path.join(DOSSIER_IMAGES, image_filename)
+        # --- Nettoyage du chemin venant de MySQL ---
+        image_filename = image_filename.replace("images/", "").replace("/images/", "")
+
+        # --- Construction du chemin absolu vers l'image ---
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        image_path = os.path.abspath(os.path.join(BASE_DIR, "..", "images", image_filename))
 
         if not os.path.exists(image_path):
             print(f"✗ Image introuvable : {image_path}")
@@ -97,12 +100,10 @@ def indexer_images():
             # --- ÉTAPE A : Prétraitement (Suppression fond + Redimensionnement) ---
             with open(image_path, "rb") as f:
                 image_bytes = f.read()
-            
-            # Cette fonction utilise rembg (ton code de départ)
+
             image_calculee = preprocess_image(image_bytes)
 
             # --- ÉTAPE B : Embedding CLIP ---
-            # On convertit l'image PIL en vecteur
             embedding = model.encode(image_calculee).tolist()
 
             # --- ÉTAPE C : Insertion Qdrant ---

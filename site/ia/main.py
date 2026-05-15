@@ -1,12 +1,15 @@
 # ia/main.py
 # Serveur FastAPI
 # Lancer avec : uvicorn main:app --reload --port 8000
+#Lancement kardiatou: uvicorn ia.main:app --reload --port 8000
 
 import sys
 import os
 import json
 import time
 import tempfile
+import whisper
+import shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -25,6 +28,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ✅ Charger le modèle Whisper une seule fois au démarrage
+print("Chargement du modèle Whisper...")
+whisper_model = whisper.load_model("base")
+print("Whisper prêt ✓")
 
 # ── Stockage temporaire des vecteurs image par session ──
 # { session_id: {"vector": [...], "ts": timestamp} }
@@ -176,3 +183,37 @@ async def search_image(file: UploadFile = File(...)):
         "products": result.get("products", []),
         "action": "show_products"
     }
+
+@app.post("/transcribe")
+async def transcribe(file: UploadFile = File(...)):
+    """
+    Reçoit un fichier audio webm depuis le navigateur,
+    le transcrit en français avec Whisper local,
+    et retourne le texte.
+    """
+    # ✅ Sauvegarde temporaire sur disque
+    # Whisper ne peut pas lire depuis la mémoire, il faut un vrai fichier
+    suffix = ".webm"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+
+    try:
+        result = whisper_model.transcribe(
+            tmp_path,
+            language="fr",
+            fp16=False
+        )
+        text = result["text"].strip()
+        return {"text": text, "success": True}
+
+    except Exception as e:
+        return {"text": "", "success": False, "error": str(e)}
+
+    finally:
+        # ✅ CORRECTION Windows : os.unlink peut échouer si Whisper
+        # a déjà supprimé ou verrouillé le fichier — on ignore l'erreur
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
