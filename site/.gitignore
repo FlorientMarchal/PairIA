@@ -1,6 +1,6 @@
 # Qdrant
 ia/qdrant_db/
- qdrant_db/
+qdrant_db/
 site/qdrant_db/
 
 # Chroma DB (ancien)
