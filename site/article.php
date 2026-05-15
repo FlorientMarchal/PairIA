@@ -190,6 +190,7 @@ $similaires = $stmt->fetchAll();
 
 <script src="js/global.js"></script>
 <script src="js/chat.js"></script>
+<script src="js/voice.js"></script>
 <script>
   // Données du produit pour le chat
   const PRODUCT_ID   = <?= $id ?>;

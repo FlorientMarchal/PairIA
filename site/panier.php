@@ -151,6 +151,7 @@ $premier_article = !empty($panier) ? array_values($panier)[0] : null;
 
 <script src="js/global.js"></script>
 <script src="js/chat.js"></script>
+<script src="js/voice.js"></script>
 <script>
 
 const LIVRAISON_SEUIL = 80;

@@ -743,4 +743,10 @@ document.addEventListener("DOMContentLoaded", () => {
       sendMessage(chip.dataset.msg);
     }
   });
+
+  //  ACTIVATION MICRO SI SUPPORTÉ
+  if (typeof voiceSupported === "function" && voiceSupported()) {
+    const mic = document.getElementById("voice-btn");
+    if (mic) mic.style.display = "inline-flex";
+  }
 });
