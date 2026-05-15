@@ -48,12 +48,13 @@ def _extraire_budget(question: str):
     return None
 
 
-def build_prompt(question: str, produits: list, product_id: int = None, genre: str = None,is_image_search: bool = False):
+def build_prompt(question: str, produits: list, product_id: int = None, genre: str = None, is_image_search: bool = False, contexte_filtres: str = ""):
     prompt_parts = []
+    if contexte_filtres:
+        prompt_parts.append(contexte_filtres + "\n")
     if is_image_search:
         prompt_parts.append(
         "NOTE : L'utilisateur a envoyé une photo de chaussures. "
-        "Tu NE PEUX PAS voir l'image directement. "
         "Présente simplement les produits similaires trouvés SANS décrire l'image envoyée "
         "et SANS inventer de caractéristiques visuelles que tu n'as pas vues.\n"
     )
@@ -71,24 +72,7 @@ def build_prompt(question: str, produits: list, product_id: int = None, genre: s
             )
 
     if produits:
-        #  AJOUT : filtre par budget si détecté dans la question
-        budget = _extraire_budget(question)
-        if budget:
-            produits_filtres = [p for p in produits if p["price"] <= budget]
-            # Si aucun produit ne passe le filtre, on garde tous les produits
-            # et on laisse Mistral expliquer qu'il n'y a rien dans ce budget
-            if not produits_filtres:
-                prompt_parts.append(
-                    f"⚠️ Aucun produit dans le catalogue ne coûte moins de {budget}€. "
-                    f"Voici les produits les plus proches :"
-                )
-            else:
-                produits = produits_filtres
-                prompt_parts.append(
-                    f"Produits disponibles sous {budget}€ :"
-                )
-        else:
-            prompt_parts.append("Produits disponibles dans le catalogue :")
+        prompt_parts.append("Produits disponibles dans le catalogue :")
 
         for i, p in enumerate(produits):
             tailles_str  = ", ".join(p.get("tailles",  [])) or "non précisé"
