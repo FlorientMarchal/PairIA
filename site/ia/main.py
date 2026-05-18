@@ -1,6 +1,7 @@
 # ia/main.py
 # Serveur FastAPI
 # Lancer avec : py -m uvicorn main:app --reload --port 8000
+# Ollama florient: $env:OLLAMA_HOST="0.0.0.0"; $env:OLLAMA_ORIGINS="*"; & "C:\Users\Dell\Desktop\ollama-windows-amd64\ollama.exe" serve
 #Lancement kardiatou: uvicorn ia.main:app --reload --port 8000
 
 import sys

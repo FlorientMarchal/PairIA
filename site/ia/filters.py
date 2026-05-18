@@ -284,12 +284,14 @@ def extraire_filtres(question: str, history: list) -> dict:
     return filtres
 
 
-def appliquer_filtres(produits: list, question: str, history: list) -> tuple[list, str]:
+def appliquer_filtres(produits: list, question: str, history: list, filtres: dict = None) -> tuple[list, str]:
     """
-    Applique les filtres extraits sur la liste de produits.
+    Applique les filtres sur la liste de produits.
+    Si filtres est fourni (pré-calculé), on l'utilise directement.
     Retourne (produits_filtrés, contexte_pour_mistral).
     """
-    filtres = extraire_filtres(question, history)
+    if filtres is None:
+        filtres = extraire_filtres(question, history)
 
     if not filtres:
         return produits, ""
