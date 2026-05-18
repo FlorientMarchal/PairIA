@@ -142,7 +142,7 @@ async function sendMessage(text) {
 
 function sendFromInput() {
   const input = document.getElementById("chat-input");
-  const text = input?.value.trim() || "";
+  const text = input?.value || "";
 
   if (pendingImageFile) {
     input.value = "";
@@ -153,7 +153,7 @@ function sendFromInput() {
     if (preview) preview.style.display = "none";
     sendImageWithText(file, text);
   } else {
-    if (!text) return;
+    if (!text.trim()) return;
     input.value = "";
     sendMessage(text);
   }
