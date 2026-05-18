@@ -1,8 +1,10 @@
 # ia/intention_classifier.py
 import torch
+import os
 from transformers import CamembertTokenizer, CamembertForSequenceClassification
 
-MODEL_DIR = "./modele_intention"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(BASE_DIR, "modele_intention")
 MAX_LEN   = 64
 LABELS    = [
     "recherche",
