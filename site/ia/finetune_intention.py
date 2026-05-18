@@ -3,6 +3,7 @@
 # Lancer avec : python finetune_intention.py
 
 import json
+import os
 import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
@@ -14,15 +15,17 @@ from transformers import (
     TrainingArguments,
 )
 from torch.utils.data import Dataset
+BASE_DIR = os.path.dirname(__file__)
 
 # ── Config ──
-MODEL_NAME   = "camembert-base"
-OUTPUT_DIR   = "./modele_intention"
-DATASET_PATH = "./dataset_intentions.json"
-MAX_LEN      = 64
-BATCH_SIZE   = 16
-EPOCHS       = 5
-SEED         = 42
+MODEL_NAME = "camembert-base"
+OUTPUT_DIR = os.path.join(BASE_DIR, "modele_intention")
+DATASET_PATH = os.path.join(BASE_DIR, "dataset_intentions.json")
+
+MAX_LEN = 64
+BATCH_SIZE = 16
+EPOCHS = 5
+SEED = 42
 
 LABELS = [
     "recherche",
