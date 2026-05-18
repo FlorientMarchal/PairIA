@@ -31,7 +31,7 @@ app.add_middleware(
 )
 # ✅ Charger le modèle Whisper une seule fois au démarrage
 print("Chargement du modèle Whisper...")
-whisper_model = whisper.load_model("base")
+whisper_model = whisper.load_model("small")
 print("Whisper prêt ✓")
 
 # ── Stockage temporaire des vecteurs image par session ──
@@ -187,47 +187,61 @@ async def search_image(file: UploadFile = File(...)):
 
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
-    """
-    Reçoit un fichier audio webm depuis le navigateur,
-    le transcrit en français avec Whisper local.
-    """
-    suffix = ".webm"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        shutil.copyfileobj(file.file, tmp)
-        tmp_path = tmp.name
+    # ✅ Sauvegarde du fichier webm original
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_webm:
+        shutil.copyfileobj(file.file, tmp_webm)
+        webm_path = tmp_webm.name
+
+    # ✅ Conversion webm → wav via ffmpeg
+    # Whisper est plus fiable avec du WAV qu'avec du WebM
+    wav_path = webm_path.replace(".webm", ".wav")
+
+    try:
+        import subprocess
+        subprocess.run(
+            [
+                "ffmpeg", "-y",           # -y : écrase sans demander
+                "-i", webm_path,          # fichier source webm
+                "-ar", "16000",           # 16kHz — fréquence optimale pour Whisper
+                "-ac", "1",               # mono — Whisper n'a pas besoin de stéréo
+                "-c:a", "pcm_s16le",      # format WAV non compressé
+                wav_path
+            ],
+            check=True,
+            capture_output=True
+        )
+        print(f"[WHISPER] WAV créé : {os.path.getsize(wav_path)} octets")
+    except subprocess.CalledProcessError as e:
+        print(f"[WHISPER] Erreur ffmpeg : {e.stderr.decode()}")
+        # Fallback : utilise le webm directement si ffmpeg échoue
+        wav_path = webm_path
 
     try:
         result = whisper_model.transcribe(
-            tmp_path,
+            wav_path,                          # ✅ WAV au lieu de WebM
             language="fr",
             fp16=False,
-            # ces paramètres améliorent la précision en français
             condition_on_previous_text=False,
-            # temperature=0 force Whisper à choisir le token le plus probable
             temperature=0,
-            # no_speech_threshold : si la probabilité de silence est > 0.6
-            # Whisper retourne une chaîne vide plutôt que d'inventer du texte
             no_speech_threshold=0.6,
-            # compression_ratio_threshold : si Whisper compresse trop le texte
-            # (signe d'hallucination), il abandonne et retourne vide
-            compression_ratio_threshold=2.4, #verifie que c'est présent
+            compression_ratio_threshold=2.4,
         )
         text = result["text"].strip()
+        print(f"[WHISPER] transcrit : {text!r}")
 
-        # si le texte est trop court ou vide, on retourne vide
-        # plutôt que du bruit transcrit
         if len(text) < 2:
             return {"text": "", "success": False, "error": "Aucune parole détectée"}
 
-        print(f"[WHISPER] transcrit : {text!r}")
         return {"text": text, "success": True}
 
     except Exception as e:
-        print(f"[WHISPER] erreur : {e}")
+        print(f"[WHISPER] ERREUR : {e}")
         return {"text": "", "success": False, "error": str(e)}
 
     finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+        # Supprime les deux fichiers temporaires
+        for path in [webm_path, wav_path]:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
