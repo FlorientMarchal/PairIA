@@ -17,15 +17,12 @@ __pycache__/
 # VS Code
 .vscode/
 
-
 # VENV
 venv/
 
 #pycache
-
 ia/__pycache__/
 *.pyc
-
 
 # Model intention
 Add-Content .gitignore "`nia/modele_intention/model.safetensors"

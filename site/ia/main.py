@@ -1,6 +1,6 @@
 # ia/main.py
 # Serveur FastAPI
-# Lancer avec : uvicorn main:app --reload --port 8000
+# Lancer avec : py -m uvicorn main:app --reload --port 8000
 #Lancement kardiatou: uvicorn ia.main:app --reload --port 8000
 
 import sys
@@ -16,9 +16,10 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from rag import get_response, get_response_stream
+from rag import get_response_stream
 from image_search import model as clip_model, rechercher_produits_similaires
 from PIL import Image
+#from rag import get_response
 
 app = FastAPI(title="API Chatbot")
 
@@ -53,6 +54,7 @@ def _clean_old_vectors(max_age_seconds: int = 3600):
 class HistoryMessage(BaseModel):
     role: str
     content: str
+    products: list[dict] = []
 
 class ChatRequest(BaseModel):
     question: str
@@ -87,6 +89,7 @@ def root():
 def health():
     return {"status": "ok"}
 
+"""
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     result = get_response(
@@ -95,10 +98,11 @@ def chat(request: ChatRequest):
         history=[{"role": m.role, "content": m.content} for m in request.history]
     )
     return result
+"""
 
 @app.post("/chat/stream")
 def chat_stream(request: ChatRequest):
-    history = [{"role": m.role, "content": m.content} for m in request.history]
+    history = [{"role": m.role, "content": m.content, "products": m.products} for m in request.history]
 
     # Récupère le vecteur image de la session si disponible
     entry = _image_vectors.get(request.session_id)

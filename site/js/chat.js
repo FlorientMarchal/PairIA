@@ -104,7 +104,7 @@ async function sendMessage(text) {
     }
 
     conversationHistory.push({ role: "user", content: text });
-    conversationHistory.push({ role: "assistant", content: message });
+    conversationHistory.push({ role: "assistant", content: message, products: products });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
@@ -278,7 +278,7 @@ async function sendImageWithText(file, text) {
       `Produits suggérés : ${productContext}`;
 
     conversationHistory.push({ role: "user", content: imageContext });
-    conversationHistory.push({ role: "assistant", content: message });
+    conversationHistory.push({ role: "assistant", content: message, products: products });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
