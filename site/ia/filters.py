@@ -112,9 +112,16 @@ def _chercher_dans_map_fuzzy(texte: str, mapping: dict, seuil: int = 88) -> str 
             # 1 mot trop court → skip
             if n == 1 and len(fragment) < 4:
                 continue
+            if n == 1:
+                candidats_valides = [
+                    c for c in candidats
+                    if abs(len(c) - len(fragment)) <= 1
+                ]
+            else:
+                candidats_valides = candidats
             # 1 mot → seuil plus strict
             seuil_effectif = 92 if n == 1 else seuil
-            match = _fuzzy_match(fragment, candidats, seuil=seuil_effectif)
+            match = _fuzzy_match(fragment, candidats_valides, seuil=seuil_effectif)
             if match:
                 return mapping[match]
     return None

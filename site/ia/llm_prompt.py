@@ -75,7 +75,7 @@ def build_prompt(question: str, produits: list, product_id: int = None, genre: s
         prompt_parts.append("Produits disponibles dans le catalogue :")
 
         for i, p in enumerate(produits):
-            tailles_str  = ", ".join(p.get("tailles",  [])) or "non précisé"
+            tailles_str = ", ".join(str(taille) for taille in p.get("tailles", [])) or "non précisé"
             couleurs_str = ", ".join(p.get("couleurs", [])) or "non précisé"
 
             ligne = f"{i+1}. {p['name']} ({p['price']}€) — {p['marque']}"

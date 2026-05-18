@@ -13,6 +13,8 @@ import whisper
 import shutil
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from decimal import Decimal
+
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -120,7 +122,7 @@ def chat_stream(request: ChatRequest):
         )
         for chunk in generator:
             if isinstance(chunk, dict):
-                yield f"data: {json.dumps(chunk)}\n\n"
+                yield f"data: {json.dumps(chunk, default=lambda o: float(o) if isinstance(o, Decimal) else str(o))}\n\n"
             else:
                 yield f"data: {json.dumps({'chunk': chunk})}\n\n"
         yield "data: [DONE]\n\n"

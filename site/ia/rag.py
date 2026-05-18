@@ -241,6 +241,11 @@ def _analyser_question(
             print(f"[VECTORISE] mode image_vector (session)")
             import numpy as np
             image_vec = np.array(image_vector)
+
+            # Analyse texte même avec image
+            filtres_explicites = extraire_filtres(question, history)
+            categories_candidates = _llm_categories_candidates(question, history)
+
             if question and question.strip():
                 contexte_produit = ""
                 for msg in reversed(history):
@@ -249,12 +254,28 @@ def _analyser_question(
                         if m:
                             contexte_produit = m.group(1).strip()
                         break
-                q_enrichie = f"{contexte_produit} {question}".strip() if contexte_produit else question
+
+                q_enrichie = (
+                    f"{contexte_produit} {question}".strip()
+                    if contexte_produit else question
+                )
+
                 text_vec = model.encode(q_enrichie)
+
+                # fusion image + texte
                 vec = ((image_vec * 0.5) + (text_vec * 0.5)).tolist()
             else:
                 vec = image_vector
-            return vec, True, {}, []
+
+            print(f"[VECTORISE] filtres explicites : {filtres_explicites}")
+            print(f"[VECTORISE] catégories candidates : {categories_candidates}")
+
+            return (
+                vec,
+                True,
+                filtres_explicites,
+                categories_candidates
+            )
 
         # ── Mode texte : 3 tâches en parallèle ──
         print(f"[VECTORISE] mode texte — analyse parallèle")
@@ -438,18 +459,40 @@ def _recherche_qdrant(
     print(f"[QDRANT] {len(produits)} produits | contexte : {contexte!r}")
     return produits, contexte
 
+# ══════════════════════════════════════════════
+# VECTORISATION + ANALYSE PARALLÈLE
+# ══════════════════════════════════════════════
+def _filtres_depuis_produit(produit: dict) -> dict:
+    """
+    Extrait des filtres implicites depuis un produit similaire à l'image.
+    """
+    filtres = {}
+
+    if produit.get("categorie"):
+        filtres["categorie"] = produit["categorie"]
+
+    # On prend UNE couleur principale si dispo
+    couleurs = produit.get("couleurs", [])
+    if couleurs:
+        filtres["couleur"] = couleurs[0]
+
+    return filtres
+
+
+
 
 # ══════════════════════════════════════════════
 # STREAMING PRINCIPAL
 # ══════════════════════════════════════════════
 
 def get_response_stream(
-    question: str,
+    question: str = "",
     product_id: int = None,
     history: list = None,
     image_path: str = None,
     image_vector: list = None,
 ):
+    question = question or ""
     if history is None:
         history = []
 
@@ -457,9 +500,14 @@ def get_response_stream(
     print(f"[RAG] question : {question!r} | history : {len(history)} messages")
     print(f"{'='*50}\n")
 
-    intention, confiance = classifier_intention(question)
-    print(f"[INTENTION] {intention!r} ({confiance:.1%})")
-
+    # Une image implique automatiquement une recherche produit
+    if image_path or image_vector:
+        intention = "recherche"
+        confiance = 1.0
+        print("[INTENTION] image détectée → recherche")
+    else:
+        intention, confiance = classifier_intention(question)
+        print(f"[INTENTION] {intention!r} ({confiance:.1%})")
     # ════════════════════════════════════════════
     # CAS 1 — HORS SUJET
     # ════════════════════════════════════════════
@@ -572,7 +620,7 @@ def get_response_stream(
             yield {"products": [], "action": None, "product_id": None, "quantity": 1}
             contexte_produits = "\n".join([
                 f"- {p['name']} ({p['marque']}, {p['price']}€) : {p['description']}\n"
-                f"  Tailles : {', '.join(p.get('tailles', []))}\n"
+                f"  Tailles : {', '.join(str(t) for t in p.get('tailles', []))}\n"
                 f"  Couleurs : {', '.join(p.get('couleurs', []))}"
                 for p in produits_historique
             ])
