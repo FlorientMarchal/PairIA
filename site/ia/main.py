@@ -1,7 +1,8 @@
 # ia/main.py
 # Serveur FastAPI
 # Lancer avec : uvicorn main:app --reload --port 8000
-#Lancement kardiatou: uvicorn ia.main:app --reload --port 8000
+#Lancement kardiatou: uvicorn ia.main:app --reload --port 8000 ou python -m uvicorn ia.main:app --port 8000
+
 
 import sys
 import os
@@ -188,11 +189,8 @@ async def search_image(file: UploadFile = File(...)):
 async def transcribe(file: UploadFile = File(...)):
     """
     Reçoit un fichier audio webm depuis le navigateur,
-    le transcrit en français avec Whisper local,
-    et retourne le texte.
+    le transcrit en français avec Whisper local.
     """
-    # ✅ Sauvegarde temporaire sur disque
-    # Whisper ne peut pas lire depuis la mémoire, il faut un vrai fichier
     suffix = ".webm"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         shutil.copyfileobj(file.file, tmp)
@@ -202,17 +200,33 @@ async def transcribe(file: UploadFile = File(...)):
         result = whisper_model.transcribe(
             tmp_path,
             language="fr",
-            fp16=False
+            fp16=False,
+            # ces paramètres améliorent la précision en français
+            condition_on_previous_text=False,
+            # temperature=0 force Whisper à choisir le token le plus probable
+            temperature=0,
+            # no_speech_threshold : si la probabilité de silence est > 0.6
+            # Whisper retourne une chaîne vide plutôt que d'inventer du texte
+            no_speech_threshold=0.6,
+            # compression_ratio_threshold : si Whisper compresse trop le texte
+            # (signe d'hallucination), il abandonne et retourne vide
+            compression_ratio_threshold=2.4, #verifie que c'est présent
         )
         text = result["text"].strip()
+
+        # si le texte est trop court ou vide, on retourne vide
+        # plutôt que du bruit transcrit
+        if len(text) < 2:
+            return {"text": "", "success": False, "error": "Aucune parole détectée"}
+
+        print(f"[WHISPER] transcrit : {text!r}")
         return {"text": text, "success": True}
 
     except Exception as e:
+        print(f"[WHISPER] erreur : {e}")
         return {"text": "", "success": False, "error": str(e)}
 
     finally:
-        # ✅ CORRECTION Windows : os.unlink peut échouer si Whisper
-        # a déjà supprimé ou verrouillé le fichier — on ignore l'erreur
         try:
             os.unlink(tmp_path)
         except OSError:
