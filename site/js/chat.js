@@ -8,6 +8,7 @@ let sessionId = crypto.randomUUID();
    CHAT TEXTE
 */
 async function sendMessage(text) {
+  let layout = null;
   const container = document.getElementById("messages");
   if (!container || !text.trim()) return;
 
@@ -74,7 +75,7 @@ async function sendMessage(text) {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
-            layout      = data.layout || null; 
+            layout = data.layout || null; 
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -105,7 +106,7 @@ async function sendMessage(text) {
     }
 
     conversationHistory.push({ role: "user", content: text });
-    conversationHistory.push({ role: "assistant", content: message });
+    conversationHistory.push({ role: "assistant", content: message, products: products });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
@@ -243,6 +244,7 @@ function showComparisonView(p1, p2, container) {
    CHAT IMAGE + TEXTE
 */
 async function sendImageWithText(file, text) {
+  let layout = null;
   const container = document.getElementById("messages");
   if (!container) return;
 
@@ -318,7 +320,7 @@ async function sendImageWithText(file, text) {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
-            layout      = data.layout || null; 
+            layout = data.layout || null; 
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -359,7 +361,7 @@ async function sendImageWithText(file, text) {
       `Produits suggérés : ${productContext}`;
 
     conversationHistory.push({ role: "user", content: imageContext });
-    conversationHistory.push({ role: "assistant", content: message });
+    conversationHistory.push({ role: "assistant", content: message, products: products });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
 
@@ -833,3 +835,84 @@ document.addEventListener("DOMContentLoaded", () => {
     if (mic) mic.style.display = "inline-flex";
   }
 });
+
+/* ══════════════════════════════════════
+   COMPARAISON CÔTE À CÔTE
+══════════════════════════════════════ */
+function showComparisonView(p1, p2, container) {
+    if (!container) container = document.getElementById("messages");
+
+    const div = document.createElement("div");
+    div.className = "chat-msg bot";
+
+    function colHtml(p, idx) {
+        const tailles  = (p.tailles  || []).join(", ") || "—";
+        const couleurs = (p.couleurs || []).join(", ") || "—";
+        const resume   = p.resume || "";   // ← résumé LLM
+        return `
+        <div class="chat-compare-col">
+            <div class="chat-compare-img">
+                ${p.url_image
+                    ? `<img src="${escapeHtml(p.url_image)}"
+                            alt="${escapeHtml(p.name)}"
+                            onerror="this.style.display='none'">`
+                    : "👟"}
+            </div>
+            <div class="chat-compare-name">${escapeHtml(p.name)}</div>
+            <div class="chat-compare-price">${p.price} €</div>
+            ${resume ? `<div class="chat-compare-resume">${escapeHtml(resume)}</div>` : ""}
+            <table class="chat-compare-table">
+                <tr>
+                    <td class="chat-compare-label">Marque</td>
+                    <td>${escapeHtml(p.marque || "—")}</td>
+                </tr>
+                <tr>
+                    <td class="chat-compare-label">Catégorie</td>
+                    <td>${escapeHtml(p.categorie || "—")}</td>
+                </tr>
+                <tr>
+                    <td class="chat-compare-label">Tailles</td>
+                    <td>${escapeHtml(tailles)}</td>
+                </tr>
+                <tr>
+                    <td class="chat-compare-label">Couleurs</td>
+                    <td>${escapeHtml(couleurs)}</td>
+                </tr>
+            </table>
+
+            <button class="chat-cart-btn"
+                style="margin-top:10px;width:100%"
+                onclick="showCartSelector(${JSON.stringify(p).replace(/"/g, '&quot;')}, document.getElementById('messages'))">
+                🛒 Choisir ce modèle
+            </button>
+        </div>`;
+    }
+
+    div.innerHTML = `
+        <div class="chat-compare-card">
+            <div class="chat-compare-title">Comparaison</div>
+            <div class="chat-compare-grid">
+                ${colHtml(p1, 0)}
+                <div class="chat-compare-vs">VS</div>
+                ${colHtml(p2, 1)}
+            </div>
+        </div>`;
+
+    container.appendChild(div);
+    requestAnimationFrame(() => {
+      const cols = div.querySelectorAll(".chat-compare-col");
+      if (cols.length < 2) return;
+
+      const imgs = div.querySelectorAll("img");
+      const loaded = Array.from(imgs).map(img =>
+          img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
+      );
+
+      Promise.all(loaded).then(() => {
+          cols.forEach(col => col.style.height = "");
+          const maxH = Math.max(...[...cols].map(col => col.scrollHeight));
+          cols.forEach(col => col.style.height = maxH + "px");
+      });
+  });
+    container.scrollTop = container.scrollHeight;
+}

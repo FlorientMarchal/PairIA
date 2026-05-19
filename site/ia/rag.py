@@ -27,6 +27,7 @@ _LIMITES = {
     "comparaison":    {"num_predict": 100, "consigne": "Dis juste en une phrase que ci dessous le client trouvera la comparaison du produit 1 et 2", "nb_produits": 2},
     "recommandation": {"num_predict": 150, "consigne": "Conseille en 3-4 phrases maximum.", "nb_produits": 1},
     "recherche":      {"num_predict": 200, "consigne": "Présente chaque produit en 1-2 phrases max.", "nb_produits": 3},
+    "salutation": {"num_predict": 50, "consigne": "Réponds en 1 phrase de bienvenue.", "nb_produits": 0}
 }
 
 
@@ -229,6 +230,8 @@ def _produits_depuis_historique(history: list) -> list:
           f"clés assistant : {[list(m.keys()) for m in history if m['role'] == 'assistant']}")
     return []
 
+
+
 def _resumer_description(produit: dict) -> str:
     """
     Génère un résumé court en français en 1 phrase de la description du produit via Mistral.
@@ -272,28 +275,19 @@ def _identifier_produits_a_comparer(question: str, produits: list) -> tuple[dict
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 20, "temperature": 0},
         )
-        print(f"[LLM-CAT] resp complet : {resp!r}")
         raw = resp["message"]["content"].strip()
-        print(f"[LLM-CAT] raw : {raw!r}")
-        matches = re.findall(r'\{[^{}]*\}', raw)
-        for m in matches:
-            try:
-                data = json.loads(m)
-                if "categories" in data:
-                    cats = [...]
-                    return cats
-            except:
-                continue
-        if match:
-            data = json.loads(match.group())
+        m = re.search(r'\{.*\}', raw, re.DOTALL)
+        if m:
+            data = json.loads(m.group())
             i1, i2 = int(data["p1"]) - 1, int(data["p2"]) - 1
             if 0 <= i1 < len(produits) and 0 <= i2 < len(produits) and i1 != i2:
                 print(f"[COMPARAISON] {produits[i1]['name']} vs {produits[i2]['name']}")
                 return produits[i1], produits[i2]
     except Exception as e:
         print(f"[COMPARAISON] identification échouée : {e} → fallback [0][1]")
-    
+
     return produits[0], produits[1]
+
 # ══════════════════════════════════════════════
 # LLM HELPERS
 # ══════════════════════════════════════════════
@@ -306,7 +300,8 @@ def _llm_enrichir_question(question: str, history: list) -> str:
 
     prompt = (
         f"{contexte}"
-        f"Reformule cette demande en 8 à 12 mots-clés descriptifs pour rechercher des chaussures.\n"
+        f"Reformule cette demande en 5 à 8 mots-clés pour rechercher des chaussures.\n"
+        f" Utilise UNIQUEMENT des mots présents ou directement liés à la demande. \n "
         f"Inclus : style, usage, matière, type de chaussure, occasion si pertinent.\n"
         f"Demande : \"{question}\"\n"
         f"Réponds UNIQUEMENT en français, avec les mots-clés séparés par des espaces, sans ponctuation."
@@ -315,7 +310,7 @@ def _llm_enrichir_question(question: str, history: list) -> str:
         resp = ollama.chat(
             model="mistral",
             messages=[{"role": "user", "content": prompt}],
-            options={"num_predict": 60, "temperature": 0},
+            options={"num_predict": 100, "temperature": 0},
         )
         enrichie = resp["message"]["content"].strip()
         print(f"[LLM] question enrichie : {enrichie!r}")
@@ -324,8 +319,8 @@ def _llm_enrichir_question(question: str, history: list) -> str:
         print(f"[LLM] enrichissement échoué : {e} → fallback question originale")
         return question
 
-
 def _llm_categories_candidates(question: str, history: list) -> list[str]:
+    print(f"[LLM-CAT] ENTRÉE fonction, question={question!r}")
     categories_dispo = DB.get("categories", [])
     if not categories_dispo:
         print("[LLM] Aucune catégorie en DB → pas de filtre")
@@ -336,32 +331,36 @@ def _llm_categories_candidates(question: str, history: list) -> list[str]:
 
     prompt = (
         f"{contexte}"
-        f"Catégories de chaussures disponibles : {', '.join(categories_dispo)}\n"
-        f"Question client : \"{question}\"\n"
-        f"Pour chaque catégorie pertinente, donne un score de 0 à 10.\n"
-        f"Réponds UNIQUEMENT en JSON : {{\"categories\": [{{\"nom\": \"Running\", \"score\": 9}}]}}\n"
-        f"Si aucune catégorie n'est pertinente : {{\"categories\": []}}"
+        f"Catégories disponibles : {', '.join(categories_dispo)}\n"
+        f"Question : \"{question}\"\n"
+        f"Liste TOUTES les catégories pertinentes ET similaires avec un score.\n"
+        f"Réponds UNIQUEMENT en JSON : {{\"categories\": [{{\"nom\": \"categorie1\", \"score\": nombre entier 1}}, {{\"nom\": \"categorie2\", \"score\": nombre entier 2}}]}}"
     )
     try:
         resp = ollama.chat(
             model="mistral",
             messages=[{"role": "user", "content": prompt}],
-            options={"num_predict": 100, "temperature": 0},
+            options={"num_predict": 250, "temperature": 0},
         )
-        raw   = resp["message"]["content"].strip()
-        match = re.search(r'\{.*?\}', raw, re.DOTALL)
+        print(f"[LLM-CAT] resp reçu")
+        raw = resp["message"]["content"].strip()
+        print(f"[LLM-CAT] raw : {raw!r}")
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
         if match:
-            data = json.loads(match.group())
-            cats = [
-                c["nom"] for c in data.get("categories", [])
-                if c["nom"] in categories_dispo and c.get("score", 0) >= 7 
-            ]
-            print(f"[LLM] catégories candidates : {cats}")
-            return cats
+            try:
+                data = json.loads(match.group())
+                cats = [
+                    c["nom"] for c in data.get("categories", [])
+                    if c["nom"] in categories_dispo and c.get("score", 0) >= 6
+                ]
+                print(f"[LLM] catégories candidates : {cats}")
+                return cats
+            except Exception as e:
+                print(f"[LLM] catégories parse échoué : {e}")
     except Exception as e:
-        print(f"[LLM] catégories échoué : {e} → pas de filtre catégorie")
+        import traceback
+        print(f"[LLM-CAT] ERREUR : {traceback.format_exc()}")
     return []
-
 
 # ══════════════════════════════════════════════
 # VECTORISATION + ANALYSE PARALLÈLE
@@ -418,11 +417,25 @@ def _analyser_question(
             filtres_explicites    = fut_filtres.result()
             categories_candidates = fut_categories.result()
 
-        if not categories_candidates and "categorie" in filtres_explicites:
-            categories_candidates = [filtres_explicites["categorie"]]
-            print(f"[VECTORISE] fallback catégorie depuis filtres : {categories_candidates}")
+        if not question_enrichie or question_enrichie.lower().strip() == question.lower().strip():
+            question_enrichie = question
+            print("[VECTORISE] enrichissement sans apport → question originale")
 
-        filtres_explicites.pop("categorie", None)
+        if "categorie" in filtres_explicites:
+            # extraire_filtres a trouvé une catégorie explicite → elle prime
+            cat_explicite = filtres_explicites.pop("categorie")
+            # Le LLM peut avoir trouvé des catégories similaires pertinentes
+            # On garde uniquement celles qui ne sont pas aberrantes (score implicite :
+            # on les filtre en ne gardant que celles détectées par le LLM ET
+            # qui ne sont pas déjà la catégorie principale)
+            cats_llm_valides = [c for c in categories_candidates if c != cat_explicite]
+            categories_candidates = [cat_explicite] + cats_llm_valides[:1]  # max 2 similaires
+            print(f"[VECTORISE] catégorie explicite prioritaire : {cat_explicite} + similaires LLM : {cats_llm_valides[:2]}")
+        else:
+            # Pas de catégorie explicite → on se fie au LLM
+            filtres_explicites.pop("categorie", None)
+            if not categories_candidates:
+                print("[VECTORISE] aucune catégorie détectée → recherche libre")
 
         vec = model.encode(question_enrichie).tolist()
         print(f"[VECTORISE] filtres explicites : {filtres_explicites}")
@@ -432,7 +445,6 @@ def _analyser_question(
     except Exception as e:
         print(f"[VECTORISE] ❌ Erreur : {e}")
         return [0] * 512, False, {}, []
-
 
 # ══════════════════════════════════════════════
 # RECHERCHE QDRANT
@@ -509,15 +521,14 @@ def _recherche_qdrant(
         print(f"[QDRANT] ❌ Erreur : {e}")
         results = []
 
-    produits = []
-    for r in results:
+    def _construire_produit(r) -> dict:
         tailles  = r.payload.get("tailles",  [])
         couleurs = r.payload.get("couleurs", [])
         if isinstance(tailles, str):
-            tailles  = [t.strip() for t in tailles.split(",")  if t.strip()]
+            tailles  = [t.strip() for t in tailles.split(",") if t.strip()]
         if isinstance(couleurs, str):
             couleurs = [c.strip() for c in couleurs.split(",") if c.strip()]
-        produits.append({
+        return {
             "id":          r.id,
             "name":        r.payload.get("nom",         ""),
             "price":       r.payload.get("prix",        0),
@@ -528,7 +539,42 @@ def _recherche_qdrant(
             "description": r.payload.get("description", ""),
             "tailles":     tailles,
             "couleurs":    couleurs,
-        })
+        }
+
+    produits = [_construire_produit(r) for r in results]
+
+    # Réordonner : catégorie principale en tête, similaires ensuite
+    if categories_candidates:
+        cat_principale = categories_candidates[0]
+        produits_principaux = [p for p in produits if p["categorie"] == cat_principale]
+        produits_similaires = [p for p in produits if p["categorie"] != cat_principale]
+        produits = produits_principaux + produits_similaires
+        print(f"[QDRANT] réordonné : {len(produits_principaux)} '{cat_principale}' + {len(produits_similaires)} similaires")
+
+    # Complétion si peu de résultats avec filtre catégorie strict
+    if len(produits) < 3 and categories_candidates:
+        print(f"[QDRANT] seulement {len(produits)} résultat(s) → complétion sans filtre catégorie")
+        filtre_souple = _construire_filtre_qdrant(filtres, [])
+        try:
+            results_extra = qdrant.query_points(
+                collection_name="produits_image",
+                query=question_vector,
+                query_filter=filtre_souple,
+                limit=8,
+                score_threshold=0.68,
+            ).points
+            ids_deja = {p["id"] for p in produits}
+            nb_ajoutes = 0
+            for r in results_extra:
+                if r.id in ids_deja:
+                    continue
+                produits.append(_construire_produit(r))
+                nb_ajoutes += 1
+                if len(produits) >= 5:
+                    break
+            print(f"[QDRANT] après complétion : {len(produits)} produits ({nb_ajoutes} ajoutés)")
+        except Exception as e:
+            print(f"[QDRANT] ❌ complétion échouée : {e}")
 
     if not produits:
         filtres_ko = []
@@ -556,7 +602,13 @@ def _recherche_qdrant(
     if "couleur"  in filtres: filtres_ok.append(f"couleur {filtres['couleur']}")
     if "pointure" in filtres: filtres_ok.append(f"taille {filtres['pointure']}")
     if categories_candidates: filtres_ok.append(f"catégorie {'/'.join(categories_candidates)}")
-    contexte = f"Produits filtrés ({', '.join(filtres_ok)}) :" if filtres_ok else ""
+
+    nb_cat = len([p for p in produits if p["categorie"] == categories_candidates[0]]) if categories_candidates else 0
+    nb_alt = len(produits) - nb_cat
+    if nb_alt > 0 and categories_candidates:
+        contexte = f"Produits filtrés ({', '.join(filtres_ok)}) + {nb_alt} alternative(s) similaire(s) :"
+    else:
+        contexte = f"Produits filtrés ({', '.join(filtres_ok)}) :" if filtres_ok else ""
 
     print(f"[QDRANT] {len(produits)} produits | contexte : {contexte!r}")
     return produits, contexte
@@ -646,6 +698,16 @@ def get_response_stream(
         yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1}
         return
 
+    # ════════════════════════════════════════════
+    # CAS 1b — SALUTATION
+    # ════════════════════════════════════════════
+    if intention == "salutation":
+        print("[CAS] 1b — salutation")
+        yield {"products": [], "action": None, "product_id": None, "quantity": 1}
+        yield "Bonjour ! 👋 Je suis votre conseiller personnel PairIA. Dites-moi quel type de chaussures vous recherchez, votre budget ou votre usage, et je trouve la paire parfaite pour vous !"
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1}
+        return
+        
     # ════════════════════════════════════════════
     # CAS 2 — LIVRAISON
     # ════════════════════════════════════════════

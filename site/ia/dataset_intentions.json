@@ -7915,5 +7915,20 @@
 {"text": "compare le premier et le deuxième", "label": "comparaison"},
 {"text": "quelles sont les différences entre ces deux modèles", "label": "comparaison"},
 {"text": "ils se ressemblent ces deux là ?", "label": "comparaison"},
-{"text": "c'est quoi les différences", "label": "comparaison"}
+{"text": "c'est quoi les différences", "label": "comparaison"},
+{"text": "tu as des chaussures de soirée ?", "label": "recherche"},
+{"text": "je cherche des chaussures pour une soirée", "label": "recherche"},
+{"text": "vous avez des chaussures habillées pour sortir ?", "label": "recherche"},
+{"text": "des chaussures pour une occasion spéciale ?", "label": "recherche"},
+{"text": "je veux des chaussures élégantes pour ce soir", "label": "recherche"},
+{"text": "des chaussures pour un mariage ?", "label": "recherche"},
+{"text": "des chaussures pour une cérémonie ?", "label": "recherche"},
+{"text": "des chaussures habillées ?", "label": "recherche"},
+{"text": "quelque chose d'élégant pour sortir le soir ?", "label": "recherche"},
+{"text": "des chaussures pour une soirée chic ?", "label": "recherche"},
+{"text": "je cherche des escarpins", "label": "recherche"},
+{"text": "vous avez des talons pour soirée ?", "label": "recherche"},
+{"text": "des chaussures pour aller au restaurant ?", "label": "recherche"},
+{"text": "quelque chose de chic pour une soirée ?", "label": "recherche"},
+{"text": "des chaussures pour un anniversaire ?", "label": "recherche"}
 ]

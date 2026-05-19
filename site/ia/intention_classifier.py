@@ -13,6 +13,7 @@ LABELS    = [
     "recommandation",  # ← nouveau
     "panier",
     "livraison",       # ← nouveau
+    "salutation",
     "hors_sujet",      # ← nouveau
 ]
 
@@ -20,7 +21,7 @@ print("[CLASSIFIER] Chargement du modèle d'intention...")
 _tokenizer = CamembertTokenizer.from_pretrained(MODEL_DIR)
 _model     = CamembertForSequenceClassification.from_pretrained(MODEL_DIR)
 _model.eval()
-print("[CLASSIFIER] Modèle chargé !")
+print(f"[CLASSIFIER] Modèle chargé ! num_labels={_model.config.num_labels}")
 
 
 def classifier_intention(question: str, seuil_confiance: float = 0.5) -> tuple[str, float]:
