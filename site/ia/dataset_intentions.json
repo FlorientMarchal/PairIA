@@ -7890,5 +7890,30 @@
   {
     "text": "c est quoi le modele qui vous surprend le plus positivement ?",
     "label": "recommandation"
-  }
+  },
+  {"text": "tu peux comparer les NeoUrban Street et les CloudStep Lite", "label": "comparaison"},
+  {"text": "compare le modèle A avec le modèle B", "label": "comparaison"},
+  {"text": "quelle différence entre les Air Max et les Stan Smith", "label": "comparaison"},
+  {"text": "compare ces deux paires", "label": "comparaison"},
+  {"text": "lequel est mieux entre X et Y", "label": "comparaison"},
+  {"text": "tu peux faire un comparatif", "label": "comparaison"},
+{"text": "fais un comparatif", "label": "comparaison"},
+{"text": "comparatif entre les deux", "label": "comparaison"},
+{"text": "tu peux comparer", "label": "comparaison"},
+{"text": "compare les deux", "label": "comparaison"},
+{"text": "compare ces modèles", "label": "comparaison"},
+{"text": "quelle différence entre les deux", "label": "comparaison"},
+{"text": "c'est quoi la différence", "label": "comparaison"},
+{"text": "lequel est mieux entre les deux", "label": "comparaison"},
+{"text": "tu peux me faire une comparaison", "label": "comparaison"},
+{"text": "compare les pour moi", "label": "comparaison"},
+{"text": "côte à côte", "label": "comparaison"},
+{"text": "mets les en comparaison", "label": "comparaison"},
+{"text": "versus", "label": "comparaison"},
+{"text": "l'un vs l'autre", "label": "comparaison"},
+{"text": "tu peux comparer les NeoUrban Street et les CloudStep Lite", "label": "comparaison"},
+{"text": "compare le premier et le deuxième", "label": "comparaison"},
+{"text": "quelles sont les différences entre ces deux modèles", "label": "comparaison"},
+{"text": "ils se ressemblent ces deux là ?", "label": "comparaison"},
+{"text": "c'est quoi les différences", "label": "comparaison"}
 ]

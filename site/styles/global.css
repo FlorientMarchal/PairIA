@@ -14,7 +14,7 @@
   --border: #e0d9ce;
   --chatbg: #ffffff;
   --nav-h: 56px;
-  --chat-w: 320px;
+  --chat-w: 420px;
   --font-main: "Inter", "DM Sans", sans-serif;
   --font-serif: "Playfair Display", Georgia, serif;
   --radius: 8px;
@@ -558,7 +558,7 @@ nav {
 ══════════════════════════════════════ */
 @media (max-width: 1024px) {
   :root {
-    --chat-w: 290px;
+    --chat-w: 360px;
   }
 }
 
@@ -626,7 +626,7 @@ nav {
 
 @media (min-width: 1400px) {
   :root {
-    --chat-w: 360px;
+    --chat-w: 480px;
   }
 }
 .chat-fab.hidden {
@@ -998,4 +998,112 @@ nav {
   100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
+}
+/* ── Comparaison côte à côte ── */
+.chat-compare-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 12px;
+    padding: 14px;
+    width: 100%;
+}
+
+.chat-compare-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted, #718096);
+    margin-bottom: 12px;
+}
+
+.chat-compare-grid {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.chat-compare-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-compare-vs {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted, #a0aec0);
+    padding-top: 60px;
+}
+
+.chat-compare-img {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--surface-alt, #f7fafc);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+}
+
+.chat-compare-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.chat-compare-name {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.chat-compare-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent, #667eea);
+    margin-bottom: 8px;
+}
+
+.chat-compare-table {
+    flex: 1;  /* pousse le bouton vers le bas */
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.chat-compare-table tr {
+    border-top: 1px solid var(--border, #edf2f7);
+}
+
+.chat-compare-table td {
+    padding: 4px 2px;
+    vertical-align: top;
+}
+
+.chat-compare-label {
+    color: var(--text-muted, #718096);
+    white-space: nowrap;
+    padding-right: 6px;
+    width: 55px;
+}
+
+.chat-compare-resume {
+    font-size: 11px;
+    color: var(--text-muted, #4a5568);
+    line-height: 1.4;
+    margin-bottom: 8px;
+    font-style: italic;
+    border-left: 2px solid var(--accent, #667eea);
+    padding-left: 6px;
+}
+
+.chat-compare-col .chat-cart-btn {
+    margin-top: auto;  /* colle le bouton en bas */
 }

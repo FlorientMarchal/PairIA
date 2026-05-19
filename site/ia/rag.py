@@ -20,13 +20,13 @@ from qdrant_client.models import Filter, FieldCondition, Range, MatchValue, Matc
 # LIMITES DE GÉNÉRATION PAR INTENTION
 # ══════════════════════════════════════════════
 _LIMITES = {
-    "hors_sujet":     {"num_predict": 80,  "consigne": "Réponds en 2-3 phrases maximum."},
-    "livraison":      {"num_predict": 120, "consigne": "Réponds en 3-4 phrases maximum."},
-    "panier":         {"num_predict": 120, "consigne": "Réponds en 2-3 phrases maximum."},
-    "suivi":          {"num_predict": 300, "consigne": "Réponds de façon complète en 5-8 phrases maximum."},
-    "comparaison":    {"num_predict": 400, "consigne": "Fais une comparaison complète, utilise jusqu'à 150 mots."},
-    "recommandation": {"num_predict": 300, "consigne": "Donne un conseil complet en 5-8 phrases maximum."},
-    "recherche":      {"num_predict": 300, "consigne": "Présente les produits de façon complète en 5-8 phrases maximum."},
+    "hors_sujet":     {"num_predict": 60,  "consigne": "Réponds en 1-2 phrases.", "nb_produits": 0},
+    "livraison":      {"num_predict": 80,  "consigne": "Réponds en 2-3 phrases.", "nb_produits": 0},
+    "panier":         {"num_predict": 80,  "consigne": "Réponds en 1-2 phrases.", "nb_produits": 1},
+    "suivi":          {"num_predict": 150, "consigne": "Réponds en 3-4 phrases maximum.", "nb_produits": 1},
+    "comparaison":    {"num_predict": 100, "consigne": "Dis juste en une phrase que ci dessous le client trouvera la comparaison du produit 1 et 2", "nb_produits": 2},
+    "recommandation": {"num_predict": 150, "consigne": "Conseille en 3-4 phrases maximum.", "nb_produits": 1},
+    "recherche":      {"num_predict": 200, "consigne": "Présente chaque produit en 1-2 phrases max.", "nb_produits": 3},
 }
 
 
@@ -43,14 +43,19 @@ def _calculer_ctx(history: list, base: int = 2048) -> int:
 # UTILITAIRES
 # ══════════════════════════════════════════════
 
-def _nb_produits_from_history(history: list) -> int:
+def _nb_produits_from_history(history: list, intention: str = "recherche") -> int:
+    # La limite par intention prime sur l'historique
+    nb_intention = _LIMITES.get(intention, _LIMITES["recherche"])["nb_produits"]
+    if nb_intention > 0:
+        return nb_intention
+
     nb_echanges = len(history) // 2
     if nb_echanges == 0:
         return 3
-    elif nb_echanges <= 2:
-        return 2
+    elif nb_echanges <= 4:
+        return 3
     else:
-        return 1
+        return 2
 
 
 def _extraire_genre(history: list, question: str) -> str | None:
@@ -62,15 +67,31 @@ def _extraire_genre(history: list, question: str) -> str | None:
     return _chercher_genre(texte_complet)
 
 
-def _chercher_produit_par_nom(question: str) -> list:
-    """
-    Détecte si l'utilisateur cite un nom de produit précis.
-    Cherche dans MySQL par correspondance floue sur le nom.
-    """
+
     from db_mysql import fetch_all
     from rapidfuzz import fuzz
 
     question_lower = question.lower().strip()
+
+    # ── GARDE-FOU : questions trop courtes ou génériques → on ne cherche pas ──
+    mots = question_lower.split()
+
+    # Moins de 3 mots → probablement pas un nom de produit
+    if len(mots) < 3:
+        return []
+
+    # Mots-clés de recherche générique → pas un nom de produit
+    mots_generiques = {
+        "pour", "je", "cherche", "veux", "voudrais", "besoin",
+        "style", "type", "modèle", "chaussure", "chaussures",
+        "une", "des", "les", "un", "le", "la", "de", "du",
+        "avec", "sans", "pas", "plus", "moins", "très",
+        "running", "sport", "ville", "casual", "marche",
+    }
+    # Si la majorité des mots sont génériques → pas un nom de produit
+    mots_non_generiques = [m for m in mots if m not in mots_generiques]
+    if len(mots_non_generiques) < 2:
+        return []
 
     try:
         rows = fetch_all("SELECT id_shoes, nom, prix, categorie, marque, url_image, description FROM articles")
@@ -86,7 +107,7 @@ def _chercher_produit_par_nom(question: str) -> list:
         if not nom:
             continue
         score = fuzz.partial_ratio(nom, question_lower)
-        if score > meilleur_score and score >= 88:
+        if score > meilleur_score and score >= 92:  # seuil remonté de 88 → 92
             meilleur_score   = score
             meilleur_produit = row
 
@@ -117,6 +138,69 @@ def _chercher_produit_par_nom(question: str) -> list:
         "couleurs":    couleurs,
     }]
 
+def _chercher_produits_cites(question: str) -> list:
+    """
+    Cherche PLUSIEURS produits cités dans la question.
+    Ex: "compare les NeoUrban Street et les CloudStep Lite"
+    → retourne les deux produits trouvés.
+    """
+    from db_mysql import fetch_all
+    from rapidfuzz import fuzz
+
+    question_lower = question.lower().strip()
+
+    try:
+        rows = fetch_all(
+            "SELECT id_shoes, nom, prix, categorie, marque, url_image, description FROM articles"
+        )
+    except Exception as e:
+        print(f"[CITES] Erreur DB : {e}")
+        return []
+
+    # Score chaque produit
+    scores = []
+    for row in rows:
+        nom = (row.get("nom") or "").lower()
+        if not nom:
+            continue
+        score = fuzz.partial_ratio(nom, question_lower)
+        if score >= 85:
+            scores.append((score, row))
+
+    # Trie par score décroissant, garde les 2 meilleurs
+    scores.sort(key=lambda x: x[0], reverse=True)
+    meilleurs = [row for _, row in scores[:2]]
+
+    if len(meilleurs) < 2:
+        return []
+
+    print(f"[CITES] Produits trouvés : {[r['nom'] for r in meilleurs]}")
+
+    # Construit les dicts produits avec tailles/couleurs
+    result = []
+    for row in meilleurs:
+        try:
+            from db_mysql import fetch_all as fa
+            sc = fa(f"SELECT taille, couleur FROM size_color WHERE id_shoes = {row['id_shoes']}")
+            tailles  = list({r["taille"]  for r in sc if r.get("taille")})
+            couleurs = list({r["couleur"] for r in sc if r.get("couleur")})
+        except Exception:
+            tailles, couleurs = [], []
+
+        result.append({
+            "id":          row["id_shoes"],
+            "name":        row["nom"],
+            "price":       row["prix"],
+            "emoji":       "👟",
+            "categorie":   row.get("categorie", ""),
+            "marque":      row.get("marque", ""),
+            "url_image":   row.get("url_image", ""),
+            "description": row.get("description", ""),
+            "tailles":     tailles,
+            "couleurs":    couleurs,
+        })
+
+    return result
 
 def _produits_mentionnes(texte: str, produits: list) -> list:
     texte_lower = texte.lower()
@@ -145,7 +229,71 @@ def _produits_depuis_historique(history: list) -> list:
           f"clés assistant : {[list(m.keys()) for m in history if m['role'] == 'assistant']}")
     return []
 
+def _resumer_description(produit: dict) -> str:
+    """
+    Génère un résumé court en français en 1 phrase de la description du produit via Mistral.
+    """
+    description = produit.get("description", "").strip()
+    if not description:
+        return ""
 
+    try:
+        resp = ollama.chat(
+            model="mistral",
+             messages=[{"role": "user", "content": (
+                f"Tu es un assistant francophone. Réponds UNIQUEMENT en français.\n"
+                f"Résume en une phrase de 10 à 15 mots maximum le point fort principal de cette chaussure.\n"
+                f"Exemple : 'Légère et propulsive, idéale pour la compétition et les coureurs entraînés.'\n"
+                f"Description : {description}"
+            )}],
+            options={"num_predict": 60, "temperature": 0.5},
+        )
+        return resp["message"]["content"].strip().strip('"').strip("'")
+    except Exception as e:
+        print(f"[RESUME] Erreur : {e}")
+        return description[:120] + "..." if len(description) > 120 else description
+
+
+def _identifier_produits_a_comparer(question: str, produits: list) -> tuple[dict, dict] | None:
+    if len(produits) < 2:
+        return None
+
+    liste = "\n".join([f"{i+1}. {p['name']}" for i, p in enumerate(produits)])
+    prompt = (
+        f"Produits disponibles :\n{liste}\n\n"
+        f"L'utilisateur dit : \"{question}\"\n"
+        f"Quels sont les numéros des 2 produits à comparer ? "
+        f"Réponds UNIQUEMENT en JSON : {{\"p1\": 1, \"p2\": 3}}\n"
+        f"Si non précisé, réponds : {{\"p1\": 1, \"p2\": 2}}"
+    )
+    try:
+        resp = ollama.chat(
+            model="mistral",
+            messages=[{"role": "user", "content": prompt}],
+            options={"num_predict": 20, "temperature": 0},
+        )
+        print(f"[LLM-CAT] resp complet : {resp!r}")
+        raw = resp["message"]["content"].strip()
+        print(f"[LLM-CAT] raw : {raw!r}")
+        matches = re.findall(r'\{[^{}]*\}', raw)
+        for m in matches:
+            try:
+                data = json.loads(m)
+                if "categories" in data:
+                    cats = [...]
+                    return cats
+            except:
+                continue
+        if match:
+            data = json.loads(match.group())
+            i1, i2 = int(data["p1"]) - 1, int(data["p2"]) - 1
+            if 0 <= i1 < len(produits) and 0 <= i2 < len(produits) and i1 != i2:
+                print(f"[COMPARAISON] {produits[i1]['name']} vs {produits[i2]['name']}")
+                return produits[i1], produits[i2]
+    except Exception as e:
+        print(f"[COMPARAISON] identification échouée : {e} → fallback [0][1]")
+    
+    return produits[0], produits[1]
 # ══════════════════════════════════════════════
 # LLM HELPERS
 # ══════════════════════════════════════════════
@@ -167,7 +315,7 @@ def _llm_enrichir_question(question: str, history: list) -> str:
         resp = ollama.chat(
             model="mistral",
             messages=[{"role": "user", "content": prompt}],
-            options={"num_predict": 40, "temperature": 0},
+            options={"num_predict": 60, "temperature": 0},
         )
         enrichie = resp["message"]["content"].strip()
         print(f"[LLM] question enrichie : {enrichie!r}")
@@ -190,21 +338,24 @@ def _llm_categories_candidates(question: str, history: list) -> list[str]:
         f"{contexte}"
         f"Catégories de chaussures disponibles : {', '.join(categories_dispo)}\n"
         f"Question client : \"{question}\"\n"
-        f"Quelles catégories sont pertinentes ? (0, 1 ou plusieurs)\n"
-        f"Réponds UNIQUEMENT en JSON valide, exemple : {{\"categories\": [\"Talons\", \"Sandales\"]}}\n"
-        f"Si la question est trop vague ou générale, réponds : {{\"categories\": []}}"
+        f"Pour chaque catégorie pertinente, donne un score de 0 à 10.\n"
+        f"Réponds UNIQUEMENT en JSON : {{\"categories\": [{{\"nom\": \"Running\", \"score\": 9}}]}}\n"
+        f"Si aucune catégorie n'est pertinente : {{\"categories\": []}}"
     )
     try:
         resp = ollama.chat(
             model="mistral",
             messages=[{"role": "user", "content": prompt}],
-            options={"num_predict": 60, "temperature": 0},
+            options={"num_predict": 100, "temperature": 0},
         )
         raw   = resp["message"]["content"].strip()
         match = re.search(r'\{.*?\}', raw, re.DOTALL)
         if match:
             data = json.loads(match.group())
-            cats = [c for c in data.get("categories", []) if c in categories_dispo]
+            cats = [
+                c["nom"] for c in data.get("categories", [])
+                if c["nom"] in categories_dispo and c.get("score", 0) >= 7 
+            ]
             print(f"[LLM] catégories candidates : {cats}")
             return cats
     except Exception as e:
@@ -267,9 +418,9 @@ def _analyser_question(
             filtres_explicites    = fut_filtres.result()
             categories_candidates = fut_categories.result()
 
-        if not question_enrichie or question_enrichie.lower().strip() == question.lower().strip():
-            question_enrichie = question
-            print("[VECTORISE] enrichissement sans apport → question originale")
+        if not categories_candidates and "categorie" in filtres_explicites:
+            categories_candidates = [filtres_explicites["categorie"]]
+            print(f"[VECTORISE] fallback catégorie depuis filtres : {categories_candidates}")
 
         filtres_explicites.pop("categorie", None)
 
@@ -440,13 +591,28 @@ def get_response_stream(
     print(f"[RAG] question : {question!r} | history : {len(history)} messages")
     print(f"{'='*50}\n")
 
-    if image_path or image_vector:
+    intention, confiance = classifier_intention(question) if question.strip() else ("recherche", 1.0)
+    """
+    _MOTS_COMPARAISON = [
+    "comparatif", "comparer", "compare", "comparaison",
+    "différence", "différences", "versus", "vs", "côte à côte"
+    ]
+    if any(mot in question.lower() for mot in _MOTS_COMPARAISON):
+        intention = "comparaison"
+        confiance = 1.0
+        print(f"[INTENTION] override → comparaison (mot-clé détecté)")
+    """
+    # Si image sans texte → recherche directe
+    if (image_path or image_vector) and not question.strip():
         intention = "recherche"
         confiance = 1.0
-        print("[INTENTION] image détectée → recherche")
-    else:
-        intention, confiance = classifier_intention(question)
-        print(f"[INTENTION] {intention!r} ({confiance:.1%})")
+        print("[INTENTION] image seule → recherche")
+    # Si image avec texte → on garde l'intention détectée SAUF hors_sujet/livraison
+    elif (image_path or image_vector) and intention in ("hors_sujet", "livraison", "panier"):
+        intention = "recherche"
+        confiance = 1.0
+        print(f"[INTENTION] image + texte → intention {intention} ignorée → recherche")
+
 
     # ════════════════════════════════════════════
     # CAS 1 — HORS SUJET
@@ -627,101 +793,46 @@ def get_response_stream(
     if intention == "comparaison":
         print("[CAS] 5 — comparaison")
         produits_historique = _produits_depuis_historique(history)
+
+        # Fallback si pas assez de produits en historique
+        if len(produits_historique) < 2:
+            produits_cites = _chercher_produits_cites(question)
+            if len(produits_cites) >= 2:
+                produits_historique = produits_cites
+                print(f"[CAS] 5 — produits cités trouvés : {[p['name'] for p in produits_cites]}")
+
         if len(produits_historique) >= 2:
-            yield {"products": [], "action": None, "product_id": None, "quantity": 1}
-            p1, p2 = produits_historique[0], produits_historique[1]
-            contexte = (
-                f"Produit 1 — {p1['name']} ({p1['marque']}, {p1['price']}€)\n"
-                f"Description : {p1['description']}\n"
-                f"Tailles : {', '.join(str(t) for t in p1.get('tailles', []))}\n"
-                f"Couleurs : {', '.join(p1.get('couleurs', []))}\n\n"
-                f"Produit 2 — {p2['name']} ({p2['marque']}, {p2['price']}€)\n"
-                f"Description : {p2['description']}\n"
-                f"Tailles : {', '.join(str(t) for t in p2.get('tailles', []))}\n"
-                f"Couleurs : {', '.join(p2.get('couleurs', []))}"
-            )
-            messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
-                {"role": "user", "content": (
-                    f"{contexte}\n\nQuestion : {question}\n"
-                    f"Fais une comparaison claire (prix, usage, confort, style) et aide à choisir. "
-                    f"{_LIMITES['comparaison']['consigne']}"
-                )},
-            ]
-            try:
-                stream = ollama.chat(
-                    model="mistral", messages=messages, stream=True,
-                    options={
-                        "num_ctx":     _calculer_ctx(history),
-                        "num_predict": _LIMITES["comparaison"]["num_predict"],
-                        "temperature": 0.6,
-                    },
-                )
-                for chunk in stream:
-                    yield chunk["message"]["content"]
-            except Exception as e:
-                yield f"Erreur Mistral : {str(e)}"
-            yield {
-                "type":       "products_final",
-                "products":   [p1, p2],
-                "action":     None,
-                "product_id": None,
-                "quantity":   1,
-                "layout":     "comparison",
-            }
-            return
+            resultat = _identifier_produits_a_comparer(question, produits_historique)
+            if resultat is None:
+                print("[CAS] 5 — pas assez de produits → fallback Qdrant")
+            else:
+                p1, p2 = resultat
+
+                # Résumés courts en parallèle (max 15 mots)
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    fut_r1 = executor.submit(_resumer_description, p1)
+                    fut_r2 = executor.submit(_resumer_description, p2)
+                    p1["resume"] = fut_r1.result()
+                    p2["resume"] = fut_r2.result()
+
+                yield {"products": [], "action": None, "product_id": None, "quantity": 1}
+                yield f"Bien sûr, voici le comparatif {p1['name']} vs {p2['name']} :"
+                yield {
+                    "type":       "products_final",
+                    "products":   [p1, p2],
+                    "action":     None,
+                    "product_id": None,
+                    "quantity":   1,
+                    "layout":     "comparison",
+                }
+                return
+
         print("[CAS] 5 — pas assez de produits → fallback Qdrant")
 
     # ════════════════════════════════════════════
     # CAS 6 — RECHERCHE & RECOMMANDATION
     # ════════════════════════════════════════════
     print("[CAS] 6 — recherche/recommandation")
-
-    # 0. Nom exact → court-circuite Qdrant
-    produits_nom_exact = _chercher_produit_par_nom(question)
-    if produits_nom_exact:
-        print("[CAS] 6 — nom exact détecté → réponse directe")
-        genre       = _extraire_genre(history, question)
-        nb_produits = _nb_produits_from_history(history)
-        limite      = _LIMITES["recherche"]
-        prompt = build_prompt(
-            question=f"{question}\n{limite['consigne']}",
-            produits=produits_nom_exact,
-            product_id=product_id,
-            genre=genre,
-            is_image_search=False,
-            contexte_filtres="",
-        )
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        for msg in history[-10:]:
-            messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": prompt})
-        yield {"products": [], "action": None, "product_id": None, "quantity": 1}
-        texte_complet = ""
-        try:
-            stream = ollama.chat(
-                model="mistral", messages=messages, stream=True,
-                options={
-                    "num_ctx":     _calculer_ctx(history),
-                    "num_predict": limite["num_predict"],
-                    "temperature": 0.5,
-                },
-            )
-            for chunk in stream:
-                token = chunk["message"]["content"]
-                texte_complet += token
-                yield token
-        except Exception as e:
-            yield f"Erreur Mistral : {str(e)}"
-        yield {
-            "type":       "products_final",
-            "products":   produits_nom_exact[:nb_produits],
-            "action":     None,
-            "product_id": None,
-            "quantity":   1,
-        }
-        return
 
     # 1. Analyse parallèle
     question_vector, is_image_search, filtres, categories_candidates = \
@@ -766,7 +877,7 @@ def get_response_stream(
 
     # 3. Prompt Mistral
     genre       = _extraire_genre(history, question)
-    nb_produits = _nb_produits_from_history(history)
+    nb_produits = _nb_produits_from_history(history,intention)
     limite      = _LIMITES.get(intention, _LIMITES["recherche"])
     print(f"[CAS] 6 — {len(produits_trouves)} produits | genre={genre} | nb_à_afficher={nb_produits}")
 
@@ -781,9 +892,16 @@ def get_response_stream(
             "Donne ton avis clair sur le meilleur choix et explique pourquoi."
         )
 
+    nb_produits = _nb_produits_from_history(history, intention)
+    nb_a_presenter = min(nb_produits, len(produits_trouves))
+    consigne_nb = (
+        f"Présente exactement {nb_a_presenter} produit(s) du catalogue ci-dessus. "
+        f"Ne mentionne aucun autre produit."
+    ) if nb_a_presenter > 0 else ""
+
     question_complete = (
         f"{description_visuelle}{question or ''}"
-        f"{suffixe_recommandation}\n{limite['consigne']}"
+        f"{suffixe_recommandation}\n{limite['consigne']} {consigne_nb}"
     )
 
     prompt = build_prompt(
@@ -826,7 +944,7 @@ def get_response_stream(
     print(f"[CAS] 6 — affichés : {[p['name'] for p in produits_affiches[:nb_produits]]}")
     yield {
         "type":       "products_final",
-        "products":   produits_affiches[:nb_produits],
+        "products":   produits_affiches[:nb_a_presenter],
         "action":     action,
         "product_id": produits_affiches[0]["id"] if produits_affiches and action else None,
         "quantity":   1,

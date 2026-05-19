@@ -74,6 +74,7 @@ async function sendMessage(text) {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
+            layout      = data.layout || null; 
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -113,10 +114,12 @@ async function sendMessage(text) {
       JSON.parse(JSON.stringify(conversationHistory)),
     );
 
-    if (products.length === 1) {
-      showCartSelector(products[0], container);
+    if (layout === "comparison" && products.length >= 2) {
+        showComparisonView(products[0], products[1], container);
+    } else if (products.length === 1) {
+        showCartSelector(products[0], container);
     } else if (products.length > 1) {
-      showProductPicker(products, container);
+        showProductPicker(products, container);
     }
 
     if (action === "add_to_cart" && product_id) {
@@ -157,6 +160,83 @@ function sendFromInput() {
     input.value = "";
     sendMessage(text);
   }
+}
+
+/* ══════════════════════════════════════
+   COMPARAISON CÔTE À CÔTE
+══════════════════════════════════════ */
+function showComparisonView(p1, p2, container) {
+    if (!container) container = document.getElementById("messages");
+
+    const div = document.createElement("div");
+    div.className = "chat-msg bot";
+
+    function colHtml(p, idx) {
+        const tailles  = (p.tailles  || []).join(", ") || "—";
+        const couleurs = (p.couleurs || []).join(", ") || "—";
+        const resume   = p.resume || "";   // ← résumé LLM
+        return `
+        <div class="chat-compare-col">
+            <div class="chat-compare-img">
+                ${p.url_image
+                    ? `<img src="${escapeHtml(p.url_image)}"
+                            alt="${escapeHtml(p.name)}"
+                            onerror="this.style.display='none'">`
+                    : "👟"}
+            </div>
+            <div class="chat-compare-name">${escapeHtml(p.name)}</div>
+            <div class="chat-compare-price">${p.price} €</div>
+            ${resume ? `<div class="chat-compare-resume">${escapeHtml(resume)}</div>` : ""}
+            <table class="chat-compare-table">
+                <tr>
+                    <td class="chat-compare-label">Marque</td>
+                    <td>${escapeHtml(p.marque || "—")}</td>
+                </tr>
+                <tr>
+                    <td class="chat-compare-label">Catégorie</td>
+                    <td>${escapeHtml(p.categorie || "—")}</td>
+                </tr>
+                <tr>
+                    <td class="chat-compare-label">Tailles</td>
+                    <td>${escapeHtml(tailles)}</td>
+                </tr>
+                <tr>
+                    <td class="chat-compare-label">Couleurs</td>
+                    <td>${escapeHtml(couleurs)}</td>
+                </tr>
+            </table>
+
+            <button class="chat-cart-btn"
+                style="margin-top:10px;width:100%"
+                onclick="showCartSelector(${JSON.stringify(p).replace(/"/g, '&quot;')}, document.getElementById('messages'))">
+                🛒 Choisir ce modèle
+            </button>
+        </div>`;
+    }
+
+    div.innerHTML = `
+        <div class="chat-compare-card">
+            <div class="chat-compare-title">Comparaison</div>
+            <div class="chat-compare-grid">
+                ${colHtml(p1, 0)}
+                <div class="chat-compare-vs">VS</div>
+                ${colHtml(p2, 1)}
+            </div>
+        </div>`;
+
+    container.appendChild(div);
+    requestAnimationFrame(() => {
+        const cols = div.querySelectorAll(".chat-compare-col");
+        if (cols.length < 2) return;
+
+        // Reset d'abord
+        cols.forEach(col => col.style.height = "");
+
+        // Prend le max des deux hauteurs naturelles
+        const maxH = Math.max(...[...cols].map(col => col.offsetHeight));
+        cols.forEach(col => col.style.height = maxH + "px");
+    });
+    container.scrollTop = container.scrollHeight;
 }
 
 /*
@@ -238,6 +318,7 @@ async function sendImageWithText(file, text) {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
+            layout      = data.layout || null; 
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -287,10 +368,12 @@ async function sendImageWithText(file, text) {
       JSON.parse(JSON.stringify(conversationHistory)),
     );
 
-    if (products.length === 1) {
-      showCartSelector(products[0], container);
+    if (layout === "comparison" && products.length >= 2) {
+        showComparisonView(products[0], products[1], container);
+    } else if (products.length === 1) {
+        showCartSelector(products[0], container);
     } else if (products.length > 1) {
-      showProductPicker(products, container);
+        showProductPicker(products, container);
     }
 
     if (action === "add_to_cart" && product_id) {
