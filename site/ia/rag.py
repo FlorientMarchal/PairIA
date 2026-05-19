@@ -3,7 +3,7 @@ import sys
 import os
 import re
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -12,9 +12,31 @@ from database import qdrant
 from llm_prompt import build_prompt, SYSTEM_PROMPT
 from image_search import model
 from intention_classifier import classifier_intention
-from filters import extraire_filtres, appliquer_filtres, user_wants_cart, DB
+from filters import extraire_filtres, user_wants_cart, DB
 from PIL import Image
 from qdrant_client.models import Filter, FieldCondition, Range, MatchValue, MatchAny, MinShould
+
+# ══════════════════════════════════════════════
+# LIMITES DE GÉNÉRATION PAR INTENTION
+# ══════════════════════════════════════════════
+_LIMITES = {
+    "hors_sujet":     {"num_predict": 80,  "consigne": "Réponds en 2-3 phrases maximum."},
+    "livraison":      {"num_predict": 120, "consigne": "Réponds en 3-4 phrases maximum."},
+    "panier":         {"num_predict": 120, "consigne": "Réponds en 2-3 phrases maximum."},
+    "suivi":          {"num_predict": 300, "consigne": "Réponds de façon complète en 5-8 phrases maximum."},
+    "comparaison":    {"num_predict": 400, "consigne": "Fais une comparaison complète, utilise jusqu'à 150 mots."},
+    "recommandation": {"num_predict": 300, "consigne": "Donne un conseil complet en 5-8 phrases maximum."},
+    "recherche":      {"num_predict": 300, "consigne": "Présente les produits de façon complète en 5-8 phrases maximum."},
+}
+
+
+def _calculer_ctx(history: list, base: int = 2048) -> int:
+    nb_msgs = len(history)
+    if nb_msgs > 10:
+        return 4096
+    elif nb_msgs > 6:
+        return 3072
+    return base
 
 
 # ══════════════════════════════════════════════
@@ -39,38 +61,33 @@ def _extraire_genre(history: list, question: str) -> str | None:
             texte_complet += " " + msg["content"].lower()
     return _chercher_genre(texte_complet)
 
+
 def _chercher_produit_par_nom(question: str) -> list:
     """
-    Détecte si l'utilisateur cite un nom de produit précis dans sa question.
+    Détecte si l'utilisateur cite un nom de produit précis.
     Cherche dans MySQL par correspondance floue sur le nom.
-    Retourne une liste avec le produit trouvé, ou [] si rien.
     """
     from db_mysql import fetch_all
     from rapidfuzz import fuzz
 
     question_lower = question.lower().strip()
 
-    # Récupère tous les noms de produits
     try:
         rows = fetch_all("SELECT id_shoes, nom, prix, categorie, marque, url_image, description FROM articles")
     except Exception as e:
         print(f"[NOM_EXACT] Erreur DB : {e}")
         return []
 
-    meilleur_score = 0
+    meilleur_score   = 0
     meilleur_produit = None
 
     for row in rows:
         nom = (row.get("nom") or "").lower()
         if not nom:
             continue
-
-        # Score de similarité entre la question et le nom du produit
         score = fuzz.partial_ratio(nom, question_lower)
-
-        # Seuil élevé (88) pour éviter les faux positifs
         if score > meilleur_score and score >= 88:
-            meilleur_score = score
+            meilleur_score   = score
             meilleur_produit = row
 
     if not meilleur_produit:
@@ -78,7 +95,6 @@ def _chercher_produit_par_nom(question: str) -> list:
 
     print(f"[NOM_EXACT] '{meilleur_produit['nom']}' détecté (score={meilleur_score})")
 
-    # Récupère tailles et couleurs depuis size_color
     try:
         sc = fetch_all(
             f"SELECT taille, couleur FROM size_color WHERE id_shoes = {meilleur_produit['id_shoes']}"
@@ -101,11 +117,12 @@ def _chercher_produit_par_nom(question: str) -> list:
         "couleurs":    couleurs,
     }]
 
+
 def _produits_mentionnes(texte: str, produits: list) -> list:
     texte_lower = texte.lower()
-    mentionnes = []
+    mentionnes  = []
     for p in produits:
-        nom = p["name"].lower()
+        nom  = p["name"].lower()
         mots = [m for m in nom.split() if len(m) > 3]
         nom_trouve = nom in texte_lower or (
             len(mots) >= 2 and all(m in texte_lower for m in mots)
@@ -130,16 +147,10 @@ def _produits_depuis_historique(history: list) -> list:
 
 
 # ══════════════════════════════════════════════
-# LLM HELPERS — appels Mistral rapides
+# LLM HELPERS
 # ══════════════════════════════════════════════
 
 def _llm_enrichir_question(question: str, history: list) -> str:
-    """
-    Demande à Mistral de reformuler la question en mots-clés riches
-    pour améliorer la recherche vectorielle Qdrant.
-    Ex: "chaussures de soirée" → "talons sandales élégantes habillées soirée chic"
-    """
-    # Contexte des 2 derniers échanges pour tenir compte de la conversation
     contexte = ""
     msgs_user = [m["content"] for m in history if m["role"] == "user"][-2:]
     if msgs_user:
@@ -167,19 +178,13 @@ def _llm_enrichir_question(question: str, history: list) -> str:
 
 
 def _llm_categories_candidates(question: str, history: list) -> list[str]:
-    """
-    Demande à Mistral quelles catégories sont pertinentes pour la question.
-    Retourne une liste de 0 à 3 catégories (garde-fou souple).
-    [] = pas de filtre catégorie (question trop vague)
-    """
     categories_dispo = DB.get("categories", [])
     if not categories_dispo:
         print("[LLM] Aucune catégorie en DB → pas de filtre")
         return []
 
-    # Contexte conversation
     msgs_user = [m["content"] for m in history if m["role"] == "user"][-2:]
-    contexte = f"Contexte : {' / '.join(msgs_user)}\n" if msgs_user else ""
+    contexte  = f"Contexte : {' / '.join(msgs_user)}\n" if msgs_user else ""
 
     prompt = (
         f"{contexte}"
@@ -195,8 +200,7 @@ def _llm_categories_candidates(question: str, history: list) -> list[str]:
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 60, "temperature": 0},
         )
-        raw = resp["message"]["content"].strip()
-        # Nettoyage robuste du JSON
+        raw   = resp["message"]["content"].strip()
         match = re.search(r'\{.*?\}', raw, re.DOTALL)
         if match:
             data = json.loads(match.group())
@@ -218,32 +222,20 @@ def _analyser_question(
     image_path: str = None,
     image_vector: list = None,
 ) -> tuple[list, bool, dict, list]:
-    """
-    Retourne (vecteur, is_image_search, filtres_explicites, categories_candidates).
-
-    Pour les recherches texte :
-      - Lance en PARALLÈLE :
-          1. Enrichissement question via LLM  → meilleur vecteur Qdrant
-          2. Extraction filtres explicites    → couleur, marque, budget, genre, pointure
-          3. Détection catégories candidates  → garde-fou souple multi-catégories
-      - Vectorise la question enrichie
-    """
-    # ── Mode image : pas de LLM, vectorisation directe ──
     try:
         if image_path and os.path.exists(image_path):
-            print(f"[VECTORISE] mode image_path")
+            print("[VECTORISE] mode image_path")
             image_vec = model.encode(Image.open(image_path))
             vec = ((image_vec * 0.7) + (model.encode(question) * 0.3)).tolist() \
                   if question and question.strip() else image_vec.tolist()
             return vec, True, {}, []
 
         if image_vector:
-            print(f"[VECTORISE] mode image_vector (session)")
+            print("[VECTORISE] mode image_vector (session)")
             import numpy as np
             image_vec = np.array(image_vector)
 
-            # Analyse texte même avec image
-            filtres_explicites = extraire_filtres(question, history)
+            filtres_explicites    = extraire_filtres(question, history)
             categories_candidates = _llm_categories_candidates(question, history)
 
             if question and question.strip():
@@ -254,31 +246,18 @@ def _analyser_question(
                         if m:
                             contexte_produit = m.group(1).strip()
                         break
-
-                q_enrichie = (
-                    f"{contexte_produit} {question}".strip()
-                    if contexte_produit else question
-                )
-
-                text_vec = model.encode(q_enrichie)
-
-                # fusion image + texte
-                vec = ((image_vec * 0.5) + (text_vec * 0.5)).tolist()
+                q_enrichie = f"{contexte_produit} {question}".strip() if contexte_produit else question
+                text_vec   = model.encode(q_enrichie)
+                vec        = ((image_vec * 0.5) + (text_vec * 0.5)).tolist()
             else:
                 vec = image_vector
 
             print(f"[VECTORISE] filtres explicites : {filtres_explicites}")
             print(f"[VECTORISE] catégories candidates : {categories_candidates}")
+            return vec, True, filtres_explicites, categories_candidates
 
-            return (
-                vec,
-                True,
-                filtres_explicites,
-                categories_candidates
-            )
-
-        # ── Mode texte : 3 tâches en parallèle ──
-        print(f"[VECTORISE] mode texte — analyse parallèle")
+        # Mode texte : 3 tâches en parallèle
+        print("[VECTORISE] mode texte — analyse parallèle")
         with ThreadPoolExecutor(max_workers=3) as executor:
             fut_enrichi    = executor.submit(_llm_enrichir_question,     question, history)
             fut_filtres    = executor.submit(extraire_filtres,            question, history)
@@ -288,12 +267,10 @@ def _analyser_question(
             filtres_explicites    = fut_filtres.result()
             categories_candidates = fut_categories.result()
 
-        # Si l'enrichissement n'a rien apporté (retour identique ou vide), on garde l'original
         if not question_enrichie or question_enrichie.lower().strip() == question.lower().strip():
             question_enrichie = question
-            print(f"[VECTORISE] enrichissement sans apport → question originale")
+            print("[VECTORISE] enrichissement sans apport → question originale")
 
-        # Retire la catégorie des filtres explicites — gérée séparément
         filtres_explicites.pop("categorie", None)
 
         vec = model.encode(question_enrichie).tolist()
@@ -311,45 +288,33 @@ def _analyser_question(
 # ══════════════════════════════════════════════
 
 def _construire_filtre_qdrant(filtres: dict, categories_candidates: list) -> Filter | None:
-    """
-    Construit un filtre Qdrant natif depuis les filtres explicites et les catégories candidates.
-    Les filtres sont appliqués DANS Qdrant avant le scoring — bien plus efficace.
-    """
-    conditions = []
+    conditions    = []
+    cat_conditions = []
 
-    # Budget → filtre sur le prix
     if "budget" in filtres:
         conditions.append(FieldCondition(key="prix", range=Range(lte=filtres["budget"])))
         print(f"[QDRANT-FILTER] prix <= {filtres['budget']}")
 
-    # Genre
     if "genre" in filtres:
-        # Inclut toujours Mixte en plus du genre demandé
         conditions.append(FieldCondition(key="genre",
                                          match=MatchAny(any=[filtres["genre"], "Mixte"])))
         print(f"[QDRANT-FILTER] genre = {filtres['genre']} ou Mixte")
 
-    # Marque
     if "marque" in filtres:
         conditions.append(FieldCondition(key="marque",
                                          match=MatchValue(value=filtres["marque"])))
         print(f"[QDRANT-FILTER] marque = {filtres['marque']}")
 
-    # Couleur — filtre sur la liste de couleurs (keyword array)
     if "couleur" in filtres:
         conditions.append(FieldCondition(key="couleurs",
                                          match=MatchValue(value=filtres["couleur"])))
         print(f"[QDRANT-FILTER] couleur = {filtres['couleur']}")
 
-    # Pointure — filtre sur la liste de tailles (keyword array)
     if "pointure" in filtres:
         conditions.append(FieldCondition(key="tailles",
                                          match=MatchValue(value=filtres["pointure"])))
         print(f"[QDRANT-FILTER] taille = {filtres['pointure']}")
 
-    # Catégories candidates — garde-fou souple (should = OR)
-    # On utilise should au lieu de must pour ne pas bloquer si vide
-    cat_conditions = []
     if categories_candidates:
         cat_conditions = [
             FieldCondition(key="categorie", match=MatchValue(value=cat))
@@ -360,15 +325,10 @@ def _construire_filtre_qdrant(filtres: dict, categories_candidates: list) -> Fil
     if not conditions and not cat_conditions:
         return None
 
-    # must = ET obligatoire (budget, genre, marque, couleur, pointure)
-    # should = OU souple (catégories candidates)
     return Filter(
         must=conditions if conditions else None,
         should=cat_conditions if cat_conditions else None,
-        min_should=MinShould(
-            conditions=cat_conditions,
-            min_count=1
-        ) if cat_conditions else None,
+        min_should=MinShould(conditions=cat_conditions, min_count=1) if cat_conditions else None,
     )
 
 
@@ -379,11 +339,7 @@ def _recherche_qdrant(
     filtres: dict,
     categories_candidates: list,
 ) -> tuple[list, str]:
-    """
-    Recherche Qdrant avec filtres NATIFS (prix, genre, marque, couleur, taille, catégorie).
-    Bien plus efficace que le filtrage Python post-hoc.
-    """
-    limit_qdrant = 20 if categories_candidates else 8
+    limit_qdrant  = 20 if categories_candidates else 8
     qdrant_filter = _construire_filtre_qdrant(filtres, categories_candidates)
     print(f"[QDRANT] limit={limit_qdrant} | filtre natif={'oui' if qdrant_filter else 'non'}")
 
@@ -402,12 +358,10 @@ def _recherche_qdrant(
         print(f"[QDRANT] ❌ Erreur : {e}")
         results = []
 
-    # Construction des produits — tailles/couleurs déjà en listes dans le payload
     produits = []
     for r in results:
         tailles  = r.payload.get("tailles",  [])
         couleurs = r.payload.get("couleurs", [])
-        # Compatibilité si encore en string (avant réindexation)
         if isinstance(tailles, str):
             tailles  = [t.strip() for t in tailles.split(",")  if t.strip()]
         if isinstance(couleurs, str):
@@ -426,7 +380,6 @@ def _recherche_qdrant(
         })
 
     if not produits:
-        # Construire le contexte d'erreur pour Mistral
         filtres_ko = []
         if "budget"   in filtres: filtres_ko.append(f"sous {filtres['budget']}€")
         if "genre"    in filtres: filtres_ko.append(f"pour {filtres['genre']}")
@@ -436,8 +389,7 @@ def _recherche_qdrant(
         if categories_candidates: filtres_ko.append(f"catégorie {'/'.join(categories_candidates)}")
         contexte = (
             f"ATTENTION : aucun produit trouvé pour [{', '.join(filtres_ko)}]. "
-            if filtres_ko else
-            "ATTENTION : aucun produit trouvé. "
+            if filtres_ko else "ATTENTION : aucun produit trouvé. "
         ) + (
             "Ne propose AUCUN produit inventé. "
             "Explique ce qui n'est pas disponible et demande à l'utilisateur "
@@ -446,7 +398,6 @@ def _recherche_qdrant(
         print(f"[QDRANT] 0 résultats | contexte : {contexte!r}")
         return [], contexte
 
-    # Contexte positif pour Mistral
     filtres_ok = []
     if "budget"   in filtres: filtres_ok.append(f"sous {filtres['budget']}€")
     if "genre"    in filtres: filtres_ok.append(f"pour {filtres['genre']}")
@@ -459,26 +410,15 @@ def _recherche_qdrant(
     print(f"[QDRANT] {len(produits)} produits | contexte : {contexte!r}")
     return produits, contexte
 
-# ══════════════════════════════════════════════
-# VECTORISATION + ANALYSE PARALLÈLE
-# ══════════════════════════════════════════════
-def _filtres_depuis_produit(produit: dict) -> dict:
-    """
-    Extrait des filtres implicites depuis un produit similaire à l'image.
-    """
-    filtres = {}
 
+def _filtres_depuis_produit(produit: dict) -> dict:
+    filtres = {}
     if produit.get("categorie"):
         filtres["categorie"] = produit["categorie"]
-
-    # On prend UNE couleur principale si dispo
     couleurs = produit.get("couleurs", [])
     if couleurs:
         filtres["couleur"] = couleurs[0]
-
     return filtres
-
-
 
 
 # ══════════════════════════════════════════════
@@ -500,7 +440,6 @@ def get_response_stream(
     print(f"[RAG] question : {question!r} | history : {len(history)} messages")
     print(f"{'='*50}\n")
 
-    # Une image implique automatiquement une recherche produit
     if image_path or image_vector:
         intention = "recherche"
         confiance = 1.0
@@ -508,6 +447,7 @@ def get_response_stream(
     else:
         intention, confiance = classifier_intention(question)
         print(f"[INTENTION] {intention!r} ({confiance:.1%})")
+
     # ════════════════════════════════════════════
     # CAS 1 — HORS SUJET
     # ════════════════════════════════════════════
@@ -520,12 +460,19 @@ def get_response_stream(
             {"role": "user", "content": (
                 f"L'utilisateur dit : « {question} »\n"
                 "C'est hors sujet pour une boutique de chaussures. "
-                "Réponds poliment que tu es spécialisé chaussures et recentre."
+                f"Réponds poliment que tu es spécialisé chaussures et recentre. "
+                f"{_LIMITES['hors_sujet']['consigne']}"
             )},
         ]
         try:
-            stream = ollama.chat(model="mistral", messages=messages, stream=True,
-                                 options={"num_ctx": 1024, "num_predict": 80, "temperature": 0.7})
+            stream = ollama.chat(
+                model="mistral", messages=messages, stream=True,
+                options={
+                    "num_ctx":     _calculer_ctx(history, 1024),
+                    "num_predict": _LIMITES["hors_sujet"]["num_predict"],
+                    "temperature": 0.7,
+                },
+            )
             for chunk in stream:
                 yield chunk["message"]["content"]
         except Exception as e:
@@ -545,12 +492,19 @@ def get_response_stream(
             {"role": "user", "content": (
                 f"L'utilisateur demande : « {question} »\n"
                 "Tu n'as pas accès aux infos livraison/retours/stock. "
-                "Dis-le honnêtement et propose de l'aider à trouver des chaussures."
+                f"Dis-le honnêtement et propose de l'aider à trouver des chaussures. "
+                f"{_LIMITES['livraison']['consigne']}"
             )},
         ]
         try:
-            stream = ollama.chat(model="mistral", messages=messages, stream=True,
-                                 options={"num_ctx": 1024, "num_predict": 100, "temperature": 0.5})
+            stream = ollama.chat(
+                model="mistral", messages=messages, stream=True,
+                options={
+                    "num_ctx":     _calculer_ctx(history, 1024),
+                    "num_predict": _LIMITES["livraison"]["num_predict"],
+                    "temperature": 0.5,
+                },
+            )
             for chunk in stream:
                 yield chunk["message"]["content"]
         except Exception as e:
@@ -561,7 +515,8 @@ def get_response_stream(
     # ════════════════════════════════════════════
     # CAS 3 — PANIER
     # ════════════════════════════════════════════
-    if (intention == "panier" or user_wants_cart(question))             and (user_wants_cart(question) or confiance >= 0.95):
+    if (intention == "panier" or user_wants_cart(question)) and \
+       (user_wants_cart(question) or confiance >= 0.95):
         print(f"[CAS] 3 — panier (intention={intention}, user_wants_cart={user_wants_cart(question)})")
         produits_historique = _produits_depuis_historique(history)
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
@@ -574,7 +529,8 @@ def get_response_stream(
                 {"role": "user", "content": (
                     f"Produits disponibles :\n{contexte_produits}\n\n"
                     f"L'utilisateur dit : « {question} »\n"
-                    "Identifie lequel il veut, confirme chaleureusement et cite son nom exact."
+                    f"Identifie lequel il veut, confirme chaleureusement et cite son nom exact. "
+                    f"{_LIMITES['panier']['consigne']}"
                 )},
             ]
         else:
@@ -582,14 +538,21 @@ def get_response_stream(
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": (
                     f"L'utilisateur dit : « {question} »\n"
-                    "Aucun produit présenté. Demande ce qu'il recherche."
+                    f"Aucun produit présenté. Demande ce qu'il recherche. "
+                    f"{_LIMITES['panier']['consigne']}"
                 )},
             ]
 
         texte_complet = ""
         try:
-            stream = ollama.chat(model="mistral", messages=messages, stream=True,
-                                 options={"num_ctx": 1024, "num_predict": 100, "temperature": 0.5})
+            stream = ollama.chat(
+                model="mistral", messages=messages, stream=True,
+                options={
+                    "num_ctx":     _calculer_ctx(history, 1024),
+                    "num_predict": _LIMITES["panier"]["num_predict"],
+                    "temperature": 0.5,
+                },
+            )
             for chunk in stream:
                 token = chunk["message"]["content"]
                 texte_complet += token
@@ -599,14 +562,15 @@ def get_response_stream(
 
         produit_cible = None
         if produits_historique:
-            mentionnes = _produits_mentionnes(texte_complet, produits_historique)
+            mentionnes    = _produits_mentionnes(texte_complet, produits_historique)
             produit_cible = mentionnes[0] if mentionnes else produits_historique[0]
 
         yield {
-            "type": "products_final", "products": [],
-            "action": "add_to_cart" if produit_cible else None,
+            "type":       "products_final",
+            "products":   [],
+            "action":     "add_to_cart" if produit_cible else None,
             "product_id": produit_cible["id"] if produit_cible else None,
-            "quantity": 1,
+            "quantity":   1,
         }
         return
 
@@ -630,18 +594,30 @@ def get_response_stream(
                 {"role": "user", "content": (
                     f"Produits déjà présentés :\n{contexte_produits}\n\n"
                     f"Question : {question}\n"
-                    "Réponds précisément en te basant uniquement sur ces informations."
+                    f"Réponds précisément en te basant uniquement sur ces informations. "
+                    f"{_LIMITES['suivi']['consigne']}"
                 )},
             ]
             try:
-                stream = ollama.chat(model="mistral", messages=messages, stream=True,
-                                     options={"num_ctx": 2048, "num_predict": 150, "temperature": 0.5})
+                stream = ollama.chat(
+                    model="mistral", messages=messages, stream=True,
+                    options={
+                        "num_ctx":     _calculer_ctx(history),
+                        "num_predict": _LIMITES["suivi"]["num_predict"],
+                        "temperature": 0.5,
+                    },
+                )
                 for chunk in stream:
                     yield chunk["message"]["content"]
             except Exception as e:
                 yield f"Erreur Mistral : {str(e)}"
-            yield {"type": "products_final", "products": produits_historique,
-                   "action": None, "product_id": None, "quantity": 1}
+            yield {
+                "type":       "products_final",
+                "products":   produits_historique,
+                "action":     None,
+                "product_id": None,
+                "quantity":   1,
+            }
             return
         print("[CAS] 4 — suivi sans produits → fallback recherche")
 
@@ -657,11 +633,11 @@ def get_response_stream(
             contexte = (
                 f"Produit 1 — {p1['name']} ({p1['marque']}, {p1['price']}€)\n"
                 f"Description : {p1['description']}\n"
-                f"Tailles : {', '.join(p1.get('tailles', []))}\n"
+                f"Tailles : {', '.join(str(t) for t in p1.get('tailles', []))}\n"
                 f"Couleurs : {', '.join(p1.get('couleurs', []))}\n\n"
                 f"Produit 2 — {p2['name']} ({p2['marque']}, {p2['price']}€)\n"
                 f"Description : {p2['description']}\n"
-                f"Tailles : {', '.join(p2.get('tailles', []))}\n"
+                f"Tailles : {', '.join(str(t) for t in p2.get('tailles', []))}\n"
                 f"Couleurs : {', '.join(p2.get('couleurs', []))}"
             )
             messages = [
@@ -669,18 +645,31 @@ def get_response_stream(
                 *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
                 {"role": "user", "content": (
                     f"{contexte}\n\nQuestion : {question}\n"
-                    "Fais une comparaison claire (prix, usage, confort, style) et aide à choisir."
+                    f"Fais une comparaison claire (prix, usage, confort, style) et aide à choisir. "
+                    f"{_LIMITES['comparaison']['consigne']}"
                 )},
             ]
             try:
-                stream = ollama.chat(model="mistral", messages=messages, stream=True,
-                                     options={"num_ctx": 2048, "num_predict": 200, "temperature": 0.6})
+                stream = ollama.chat(
+                    model="mistral", messages=messages, stream=True,
+                    options={
+                        "num_ctx":     _calculer_ctx(history),
+                        "num_predict": _LIMITES["comparaison"]["num_predict"],
+                        "temperature": 0.6,
+                    },
+                )
                 for chunk in stream:
                     yield chunk["message"]["content"]
             except Exception as e:
                 yield f"Erreur Mistral : {str(e)}"
-            yield {"type": "products_final", "products": [p1, p2],
-                   "action": None, "product_id": None, "quantity": 1, "layout": "comparison"}
+            yield {
+                "type":       "products_final",
+                "products":   [p1, p2],
+                "action":     None,
+                "product_id": None,
+                "quantity":   1,
+                "layout":     "comparison",
+            }
             return
         print("[CAS] 5 — pas assez de produits → fallback Qdrant")
 
@@ -689,14 +678,15 @@ def get_response_stream(
     # ════════════════════════════════════════════
     print("[CAS] 6 — recherche/recommandation")
 
-    # 0. Détection nom exact — court-circuite tout si l'utilisateur cite un produit précis
+    # 0. Nom exact → court-circuite Qdrant
     produits_nom_exact = _chercher_produit_par_nom(question)
     if produits_nom_exact:
-        print(f"[CAS] 6 — nom exact détecté → réponse directe")
+        print("[CAS] 6 — nom exact détecté → réponse directe")
         genre       = _extraire_genre(history, question)
         nb_produits = _nb_produits_from_history(history)
+        limite      = _LIMITES["recherche"]
         prompt = build_prompt(
-            question=question,
+            question=f"{question}\n{limite['consigne']}",
             produits=produits_nom_exact,
             product_id=product_id,
             genre=genre,
@@ -710,8 +700,14 @@ def get_response_stream(
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
         texte_complet = ""
         try:
-            stream = ollama.chat(model="mistral", messages=messages, stream=True,
-                                 options={"num_ctx": 2048, "num_predict": 150, "temperature": 0.5})
+            stream = ollama.chat(
+                model="mistral", messages=messages, stream=True,
+                options={
+                    "num_ctx":     _calculer_ctx(history),
+                    "num_predict": limite["num_predict"],
+                    "temperature": 0.5,
+                },
+            )
             for chunk in stream:
                 token = chunk["message"]["content"]
                 texte_complet += token
@@ -719,21 +715,24 @@ def get_response_stream(
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
         yield {
-            "type": "products_final",
-            "products": produits_nom_exact[:nb_produits],
-            "action": None, "product_id": None, "quantity": 1,
+            "type":       "products_final",
+            "products":   produits_nom_exact[:nb_produits],
+            "action":     None,
+            "product_id": None,
+            "quantity":   1,
         }
         return
 
-    # 1. Analyse parallèle (enrichissement + filtres + catégories)
+    # 1. Analyse parallèle
     question_vector, is_image_search, filtres, categories_candidates = \
         _analyser_question(question, history, image_path, image_vector)
 
-    # 2. Qdrant + garde-fou catégorie + filtres explicites
+    # 2. Qdrant
     produits_trouves, contexte_filtres = _recherche_qdrant(
         question_vector, question, history, filtres, categories_candidates
     )
 
+    # Aucun produit
     if not produits_trouves:
         print("[CAS] 6 — aucun produit → réponse Mistral directe")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
@@ -743,15 +742,21 @@ def get_response_stream(
             {"role": "user", "content": (
                 f"{contexte_filtres}\n"
                 "IMPORTANT : tu ne dois proposer AUCUN produit inventé. "
-                "Ne cite aucun nom de produit, aucun prix, aucune marque que tu n'as pas dans le catalogue ci-dessus. "
+                "Ne cite aucun nom de produit, aucun prix, aucune marque. "
                 "Explique simplement ce qui n'est pas disponible et demande à l'utilisateur "
-                "s'il veut modifier ses critères de recherche.\n"
-                f"Question : {question}"
+                f"s'il veut modifier ses critères.\nQuestion : {question}\n"
+                f"{_LIMITES['recherche']['consigne']}"
             )},
         ]
         try:
-            stream = ollama.chat(model="mistral", messages=messages, stream=True,
-                                 options={"num_ctx": 2048, "num_predict": 150, "temperature": 0.7})
+            stream = ollama.chat(
+                model="mistral", messages=messages, stream=True,
+                options={
+                    "num_ctx":     _calculer_ctx(history),
+                    "num_predict": _LIMITES["recherche"]["num_predict"],
+                    "temperature": 0.7,
+                },
+            )
             for chunk in stream:
                 yield chunk["message"]["content"]
         except Exception as e:
@@ -762,6 +767,7 @@ def get_response_stream(
     # 3. Prompt Mistral
     genre       = _extraire_genre(history, question)
     nb_produits = _nb_produits_from_history(history)
+    limite      = _LIMITES.get(intention, _LIMITES["recherche"])
     print(f"[CAS] 6 — {len(produits_trouves)} produits | genre={genre} | nb_à_afficher={nb_produits}")
 
     description_visuelle = ""
@@ -775,7 +781,11 @@ def get_response_stream(
             "Donne ton avis clair sur le meilleur choix et explique pourquoi."
         )
 
-    question_complete = f"{description_visuelle}{question or ''}{suffixe_recommandation}"
+    question_complete = (
+        f"{description_visuelle}{question or ''}"
+        f"{suffixe_recommandation}\n{limite['consigne']}"
+    )
+
     prompt = build_prompt(
         question=question_complete,
         produits=produits_trouves,
@@ -796,7 +806,11 @@ def get_response_stream(
     try:
         stream = ollama.chat(
             model="mistral", messages=messages, stream=True,
-            options={"num_ctx": 2048, "num_predict": 150, "temperature": 0.7},
+            options={
+                "num_ctx":     _calculer_ctx(history),
+                "num_predict": limite["num_predict"],
+                "temperature": 0.7,
+            },
         )
         for chunk in stream:
             token = chunk["message"]["content"]
