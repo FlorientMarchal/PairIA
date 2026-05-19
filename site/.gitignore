@@ -25,9 +25,4 @@ ia/__pycache__/
 *.pyc
 
 # Model intention
-Add-Content .gitignore "`nia/modele_intention/model.safetensors"
-Add-Content .gitignore "ia/modele_intention/optimizer.pt"
-Add-Content .gitignore "ia/modele_intention/checkpoint-*"
-Add-Content .gitignore "ia/modele_intention/rng_state.pth"
-Add-Content .gitignore "ia/modele_intention/scheduler.pt"
-Add-Content .gitignore "ia/modele_intention/training_args.bin"
+ia/modele_intention/
