@@ -136,7 +136,7 @@ if (!$is_ajax) {
 </div>
 
 <script>
-
+initPanierContext(<?php echo json_encode($panier_js, JSON_HEX_APOS | JSON_HEX_TAG); ?>);
 const LIVRAISON_SEUIL = 80;
 
 /* ── Modifier la quantité ── */
@@ -283,5 +283,15 @@ function confirmerSuppression(callback) {
     if (e.target === overlay) overlay.remove();
   });
 }
-
+<?php
+$panier_js = [];
+foreach ($panier as $key => $item) {
+    $panier_js[] = [
+        'nom'       => $item['nom'],
+        'categorie' => $item['categorie'] ?? '',
+        'prix'      => (float)$item['prix'],
+        'quantity'  => (int)($item['quantity'] ?? 1),
+    ];
+}
+?>
 </script>

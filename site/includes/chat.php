@@ -34,11 +34,11 @@ if ($page === 'article' && $product_name) {
 
     $det = isset($determinants[$categorie]) ? $determinants[$categorie] : 'le';
 
-    $welcome = "Je vois que vous regardez {$det} <strong style='color:var(--accent)'>{$product_name}</strong>. Posez-moi n'importe quelle question sur ce modèle — taille, matériaux, comparaison !";
+    $welcome = "<span style='opacity:0.5;font-size:0.85em'>✦ <span class='chat-dots'><span>.</span><span>.</span><span>.</span></span></span>";
 
 } elseif ($page === 'panier') {
 
-    $welcome = "Votre sélection est prête 🛍 Puis-je vous suggérer des articles complémentaires ou avez-vous une question sur votre commande ?";
+    $welcome = "<span style='opacity:0.5;font-size:0.85em'>✦ <span class='chat-dots'><span>.</span><span>.</span><span>.</span></span></span>";
 
 } else {
 
@@ -124,6 +124,9 @@ if ($page === 'article' && $product_name) {
       <div class="chat-time">maintenant</div>
     </div>
   </div>
+  <?php if ($product_context_js): ?>
+  <script><?= $product_context_js ?></script>
+  <?php endif; ?>
 
   <!-- INPUT -->
   <div class="chat-input-area">

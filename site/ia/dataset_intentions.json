@@ -6796,70 +6796,6 @@
     "label": "salutation"
   },
   {
-    "text": "merci vous etes tres serviable",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres competent",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres professionnel",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres sympa",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres gentil",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres patient",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres efficace",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres rapide",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres precis",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres clair",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres utile",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres agreable",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres aimable",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres accueillant",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres attentionne",
-    "label": "salutation"
-  },
-  {
-    "text": "merci vous etes tres a l ecoute",
-    "label": "salutation"
-  },
-  {
     "text": "merci vous etes tres disponible",
     "label": "salutation"
   },
@@ -7945,5 +7881,858 @@
 {"text": "est-ce que vous avez des bottines ?", "label": "recherche"},
 {"text": "tu as des chaussures pour femme ?", "label": "recherche"},
 {"text": "est-ce qu'il existe des chaussures vegan ?", "label": "recherche"},
-{"text": "vous proposez des chaussures de sécurité ?", "label": "recherche"}
+{"text": "vous proposez des chaussures de sécurité ?", "label": "recherche"},
+{"text": "présente ce produit en une phrase", "label": "recommandation"},
+{"text": "décris ce modèle en une phrase", "label": "recommandation"},
+{"text": "donne moi le point fort de ce produit", "label": "recommandation"},
+{"text": "c'est quoi le point fort principal de ce modèle", "label": "recommandation"},
+{"text": "présente les NeoUrban Street en une phrase", "label": "recommandation"},
+{"text": "mets en avant le meilleur atout de cette chaussure", "label": "recommandation"},
+{"text": "c'est quoi l'atout principal de ce modèle", "label": "recommandation"},
+{"text": "présente ce modèle avec son point fort", "label": "recommandation"},
+{"text": "décris en une phrase ce que ce modèle a de particulier", "label": "recommandation"},
+{"text": "c'est quoi ce qui rend ce modèle unique", "label": "recommandation"},
+{"text": "donne une phrase percutante sur ce produit", "label": "recommandation"},
+{"text": "résume ce produit en une phrase", "label": "recommandation"},
+{"text": "c'est quoi le meilleur argument pour ce modèle", "label": "recommandation"},
+{"text": "présente brièvement ce modèle", "label": "recommandation"},
+{"text": "donne moi une accroche sur ce produit", "label": "recommandation"},
+{"text": "c'est quoi le meilleur atout de ces baskets", "label": "recommandation"},
+{"text": "tu peux me présenter ce modèle rapidement", "label": "recommandation"},
+{"text": "c'est quoi ce que ce modèle fait de mieux", "label": "recommandation"},
+{"text": "donne moi une bonne raison d'acheter ce modèle", "label": "recommandation"},
+{"text": "propose moi quelque chose pour ce modèle", "label": "recommandation"},
+{"text": "résume mon panier en une phrase", "label": "recommandation"},
+{"text": "c'est quoi un bon résumé de ma sélection", "label": "recommandation"},
+{"text": "tu peux me résumer ce que j'ai dans mon panier", "label": "recommandation"},
+{"text": "je veux un avis sur mon panier", "label": "recommandation"},
+{"text": "mon panier te semble bien", "label": "recommandation"},
+{"text": "c'est quoi ton avis sur ma sélection", "label": "recommandation"},
+{"text": "j'ai regardé des baskets lifestyle tu peux m'aider à choisir", "label": "recommandation"},
+{"text": "j'ai vu plusieurs modèles tu peux m'orienter", "label": "recommandation"},
+{"text": "j'ai consulté des modèles running aide moi à décider", "label": "recommandation"},
+{"text": "je reviens sur le site aide moi à reprendre mon choix", "label": "recommandation"},
+{"text": "j'avais regardé des chaussures tu peux me conseiller", "label": "recommandation"},
+{"text": "j'ai vu des modèles intéressants aide moi à trancher", "label": "recommandation"},
+
+  {
+    "text": "vous avez les Nova Air Lifestyle ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les RetroWave 90s",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que vous avez les CloudStep Lite ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je voudrais voir les NeoUrban Street",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les AirFlex Pastel ?",
+    "label": "recherche"
+  },
+  {
+    "text": "montrez moi les StreetWave Bold",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les Velocity Pro X",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les FlexRun Training ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux voir les PowerGrip Court",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que les MaxBoost Gym sont disponibles ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les AeroRun 5 Pro ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les SpeedFlow Race",
+    "label": "recherche"
+  },
+  {
+    "text": "montrez moi les EnduroTrail GTX",
+    "label": "recherche"
+  },
+  {
+    "text": "je voudrais les FlowLite Daily",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les UltraStep Boost ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les TrailRock X Pro",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que les TrekLite Summer sont en stock ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux voir les RockShield Alpine",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les BreezeWalk Liège ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les OceanBreeze Sport",
+    "label": "recherche"
+  },
+  {
+    "text": "montrez moi les UrbanRidge Winter",
+    "label": "recherche"
+  },
+  {
+    "text": "je voudrais les CityWalk Chelsea",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les SnowShield Arctic ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les SoftWalk Classic",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que vous avez les ClassicFit Premium ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux voir les Élégance Haute Nuit",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les SafeGrip S3 Pro ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les PureStep Vegan",
+    "label": "recherche"
+  },
+  {
+    "text": "montrez moi les GreenWalk Knit",
+    "label": "recherche"
+  },
+  {
+    "text": "je voudrais les BareStep Zero Drop",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez les RainStep WP ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche les StormGuard Boot",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que les PowerTrain Cross sont disponibles ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux voir les WalkPro Comfort",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures UrbanStep ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche une paire FlyMotion",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des modèles Athletica ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux voir les chaussures MountainEdge",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des produits WorkGuard ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche quelque chose d'EcoFeet",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des modèles GentleStep ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux voir les chaussures NordCraft",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des modèles BelleMode ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche quelque chose de FreeMotion",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des produits HomeStep ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux voir les chaussures DryWalk",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des modèles ActiveFeet ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez d'autres baskets lifestyle comme les Nova Air ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche quelque chose dans le style des RetroWave",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures de running comme les AeroRun ?",
+    "label": "recherche"
+  },
+  {
+    "text": "quelque chose de similaire aux EnduroTrail mais moins cher ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des randonnées comme les TrailRock mais en été ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des sandales comme les BreezeWalk mais pour homme ?",
+    "label": "recherche"
+  },
+  {
+    "text": "quelque chose de similaire aux NeoUrban Street en femme ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures vegan comme les PureStep ?",
+    "label": "recherche"
+  },
+  {
+    "text": "quelque chose de style StreetWave mais moins haut ?",
+    "label": "recherche"
+  },
+  {
+    "text": "les Nova Air Lifestyle sont disponibles en quelle taille ?",
+    "label": "suivi"
+  },
+  {
+    "text": "le RetroWave 90s taille comment ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les CloudStep Lite sont disponibles en noir ?",
+    "label": "suivi"
+  },
+  {
+    "text": "le NeoUrban Street a une semelle anti-odeur ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les AirFlex Pastel sont disponibles en quelle couleur ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les StreetWave Bold font quelle hauteur de semelle ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les Velocity Pro X conviennent pour le crossfit ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les FlexRun Training sont respirantes ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les PowerGrip Court sont pour quel type de sol ?",
+    "label": "suivi"
+  },
+  {
+    "text": "le MaxBoost Gym a quel drop ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les AeroBoost React pèsent combien ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les AeroRun 5 Pro sont bonnes pour le marathon ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SpeedFlow Race ont vraiment une plaque carbone ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les EnduroTrail GTX sont vraiment imperméables ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les FlowLite Daily conviennent aux débutants ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les UltraStep Boost ont la technologie boost ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SpeedMax Light ont quel drop ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les TrailRock X Pro sont cramponables ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les TrekLite Summer sèchent vite ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les RockShield Alpine sont compatibles crampons ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les ForestGrip Walk conviennent aux débutants randonneurs ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les BreezeWalk Liège sont réglables ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les OceanBreeze Sport résistent à l'eau salée ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les UrbanRidge Winter sont imperméables ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les CityWalk Chelsea ont quel talon ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SnowShield Arctic résistent jusqu'à quelle température ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SoftWalk Classic sont en vrai cuir ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les ClassicFit Premium sont faits à la main ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les Élégance Haute Nuit ont quel talon en cm ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SafeGrip S3 Pro répondent à quelle norme ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SteelPro Light S1P sont plus légères que les S3 ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les HardWork ESD S2 sont certifiées antistatique ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les PureStep Vegan sont en cuir de pomme ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les GreenWalk Knit utilisent des teintures naturelles ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SoftHome Cozy sont lavables en machine ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les CozyWarm Memory ont une semelle mémoire ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les WalkPro Comfort conviennent aux personnes âgées ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les BareStep Zero Drop ont quel drop exactement ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les NatureFlex Wide sont vraiment extra-larges ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les EasyStep Canvas passent en machine ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les RainStep WP sont vraiment imperméables ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les StormGuard Boot tiennent jusqu'à quelle profondeur ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les PowerTrain Cross sont bonnes pour le Zumba ?",
+    "label": "suivi"
+  },
+  {
+    "text": "c'est quoi le prix des AeroRun 5 Pro ?",
+    "label": "suivi"
+  },
+  {
+    "text": "combien coûtent les SpeedFlow Race ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les TrailRock X Pro sont à quel prix ?",
+    "label": "suivi"
+  },
+  {
+    "text": "c'est cher les ClassicFit Premium ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SnowShield Arctic sont à combien ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les AeroRun 5 Pro sont en stock en 43 ?",
+    "label": "suivi"
+  },
+  {
+    "text": "vous avez encore des EnduroTrail GTX en 40 ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les CloudStep Lite sont disponibles en 38 ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les NeoUrban Street sont en stock ?",
+    "label": "suivi"
+  },
+  {
+    "text": "les SpeedFlow Race sont disponibles ?",
+    "label": "suivi"
+  },
+  {
+    "text": "quelle différence entre les AeroRun 5 Pro et les SpeedFlow Race ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "tu peux comparer les FlowLite Daily et les AeroRun 5 Pro ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "les EnduroTrail GTX ou les TrailRock X Pro pour le trail ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "lequel est mieux entre les NeoUrban Street et les StreetWave Bold ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les CloudStep Lite et les Nova Air Lifestyle",
+    "label": "comparaison"
+  },
+  {
+    "text": "les Velocity Pro X ou les FlexRun Training pour la salle ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "quelle différence entre les MaxBoost Gym et les Velocity Pro X ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les TrailRock X Pro et les RockShield Alpine",
+    "label": "comparaison"
+  },
+  {
+    "text": "les TrekLite Summer ou les ForestGrip Walk pour la rando d'été ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "lequel choisir entre les UltraStep Boost et les AeroRun 5 Pro ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les SpeedMax Light et les SpeedFlow Race",
+    "label": "comparaison"
+  },
+  {
+    "text": "les SafeGrip S3 Pro ou les SteelPro Light S1P pour l'entrepôt ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "quelle différence entre les PureStep Vegan et les GreenWalk Knit ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les BareStep Zero Drop et les NatureFlex Wide",
+    "label": "comparaison"
+  },
+  {
+    "text": "les RainStep WP ou les StormGuard Boot pour la pluie ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "lequel est mieux entre les SoftWalk Classic et les ClassicFit Premium ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les Élégance Haute Nuit et les NightElegance Stiletto",
+    "label": "comparaison"
+  },
+  {
+    "text": "les SoftHeel Block ou les CityWalk Chelsea pour le bureau ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "quelle différence entre les UrbanRidge Winter et les SnowShield Arctic ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les EasyStep Canvas et les StreetFlex Knit",
+    "label": "comparaison"
+  },
+  {
+    "text": "les AeroBoost React ou les Velocity Pro X pour le HIIT ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "lequel est plus léger entre les BareStep et les NatureFlex Wide ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "les WalkPro Comfort vs les TrailWalk Nature pour la marche ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "quel est le plus imperméable des deux : EnduroTrail GTX ou TrailRock X Pro ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "FlyMotion ou Athletica pour le running ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "UrbanStep ou FlyMotion pour les baskets lifestyle ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "MountainEdge ou Athletica pour la randonnée ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "WorkGuard S3 ou S1P pour mon poste en logistique ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "EcoFeet ou UrbanStep pour quelque chose d'écologique ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les deux modèles de running FlyMotion",
+    "label": "comparaison"
+  },
+  {
+    "text": "entre les trois chaussures de trail MountainEdge laquelle choisir ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "tu me conseillerais les AeroRun 5 Pro pour débuter le running ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu recommandes les FlowLite Daily ou autre chose pour le jogging ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "les SpeedFlow Race sont-elles vraiment adaptées pour moi qui court rarement ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "lequel de vos modèles trail tu conseillerais pour un premier trail ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "les EnduroTrail GTX c'est une bonne idée pour la Sainte-Victoire ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu penses que les TrailRock X Pro sont adaptées pour des randos de plusieurs jours ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "les MaxBoost Gym sont vraiment utiles pour la musculation ou c'est du marketing ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu conseillerais les Velocity Pro X ou les FlexRun Training pour un débutant en salle ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "les SnowShield Arctic tu penses que c'est excessif pour Paris en hiver ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "pour un cadeau de noel tu conseillerais les ClassicFit Premium ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "les WalkPro Comfort conviendraient pour ma grand-mère ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "les BareStep Zero Drop c'est raisonnable pour commencer le minimaliste ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu penses que les SafeGrip S3 Pro sont adaptées à mon poste en BTP ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "les PureStep Vegan sont vraiment bien ou juste un argument marketing ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "quel modèle UrbanStep tu conseillerais pour le quotidien ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le meilleur modèle FlyMotion pour courir un 10km ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu recommandes quoi chez MountainEdge pour une rando facile en famille ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le modèle GentleStep le plus adapté pour le bureau ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu me conseilles les SoftHome Cozy ou les CozyWarm Memory pour l'hiver ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le meilleur trail MountainEdge selon toi ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu recommandes quoi comme running Athletica pour longue distance ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le modèle BelleMode le plus confortable ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu conseillerais les EcoFeet à quelqu'un qui débute dans le vegan ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "quel modèle WorkGuard pour travailler dans un labo électronique ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le running FlyMotion que tu préfères ?",
+    "label": "recommandation"
+  },
+  {
+    "text": "je prends les AeroRun 5 Pro en taille 42",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les SpeedFlow Race au panier",
+    "label": "panier"
+  },
+  {
+    "text": "je veux commander les EnduroTrail GTX",
+    "label": "panier"
+  },
+  {
+    "text": "mets les TrailRock X Pro dans mon panier",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les NeoUrban Street en 44",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les CloudStep Lite au panier s'il vous plaît",
+    "label": "panier"
+  },
+  {
+    "text": "je veux acheter les Velocity Pro X",
+    "label": "panier"
+  },
+  {
+    "text": "commande les MaxBoost Gym en 43",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les SnowShield Arctic",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les ClassicFit Premium au panier",
+    "label": "panier"
+  },
+  {
+    "text": "je veux les SoftHome Cozy",
+    "label": "panier"
+  },
+  {
+    "text": "je commande les WalkPro Comfort en 41",
+    "label": "panier"
+  },
+  {
+    "text": "mets les BareStep Zero Drop dans le panier",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les PureStep Vegan en 40",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les RainStep WP au panier",
+    "label": "panier"
+  },
+  {
+    "text": "je veux les SafeGrip S3 Pro en taille 43",
+    "label": "panier"
+  },
+  {
+    "text": "commande les CityWalk Chelsea",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les BreezeWalk Liège",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les UltraStep Boost au panier en 42",
+    "label": "panier"
+  },
+  {
+    "text": "je veux acheter les FlowLite Daily",
+    "label": "panier"
+  },
+  {
+    "text": "mets les UrbanRidge Winter dans mon panier",
+    "label": "panier"
+  },
+  {
+    "text": "je commande les Élégance Haute Nuit",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les OceanBreeze Sport en 38",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les PowerTrain Cross au panier",
+    "label": "panier"
+  },
+  {
+    "text": "je veux les RetroWave 90s en 45",
+    "label": "panier"
+  },
+  {
+    "text": "commande les StreetFlex Knit",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les GreenWalk Knit en 39",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les StormGuard Boot au panier",
+    "label": "panier"
+  },
+  {
+    "text": "je veux les CozyWarm Memory",
+    "label": "panier"
+  },
+  {
+    "text": "je commande les ForestGrip Walk en 41",
+    "label": "panier"
+  },
+  {
+    "text": "mets les NatureFlex Wide dans le panier en 42",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les SteelPro Light S1P en 44",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les SoftHeel Block au panier",
+    "label": "panier"
+  },
+  {
+    "text": "je veux les AirFlex Pastel en 37",
+    "label": "panier"
+  },
+  {
+    "text": "commande les StreetWave Bold en 40",
+    "label": "panier"
+  },
+  {
+    "text": "je prends les TrekLite Summer",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les RockShield Alpine au panier",
+    "label": "panier"
+  },
+  {
+    "text": "je veux les SoftWalk Classic en 43",
+    "label": "panier"
+  },
+  {
+    "text": "je commande les EasyStep Canvas",
+    "label": "panier"
+  },
+  {
+    "text": "mets les AeroBoost React dans mon panier",
+    "label": "panier"
+  }
 ]

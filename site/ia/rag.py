@@ -20,14 +20,14 @@ from qdrant_client.models import Filter, FieldCondition, Range, MatchValue, Matc
 # LIMITES DE GÉNÉRATION PAR INTENTION
 # ══════════════════════════════════════════════
 _LIMITES = {
-    "hors_sujet":     {"num_predict": 60,  "consigne": "Réponds en 1-2 phrases.", "nb_produits": 0},
-    "livraison":      {"num_predict": 80,  "consigne": "Réponds en 2-3 phrases.", "nb_produits": 0},
-    "panier":         {"num_predict": 80,  "consigne": "Réponds en 1-2 phrases.", "nb_produits": 1},
-    "suivi":          {"num_predict": 150, "consigne": "Réponds en 3-4 phrases maximum.", "nb_produits": 1},
-    "comparaison":    {"num_predict": 100, "consigne": "Dis juste en une phrase que ci dessous le client trouvera la comparaison du produit 1 et 2", "nb_produits": 2},
-    "recommandation": {"num_predict": 150, "consigne": "Conseille en 3-4 phrases maximum.", "nb_produits": 1},
-    "recherche":      {"num_predict": 200, "consigne": "Présente chaque produit en 1 phrases max.", "nb_produits": 3},
-    "salutation": {"num_predict": 50, "consigne": "Réponds en 1 phrase de bienvenue.", "nb_produits": 0}
+    "hors_sujet":     {"num_predict": 100,   "consigne": "Réponds en 1-2 phrases.", "nb_produits": 0},
+    "livraison":      {"num_predict": 180,  "consigne": "Réponds en 2-3 phrases.", "nb_produits": 0},
+    "panier":         {"num_predict": 200,  "consigne": "Réponds en 2-3 phrases.", "nb_produits": 1},
+    "suivi":          {"num_predict": 220,  "consigne": "Réponds en 2-3 phrases maximum.", "nb_produits": 1},
+    "comparaison":    {"num_predict": 120,  "consigne": "Dis juste en une phrase que ci dessous le client trouvera la comparaison du produit 1 et 2", "nb_produits": 2},
+    "recommandation": {"num_predict": 220,  "consigne": "Conseille en 2-3 phrases maximum.", "nb_produits": 1},
+    "recherche":      {"num_predict": 280,  "consigne": "Présente chaque produit en 1 phrase max.", "nb_produits": 3},
+    "salutation":     {"num_predict": 150,   "consigne": "Réponds en 1 phrase de bienvenue.", "nb_produits": 0},
 }
 
 
@@ -119,7 +119,7 @@ def _extraire_genre(history: list, question: str) -> str | None:
 
     try:
         sc = fetch_all(
-            f"SELECT taille, couleur FROM size_color WHERE id_shoes = {meilleur_produit['id_shoes']}"
+            f"SELECT taille, couleur FROM size_color WHERE id_shoes = {r['id_shoes']}"
         )
         tailles  = list({r["taille"]  for r in sc if r.get("taille")})
         couleurs = list({r["couleur"] for r in sc if r.get("couleur")})
@@ -245,7 +245,7 @@ def _resumer_description(produit: dict) -> str:
             model="mistral",
              messages=[{"role": "user", "content": (
                 f"Tu es un assistant francophone. Réponds UNIQUEMENT en français.\n"
-                f"Résume en une phrase de 10 à 15 mots maximum le point fort principal de cette chaussure.\n"
+                f"Résume en une phrase de 10 à 15 mots MAXIMUM le point fort principal de cette chaussure.\n"
                 f"Exemple : 'Légère et propulsive, idéale pour la compétition et les coureurs entraînés.'\n"
                 f"Description : {description}"
             )}],
@@ -333,7 +333,7 @@ def _llm_categories_candidates(question: str, history: list) -> list[str]:
         f"{contexte}"
         f"Catégories disponibles : {', '.join(categories_dispo)}\n"
         f"Question : \"{question}\"\n"
-        f"Liste TOUTES les catégories pertinentes ET similaires avec un score.\n"
+        f"Liste TOUTES les catégories pertinentes ET similaires avec un score de 1 à 10.\n"
         f"Réponds UNIQUEMENT en JSON : {{\"categories\": [{{\"nom\": \"categorie1\", \"score\": nombre entier 1}}, {{\"nom\": \"categorie2\", \"score\": nombre entier 2}}]}}"
     )
     try:
@@ -349,19 +349,40 @@ def _llm_categories_candidates(question: str, history: list) -> list[str]:
         if match:
             try:
                 data = json.loads(match.group())
-                cats = [
-                    c["nom"] for c in data.get("categories", [])
-                    if c["nom"] in categories_dispo and c.get("score", 0) >= 6
+
+                # Toutes les catégories valides avec leur score
+                cats_raw = [
+                    c for c in data.get("categories", [])
+                    if c["nom"] in categories_dispo and c.get("score", 0) > 0
                 ]
-                print(f"[LLM] catégories candidates : {cats}")
+                print(f"[LLM-CAT] catégories brutes : {[(c['nom'], c['score']) for c in cats_raw]}")
+
+                if not cats_raw:
+                    print(f"[LLM-CAT] aucune catégorie reconnue → recherche libre")
+                    return []
+
+                # Seuil adaptatif selon le meilleur score
+                meilleur_score = max(c["score"] for c in cats_raw)
+                if meilleur_score >= 9:
+                    seuil = 7
+                elif meilleur_score >= 7:
+                    seuil = 5
+                elif meilleur_score >= 5:
+                    seuil = 4
+                else:
+                    seuil = 3
+                print(f"[LLM-CAT] meilleur score={meilleur_score} → seuil adaptatif={seuil}")
+
+                cats = [c["nom"] for c in cats_raw if c.get("score", 0) >= seuil]
+                print(f"[LLM-CAT] catégories retenues (score >= {seuil}) : {cats}")
                 return cats
+
             except Exception as e:
-                print(f"[LLM] catégories parse échoué : {e}")
+                print(f"[LLM-CAT] parse échoué : {e}")
     except Exception as e:
         import traceback
         print(f"[LLM-CAT] ERREUR : {traceback.format_exc()}")
     return []
-
 # ══════════════════════════════════════════════
 # VECTORISATION + ANALYSE PARALLÈLE
 # ══════════════════════════════════════════════
@@ -644,7 +665,66 @@ def get_response_stream(
     print(f"[RAG] question : {question!r} | history : {len(history)} messages")
     print(f"{'='*50}\n")
 
-    intention, confiance = classifier_intention(question) if question.strip() else ("recherche", 1.0)
+    # ══════════════════════════════════════════════
+    # DÉTECTION PROMPTS INTERNES (pages produit/panier)
+    # Ces prompts sont générés automatiquement par le JS,
+    # ils ne doivent JAMAIS passer dans le classifier.
+    # ══════════════════════════════════════════════
+    _MARQUEURS_INTERNES = [
+        "accueille le client sur la fiche",
+        "mets en avant le point fort de",
+        "revient sur",
+        "revient encore sur",
+        "parle directement au client de son panier",
+        "dis directement au client que tu as vu",
+        "invite le client à découvrir le catalogue",
+        "crée un sentiment d'urgence",
+        "encourage-le chaleureusement à passer à l'achat",
+        "En une à deux phrases (max",   # ← couvre tous les prompts auto
+        "En une seule phrase courte (max",  # ← panier
+    ]
+    est_prompt_interne = any(marqueur in question for marqueur in _MARQUEURS_INTERNES)
+
+    mots_accueil = [
+        "Génère un message d'accueil",
+        "En une seule phrase courte",
+        "accueille le client",
+        "cite son point fort",
+    ]
+    if any(mot in question for mot in mots_accueil) or est_prompt_interne:
+        intention, confiance = "salutation", 1.0
+    else:
+        intention, confiance = classifier_intention(question) if question.strip() else ("recherche", 1.0)
+        if intention not in ("salutation", "hors_sujet", "livraison", "comparaison") and question.strip():
+            try:
+                from db_mysql import fetch_all
+                from rapidfuzz import fuzz
+                rows = fetch_all("SELECT id_shoes, nom, prix, categorie, marque, url_image, description FROM articles")
+                question_lower = question.lower()
+                for row in rows:
+                    nom = (row.get("nom") or "").lower()
+                    if nom and fuzz.partial_ratio(nom, question_lower) >= 90:
+                        # Charger le produit complet et l'injecter dans l'historique
+                        sc = fetch_all(f"SELECT taille, couleur FROM size_color WHERE id_shoes = {row['id_shoes']}")
+                        produit_detecte = {
+                            "id":          row["id_shoes"],
+                            "name":        row["nom"],
+                            "price":       row["prix"],
+                            "categorie":   row.get("categorie", ""),
+                            "marque":      row.get("marque", ""),
+                            "url_image":   row.get("url_image", ""),
+                            "description": row.get("description", ""),
+                            "tailles":     list({x["taille"] for x in sc if x.get("taille")}),
+                            "couleurs":    list({x["couleur"] for x in sc if x.get("couleur")}),
+                        }
+                        # Injecter comme si l'assistant avait déjà présenté ce produit
+                        history = history + [{"role": "assistant", "content": "", "products": [produit_detecte]}]
+                        intention = "suivi"
+                        confiance = 1.0
+                        print(f"[INTENTION] override → suivi (nom exact détecté : {row['nom']})")
+                        break
+            except Exception as e:
+                print(f"[INTENTION] override nom exact échoué : {e}")
     """
     _MOTS_COMPARAISON = [
     "comparatif", "comparer", "compare", "comparaison",
@@ -702,10 +782,42 @@ def get_response_stream(
     # ════════════════════════════════════════════
     # CAS 1b — SALUTATION
     # ════════════════════════════════════════════
+    # CAS 1b — SALUTATION
+    # CAS 1b — SALUTATION / PROMPT INTERNE
     if intention == "salutation":
         print("[CAS] 1b — salutation")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
-        yield "Bonjour ! 👋 Je suis votre conseiller personnel PairIA. Dites-moi quel type de chaussures vous recherchez, votre budget ou votre usage, et je trouve la paire parfaite pour vous !"
+
+        has_prior_exchange = any(m["role"] == "assistant" for m in history)
+        if has_prior_exchange and "Ne commence pas par Bonjour" not in question:
+            question_llm = question + " (Ne commence pas par Bonjour, tu as déjà salué le client.)"
+        else:
+            question_llm = question
+
+        # Si c'est un prompt interne, on passe directement la consigne au LLM
+        # sans polluer avec l'historique de produits
+        if est_prompt_interne:
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": question_llm},
+            ]
+        else:
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                *[{"role": m["role"], "content": m["content"]} for m in history[-6:] if m["role"] in ("user", "assistant")],
+                {"role": "user", "content": question_llm},
+            ]
+
+        try:
+            stream = ollama.chat(
+                model="mistral", messages=messages, stream=True,
+                options={"num_ctx": 2048, "num_predict": 120, "temperature": 0.8},
+            )
+            for chunk in stream:
+                yield chunk["message"]["content"]
+        except Exception as e:
+            yield "Je suis votre conseiller PairIA, posez-moi vos questions 👟"
+
         yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1}
         return
         
@@ -803,27 +915,68 @@ def get_response_stream(
         }
         return
 
-    # ════════════════════════════════════════════
     # CAS 4 — SUIVI
-    # ════════════════════════════════════════════
     if intention == "suivi":
         print("[CAS] 4 — suivi")
-        produits_historique = _produits_depuis_historique(history)
-        if produits_historique:
+        produit_suivi = None
+        for msg in reversed(history):
+            if msg.get("role") == "assistant" and msg.get("products"):
+                produit_suivi = msg["products"][0]
+                break
+        if not produit_suivi:
+            for msg in history:
+                if msg.get("role") == "system" and "consulte actuellement" in msg.get("content", ""):
+                    import re
+                    match = re.search(r'consulte actuellement\s*:\s*"([^"]+)"', msg["content"])
+                    if match:
+                        nom_produit = match.group(1)
+                        print(f"[CAS] 4 — produit trouvé via contexte system : {nom_produit}")
+                        try:                          # ← AJOUT
+                            from db_mysql import fetch_all
+                            rows = fetch_all(
+                                f"SELECT id_shoes, nom, prix, categorie, marque, url_image, description FROM articles "
+                                f"WHERE nom = '{nom_produit.replace(chr(39), chr(39)*2)}' LIMIT 1"
+                            )
+                            print(f"[CAS] 4 — rows DB : {rows}")   # ← AJOUT
+                            if rows:
+                                r = rows[0]
+                                sc = fetch_all(
+                                    f"SELECT taille, couleur FROM size_color WHERE id_shoes = {r['id_shoes']}"
+                                )
+                                produit_suivi = {
+                                    "id":          r["id_shoes"],
+                                    "name":        r["nom"],
+                                    "price":       r["prix"],
+                                    "categorie":   r.get("categorie", ""),
+                                    "marque":      r.get("marque", ""),
+                                    "url_image":   r.get("url_image", ""),
+                                    "description": r.get("description", ""),
+                                    "tailles":     list({x["taille"] for x in sc if x.get("taille")}),
+                                    "couleurs":    list({x["couleur"] for x in sc if x.get("couleur")}),
+                                }
+                                print(f"[CAS] 4 — produit_suivi construit : {produit_suivi['name']}")  # ← AJOUT
+                        except Exception as e:        # ← AJOUT
+                            import traceback          # ← AJOUT
+                            print(f"[CAS] 4 — ERREUR DB : {traceback.format_exc()}")  # ← AJOUT
+                    break
+
+        # ← NOUVEAU : si on a trouvé produit_suivi, on l'utilise directement
+        produits_a_utiliser = [produit_suivi] if produit_suivi else _produits_depuis_historique(history)
+
+        if produits_a_utiliser:
             yield {"products": [], "action": None, "product_id": None, "quantity": 1}
             contexte_produits = "\n".join([
                 f"- {p['name']} ({p.get('marque', '')}, {p['price']}€) : {p.get('description', '')}\n"
                 f"  Tailles : {', '.join(str(t) for t in p.get('tailles', []))}\n"
                 f"  Couleurs : {', '.join(p.get('couleurs', []))}"
-                for p in produits_historique
+                for p in produits_a_utiliser
             ])
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
                 {"role": "user", "content": (
                     f"Produits déjà présentés :\n{contexte_produits}\n\n"
                     f"Question : {question}\n"
-                    f"Réponds précisément en te basant uniquement sur ces informations. "
+                    f"Réponds en 1-2 phrases naturelles et directes, en te basant UNIQUEMENT sur les informations ci-dessus. "
+                    f"Ne mentionne AUCUN autre produit. "
                     f"{_LIMITES['suivi']['consigne']}"
                 )},
             ]
@@ -842,14 +995,13 @@ def get_response_stream(
                 yield f"Erreur Mistral : {str(e)}"
             yield {
                 "type":       "products_final",
-                "products":   produits_historique,
+                "products":   produits_a_utiliser,
                 "action":     None,
                 "product_id": None,
                 "quantity":   1,
             }
             return
         print("[CAS] 4 — suivi sans produits → fallback recherche")
-
     # ════════════════════════════════════════════
     # CAS 5 — COMPARAISON
     # ════════════════════════════════════════════

@@ -58,6 +58,7 @@ class HistoryMessage(BaseModel):
     role: str
     content: str
     products: list[dict] = []
+    internal: bool = False
 
 class ChatRequest(BaseModel):
     question: str
@@ -105,7 +106,11 @@ def chat(request: ChatRequest):
 
 @app.post("/chat/stream")
 def chat_stream(request: ChatRequest):
-    history = [{"role": m.role, "content": m.content, "products": m.products} for m in request.history]
+    history = [
+        {"role": m.role, "content": m.content, "products": m.products}
+        for m in request.history
+        if not m.internal         
+    ]
 
     # Récupère le vecteur image de la session si disponible
     entry = _image_vectors.get(request.session_id)
