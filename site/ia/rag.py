@@ -1095,11 +1095,19 @@ def get_response_stream(
     nb_produits = _nb_produits_from_history(history,intention)
     limite      = _LIMITES.get(intention, _LIMITES["recherche"])
     print(f"[CAS] 6 — {len(produits_trouves)} produits | genre={genre} | nb_à_afficher={nb_produits}")
-
+    if is_image_search:
+        produits_trouves = produits_trouves[:3]
+        nb_a_presenter   = 3
+        print(f"[CAS] 6 — recherche image → top 3 Qdrant forcé")
+    else:
+        nb_a_presenter = min(nb_produits, len(produits_trouves))
     description_visuelle = ""
     if is_image_search and produits_trouves:
-        description_visuelle = f"[Photo reçue, produit similaire : {produits_trouves[0]['name']}] "
-
+       description_visuelle = (
+        "[Photo reçue] Présente ces 3 produits visuellement similaires à la photo. "
+        "Sois naturel et enthousiaste, comme un vendeur qui conseille un ami. "
+        "1 phrase par produit, pas de liste à puces, pas de 'Voici'."
+    )
     suffixe_recommandation = ""
     if intention == "recommandation":
         suffixe_recommandation = (
@@ -1142,7 +1150,7 @@ def get_response_stream(
             options={
                 "num_ctx":     _calculer_ctx(history),
                 "num_predict": limite["num_predict"],
-                "temperature": 0.7,
+                "temperature": 0.4 if is_image_search else 0.7,
             },
         )
         for chunk in stream:
