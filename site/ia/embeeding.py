@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ia/embeeding.py
 # Script d'indexation : lit les produits depuis MySQL et les stocke dans Qdrant
 # Commande : py embeeding.py
@@ -48,7 +49,6 @@ def indexer_produits():
     produits = cursor.fetchall()
     cursor.close()
     conn.close()
-    print(f"{len(produits)} produits trouvés.")
 
     # ── Connexion Qdrant ──
     print("Connexion à Qdrant...")
