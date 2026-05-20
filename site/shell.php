@@ -9,26 +9,26 @@ require_once 'includes/bd.php';
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PairIA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles/global.css">
   <link rel="stylesheet" href="styles/index.css">
   <link rel="stylesheet" href="styles/article.css">
   <link rel="stylesheet" href="styles/panier.css">
-  <link rel="stylesheet" id="page-css">
 </head>
 <body>
 
 <?php include 'includes/navbar.php'; ?>
 
+<!-- Hero full-width, EN DEHORS du split content/chat -->
+<div id="spa-hero"></div>
+
+<!-- Split : contenu scrollable + chat fixe -->
 <div class="page-layout">
   <div class="page-content" id="main-content">
-    <div id="spa-hero"></div>
     <div id="spa-content">
-      <!-- contenu chargé dynamiquement -->
-      <div style="padding:2rem;text-align:center;color:#999">Chargement...</div>
+      <div class="loading-placeholder">Chargement…</div>
     </div>
   </div>
-
   <?php include 'includes/chat.php'; ?>
 </div>
 
