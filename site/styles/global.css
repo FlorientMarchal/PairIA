@@ -556,11 +556,7 @@ nav {
 /* ══════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════ */
-@media (max-width: 1024px) {
-  :root {
-    --chat-w: 360px;
-  }
-}
+/* chat-w fixe à 420px sur tous les écrans desktop */
 
 @media (max-width: 768px) {
   nav {
@@ -624,11 +620,7 @@ nav {
   }
 }
 
-@media (min-width: 1400px) {
-  :root {
-    --chat-w: 480px;
-  }
-}
+
 .chat-fab.hidden {
   display: none !important;
 }

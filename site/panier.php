@@ -12,146 +12,129 @@ $livraison   = $sous_total >= 80 ? 0 : 10;
 $total       = $sous_total + $livraison;
 $nb_articles = array_sum(array_column($panier, 'quantity'));
 
-$premier_article = !empty($panier) ? array_values($panier)[0] : null;
+$is_ajax = isset($_GET['ajax']);
+if (!$is_ajax) {
+    // Accès direct → redirige vers shell qui chargera cette page en AJAX
+    header('Location: shell.php');
+    exit;
+}
+
+// Fragment AJAX
 ?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PairIA — Mon panier</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles/global.css">
-  <link rel="stylesheet" href="styles/panier.css">
-</head>
-<body>
+<title>PairIA — Mon panier</title>
 
-<?php include 'includes/navbar.php'; ?>
+<div id="ajax-hero"></div>
 
-<div class="page-layout">
-  <div class="page-content">
-    <div class="panier-area">
+<div id="ajax-content">
+  <div class="panier-area">
 
-      <div class="panier-header">
-        <h1 class="panier-title">Mon panier</h1>
-        <?php if ($nb_articles > 0): ?>
-          <span class="panier-count"><?= $nb_articles ?> article<?= $nb_articles > 1 ? 's' : '' ?></span>
-        <?php endif; ?>
+    <div class="panier-header">
+      <h1 class="panier-title">Mon panier</h1>
+      <?php if ($nb_articles > 0): ?>
+        <span class="panier-count"><?= $nb_articles ?> article<?= $nb_articles > 1 ? 's' : '' ?></span>
+      <?php endif; ?>
+    </div>
+
+    <?php if (empty($panier)): ?>
+
+      <div class="panier-vide">
+        <div class="panier-vide-icon">🛍</div>
+        <div class="panier-vide-title">Votre panier est vide</div>
+        <p class="panier-vide-sub">Demandez à notre conseiller de vous aider à trouver la paire parfaite !</p>
+        <a href="index.php" class="panier-vide-btn">Voir le catalogue</a>
       </div>
 
-      <?php if (empty($panier)): ?>
+    <?php else: ?>
 
-        <div class="panier-vide">
-          <div class="panier-vide-icon">🛍</div>
-          <div class="panier-vide-title">Votre panier est vide</div>
-          <p class="panier-vide-sub">Demandez à notre conseiller de vous aider à trouver la paire parfaite !</p>
-          <a href="index.php" class="panier-vide-btn">Voir le catalogue</a>
-        </div>
+      <div class="panier-items" id="panier-items">
+        <?php foreach ($panier as $key => $item): ?>
+          <div class="panier-item"
+            id="item-<?= htmlspecialchars($key) ?>"
+            data-prix="<?= $item['prix'] ?>">
 
-      <?php else: ?>
-
-        <div class="panier-items" id="panier-items">
-          <?php foreach ($panier as $key => $item): ?>
-            <div class="panier-item"
-              id="item-<?= htmlspecialchars($key) ?>"
-              data-prix="<?= $item['prix'] ?>">
-
-              <div class="item-img">
-                <?php if (!empty($item['image'])): ?>
-                  <img src="<?= htmlspecialchars($item['image']) ?>"
-                    alt="<?= htmlspecialchars($item['nom']) ?>"
-                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <span class="item-emoji" style="display:none">👟</span>
-                <?php else: ?>
-                  <span class="item-emoji">👟</span>
-                <?php endif; ?>
-              </div>
-
-              <div class="item-details">
-                <div class="item-cat"><?= htmlspecialchars($item['categorie']) ?></div>
-                <div class="item-name"><?= htmlspecialchars($item['nom']) ?></div>
-                <?php if (!empty($item['taille'])): ?>
-                  <div class="item-meta">Pointure : <?= htmlspecialchars($item['taille']) ?></div>
-                <?php endif; ?>
-                <?php if (!empty($item['couleur'])): ?>
-                  <div class="item-meta">Couleur : <?= htmlspecialchars($item['couleur']) ?></div>
-                <?php endif; ?>
-              </div>
-
-              <div class="item-right">
-                <div class="item-price-wrap">
-                  <div class="item-price" id="price-<?= htmlspecialchars($key) ?>">
-                    <?= number_format($item['prix'] * $item['quantity'], 2, ',', ' ') ?> €
-                  </div>
-                  <div class="item-price-unit"><?= number_format($item['prix'], 2, ',', ' ') ?> € / unité</div>
-                </div>
-                <div class="item-qty-wrap">
-                  <button class="item-qty-btn" onclick="changeItemQty('<?= htmlspecialchars($key) ?>', -1)">−</button>
-                  <span class="item-qty-val" id="qty-<?= htmlspecialchars($key) ?>"><?= $item['quantity'] ?></span>
-                  <button class="item-qty-btn" onclick="changeItemQty('<?= htmlspecialchars($key) ?>', 1)">+</button>
-                </div>
-                <button class="item-remove" onclick="removeItem('<?= htmlspecialchars($key) ?>')">
-                  Supprimer
-                </button>
-              </div>
-
+            <div class="item-img">
+              <?php if (!empty($item['image'])): ?>
+                <img src="<?= htmlspecialchars($item['image']) ?>"
+                  alt="<?= htmlspecialchars($item['nom']) ?>"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                <span class="item-emoji" style="display:none">👟</span>
+              <?php else: ?>
+                <span class="item-emoji">👟</span>
+              <?php endif; ?>
             </div>
-          <?php endforeach; ?>
+
+            <div class="item-details">
+              <div class="item-cat"><?= htmlspecialchars($item['categorie']) ?></div>
+              <div class="item-name"><?= htmlspecialchars($item['nom']) ?></div>
+              <?php if (!empty($item['taille'])): ?>
+                <div class="item-meta">Pointure : <?= htmlspecialchars($item['taille']) ?></div>
+              <?php endif; ?>
+              <?php if (!empty($item['couleur'])): ?>
+                <div class="item-meta">Couleur : <?= htmlspecialchars($item['couleur']) ?></div>
+              <?php endif; ?>
+            </div>
+
+            <div class="item-right">
+              <div class="item-price-wrap">
+                <div class="item-price" id="price-<?= htmlspecialchars($key) ?>">
+                  <?= number_format($item['prix'] * $item['quantity'], 2, ',', ' ') ?> €
+                </div>
+                <div class="item-price-unit"><?= number_format($item['prix'], 2, ',', ' ') ?> € / unité</div>
+              </div>
+              <div class="item-qty-wrap">
+                <button class="item-qty-btn" onclick="changeItemQty('<?= htmlspecialchars($key) ?>', -1)">−</button>
+                <span class="item-qty-val" id="qty-<?= htmlspecialchars($key) ?>"><?= $item['quantity'] ?></span>
+                <button class="item-qty-btn" onclick="changeItemQty('<?= htmlspecialchars($key) ?>', 1)">+</button>
+              </div>
+              <button class="item-remove" onclick="removeItem('<?= htmlspecialchars($key) ?>')">
+                Supprimer
+              </button>
+            </div>
+
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <div class="recap">
+        <div class="recap-title">Récapitulatif</div>
+
+        <div class="recap-row">
+          <span>Sous Total :</span>
+          <span id="sous-total"><?= number_format($sous_total, 2, ',', ' ') ?> €</span>
+        </div>
+        <div class="recap-row">
+          <span>Livraison :</span>
+          <span id="livraison" class="<?= $livraison === 0 ? 'livraison-gratuite' : '' ?>">
+            <?= $livraison === 0 ? 'Gratuite' : number_format($livraison, 2, ',', ' ') . ' €' ?>
+          </span>
         </div>
 
-        <div class="recap">
-          <div class="recap-title">Récapitulatif</div>
-
-          <div class="recap-row">
-            <span>Sous Total :</span>
-            <span id="sous-total"><?= number_format($sous_total, 2, ',', ' ') ?> €</span>
-          </div>
-          <div class="recap-row">
-            <span>Livraison :</span>
-            <span id="livraison" class="<?= $livraison === 0 ? 'livraison-gratuite' : '' ?>">
-              <?= $livraison === 0 ? 'Gratuite' : number_format($livraison, 2, ',', ' ') . ' €' ?>
-            </span>
-          </div>
-
-          <!-- Message livraison gratuite — toujours présent, affiché/masqué en JS -->
-          <div class="recap-free-shipping" id="free-shipping-msg"
-            <?= $livraison === 0 ? 'style="display:none"' : '' ?>>
-            Plus que <?= number_format(80 - $sous_total, 2, ',', ' ') ?> € pour la livraison gratuite !
-          </div>
-
-          <div class="recap-divider"></div>
-
-          <div class="recap-row recap-total">
-            <span>Total TTC :</span>
-            <span id="total"><?= number_format($total, 2, ',', ' ') ?> €</span>
-          </div>
-
-          <button class="recap-checkout-btn">Finaliser la commande →</button>
-
-          <div class="recap-garanties">
-            <div class="recap-garantie-row">🔒 Paiement sécurisé</div>
-            <div class="recap-garantie-row">🔄 Retours gratuits 30 jours</div>
-            <div class="recap-garantie-row">🚚 Livraison 3-5 jours</div>
-          </div>
+        <div class="recap-free-shipping" id="free-shipping-msg"
+          <?= $livraison === 0 ? 'style="display:none"' : '' ?>>
+          Plus que <?= number_format(80 - $sous_total, 2, ',', ' ') ?> € pour la livraison gratuite !
         </div>
 
-      <?php endif; ?>
+        <div class="recap-divider"></div>
 
-    </div>
+        <div class="recap-row recap-total">
+          <span>Total TTC :</span>
+          <span id="total"><?= number_format($total, 2, ',', ' ') ?> €</span>
+        </div>
+
+        <button class="recap-checkout-btn">Finaliser la commande →</button>
+
+        <div class="recap-garanties">
+          <div class="recap-garantie-row">🔒 Paiement sécurisé</div>
+          <div class="recap-garantie-row">🔄 Retours gratuits 30 jours</div>
+          <div class="recap-garantie-row">🚚 Livraison 3-5 jours</div>
+        </div>
+      </div>
+
+    <?php endif; ?>
+
   </div>
-
-  <?php
-  if ($premier_article) {
-      $article = ['nom' => $premier_article['nom'], 'categorie' => $premier_article['categorie']];
-  }
-  include 'includes/chat.php';
-  ?>
 </div>
 
-<script src="js/global.js"></script>
-<script src="js/chat.js"></script>
-<script src="js/voice.js"></script>
 <script>
 
 const LIVRAISON_SEUIL = 80;
@@ -233,9 +216,9 @@ function recalcTotal() {
   const livraison = sousTotal >= LIVRAISON_SEUIL ? 0 : 10;
   const total     = sousTotal + livraison;
 
-  const stEl = document.getElementById('sous-total');
-  const lvEl = document.getElementById('livraison');
-  const ttEl = document.getElementById('total');
+  const stEl  = document.getElementById('sous-total');
+  const lvEl  = document.getElementById('livraison');
+  const ttEl  = document.getElementById('total');
   const fsmEl = document.getElementById('free-shipping-msg');
 
   if (stEl) stEl.textContent = sousTotal.toFixed(2).replace('.', ',') + ' €';
@@ -302,5 +285,3 @@ function confirmerSuppression(callback) {
 }
 
 </script>
-</body>
-</html>
