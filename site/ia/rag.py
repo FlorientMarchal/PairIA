@@ -26,7 +26,7 @@ _LIMITES = {
     "suivi":          {"num_predict": 150, "consigne": "Réponds en 3-4 phrases maximum.", "nb_produits": 1},
     "comparaison":    {"num_predict": 100, "consigne": "Dis juste en une phrase que ci dessous le client trouvera la comparaison du produit 1 et 2", "nb_produits": 2},
     "recommandation": {"num_predict": 150, "consigne": "Conseille en 3-4 phrases maximum.", "nb_produits": 1},
-    "recherche":      {"num_predict": 200, "consigne": "Présente chaque produit en 1-2 phrases max.", "nb_produits": 3},
+    "recherche":      {"num_predict": 200, "consigne": "Présente chaque produit en 1 phrases max.", "nb_produits": 3},
     "salutation": {"num_predict": 50, "consigne": "Réponds en 1 phrase de bienvenue.", "nb_produits": 0}
 }
 
@@ -410,7 +410,8 @@ def _analyser_question(
         print("[VECTORISE] mode texte — analyse parallèle")
         with ThreadPoolExecutor(max_workers=3) as executor:
             fut_enrichi    = executor.submit(_llm_enrichir_question,     question, history)
-            fut_filtres    = executor.submit(extraire_filtres,            question, history)
+            history_recent = [m for m in history[-4:]]  # seulement les 2 derniers échanges
+            fut_filtres = executor.submit(extraire_filtres, question, history_recent)
             fut_categories = executor.submit(_llm_categories_candidates, question, history)
 
             question_enrichie     = fut_enrichi.result()
@@ -429,7 +430,7 @@ def _analyser_question(
             # on les filtre en ne gardant que celles détectées par le LLM ET
             # qui ne sont pas déjà la catégorie principale)
             cats_llm_valides = [c for c in categories_candidates if c != cat_explicite]
-            categories_candidates = [cat_explicite] + cats_llm_valides[:1]  # max 2 similaires
+            categories_candidates = [cat_explicite] + cats_llm_valides[:2]  # max 2 similaires
             print(f"[VECTORISE] catégorie explicite prioritaire : {cat_explicite} + similaires LLM : {cats_llm_valides[:2]}")
         else:
             # Pas de catégorie explicite → on se fie au LLM
@@ -811,7 +812,7 @@ def get_response_stream(
         if produits_historique:
             yield {"products": [], "action": None, "product_id": None, "quantity": 1}
             contexte_produits = "\n".join([
-                f"- {p['name']} ({p['marque']}, {p['price']}€) : {p['description']}\n"
+                f"- {p['name']} ({p.get('marque', '')}, {p['price']}€) : {p.get('description', '')}\n"
                 f"  Tailles : {', '.join(str(t) for t in p.get('tailles', []))}\n"
                 f"  Couleurs : {', '.join(p.get('couleurs', []))}"
                 for p in produits_historique

@@ -1,8 +1,10 @@
 // js/chat.js
 const API_URL = "http://localhost:8000";
 
-let conversationHistory = [];
-let sessionId = crypto.randomUUID();
+let conversationHistory = JSON.parse(sessionStorage.getItem('chatHistory') || '[]');
+let sessionId = sessionStorage.getItem('chatSessionId') || crypto.randomUUID();
+sessionStorage.setItem('chatSessionId', sessionId);
+
 
 /*
    CHAT TEXTE
@@ -106,9 +108,10 @@ async function sendMessage(text) {
     }
 
     conversationHistory.push({ role: "user", content: text });
-    conversationHistory.push({ role: "assistant", content: message, products: products });
+    conversationHistory.push({ role: "assistant", content: message, products: products,layout: layout });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
+    sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory)); // ← ajoute
 
     console.log(
       "[HISTORIQUE MIS À JOUR]",
@@ -163,82 +166,6 @@ function sendFromInput() {
   }
 }
 
-/* ══════════════════════════════════════
-   COMPARAISON CÔTE À CÔTE
-══════════════════════════════════════ */
-function showComparisonView(p1, p2, container) {
-    if (!container) container = document.getElementById("messages");
-
-    const div = document.createElement("div");
-    div.className = "chat-msg bot";
-
-    function colHtml(p, idx) {
-        const tailles  = (p.tailles  || []).join(", ") || "—";
-        const couleurs = (p.couleurs || []).join(", ") || "—";
-        const resume   = p.resume || "";   // ← résumé LLM
-        return `
-        <div class="chat-compare-col">
-            <div class="chat-compare-img">
-                ${p.url_image
-                    ? `<img src="${escapeHtml(p.url_image)}"
-                            alt="${escapeHtml(p.name)}"
-                            onerror="this.style.display='none'">`
-                    : "👟"}
-            </div>
-            <div class="chat-compare-name">${escapeHtml(p.name)}</div>
-            <div class="chat-compare-price">${p.price} €</div>
-            ${resume ? `<div class="chat-compare-resume">${escapeHtml(resume)}</div>` : ""}
-            <table class="chat-compare-table">
-                <tr>
-                    <td class="chat-compare-label">Marque</td>
-                    <td>${escapeHtml(p.marque || "—")}</td>
-                </tr>
-                <tr>
-                    <td class="chat-compare-label">Catégorie</td>
-                    <td>${escapeHtml(p.categorie || "—")}</td>
-                </tr>
-                <tr>
-                    <td class="chat-compare-label">Tailles</td>
-                    <td>${escapeHtml(tailles)}</td>
-                </tr>
-                <tr>
-                    <td class="chat-compare-label">Couleurs</td>
-                    <td>${escapeHtml(couleurs)}</td>
-                </tr>
-            </table>
-
-            <button class="chat-cart-btn"
-                style="margin-top:10px;width:100%"
-                onclick="showCartSelector(${JSON.stringify(p).replace(/"/g, '&quot;')}, document.getElementById('messages'))">
-                🛒 Choisir ce modèle
-            </button>
-        </div>`;
-    }
-
-    div.innerHTML = `
-        <div class="chat-compare-card">
-            <div class="chat-compare-title">Comparaison</div>
-            <div class="chat-compare-grid">
-                ${colHtml(p1, 0)}
-                <div class="chat-compare-vs">VS</div>
-                ${colHtml(p2, 1)}
-            </div>
-        </div>`;
-
-    container.appendChild(div);
-    requestAnimationFrame(() => {
-        const cols = div.querySelectorAll(".chat-compare-col");
-        if (cols.length < 2) return;
-
-        // Reset d'abord
-        cols.forEach(col => col.style.height = "");
-
-        // Prend le max des deux hauteurs naturelles
-        const maxH = Math.max(...[...cols].map(col => col.offsetHeight));
-        cols.forEach(col => col.style.height = maxH + "px");
-    });
-    container.scrollTop = container.scrollHeight;
-}
 
 /*
    CHAT IMAGE + TEXTE
@@ -364,6 +291,7 @@ async function sendImageWithText(file, text) {
     conversationHistory.push({ role: "assistant", content: message, products: products });
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
+    sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory)); // ← ajoute
 
     console.log(
       "[HISTORIQUE MIS À JOUR]",
@@ -400,10 +328,12 @@ async function sendImageWithText(file, text) {
 }
 
 function resetConversation() {
-  conversationHistory = [];
-  sessionId = crypto.randomUUID();
-  const container = document.getElementById("messages");
-  if (container) container.innerHTML = "";
+    conversationHistory = [];
+    sessionId = crypto.randomUUID();
+    sessionStorage.removeItem('chatHistory');
+    sessionStorage.setItem('chatSessionId', sessionId);
+    const container = document.getElementById("messages");
+    if (container) container.innerHTML = "";
 }
 
 /* ══════════════════════════════════════
@@ -820,14 +750,49 @@ function escapeAttr(text) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  updateCartCount();
+    updateCartCount();
 
-  document.addEventListener("click", (e) => {
-    const chip = e.target.closest(".chat-chip");
-    if (chip && chip.dataset.msg) {
-      sendMessage(chip.dataset.msg);
+    // Rejoue l'historique visuel
+    const container = document.getElementById("messages");
+    if (container && conversationHistory.length > 0) {
+        // Vide le message de bienvenue par défaut
+        container.innerHTML = "";
+        
+        for (const msg of conversationHistory) {
+            // Ignore les messages de contexte produit injectés
+            if (msg.content.startsWith("[Page produit")) continue;
+            
+            if (msg.role === "user") {
+                appendUserMessage(msg.content);
+            } else if (msg.role === "assistant" && msg.content) {
+                appendBotMessageText(msg.content);
+                // Réaffiche les produits si présents
+                if (msg.products && msg.products.length > 0) {
+                    if (msg.products.length === 1) {
+                        showCartSelector(msg.products[0], container);
+                    } else if (msg.layout === "comparison" && msg.products.length >= 2) {
+                        showComparisonView(msg.products[0], msg.products[1], container);
+                    } else if (msg.products.length > 1) {
+                        showProductPicker(msg.products, container);
+                    }
+                }
+            }
+        }
+        container.scrollTop = container.scrollHeight;
     }
-  });
+
+    document.addEventListener("click", (e) => {
+        const chip = e.target.closest(".chat-chip");
+        if (chip && chip.dataset.msg) {
+            sendMessage(chip.dataset.msg);
+        }
+    });
+
+    if (typeof voiceSupported === "function" && voiceSupported()) {
+        const mic = document.getElementById("voice-btn");
+        if (mic) mic.style.display = "inline-flex";
+    }
+
 
   //  ACTIVATION MICRO SI SUPPORTÉ
   if (typeof voiceSupported === "function" && voiceSupported()) {
@@ -915,4 +880,23 @@ function showComparisonView(p1, p2, container) {
       });
   });
     container.scrollTop = container.scrollHeight;
+}
+
+function initProductContext(produit) {
+    const dejaPresent = conversationHistory.some(
+        msg => msg.products && msg.products.some(p => p.id === produit.id)
+    );
+    if (dejaPresent) return;
+
+    // Ajoute le contexte produit sans effacer l'historique existant
+    conversationHistory.push({
+        role: "user",
+        content: `[Page produit : ${produit.name}]`
+    });
+    conversationHistory.push({
+        role: "assistant",
+        content: `Je vois que vous consultez les ${produit.name} à ${produit.price}€. N'hésitez pas à me poser vos questions !`,
+        products: [produit]
+    });
+    sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
 }

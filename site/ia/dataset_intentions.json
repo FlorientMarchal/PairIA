@@ -7930,5 +7930,20 @@
 {"text": "vous avez des talons pour soirée ?", "label": "recherche"},
 {"text": "des chaussures pour aller au restaurant ?", "label": "recherche"},
 {"text": "quelque chose de chic pour une soirée ?", "label": "recherche"},
-{"text": "des chaussures pour un anniversaire ?", "label": "recherche"}
+{"text": "des chaussures pour un anniversaire ?", "label": "recherche"},
+{"text": "est-ce que tu as des chaussures de marche ?", "label": "recherche"},
+{"text": "est-ce que vous avez des baskets ?", "label": "recherche"},
+{"text": "avez-vous des chaussures de sport ?", "label": "recherche"},
+{"text": "est-ce qu'il y a des sandales ?", "label": "recherche"},
+{"text": "vous avez quelque chose pour la randonnée ?", "label": "recherche"},
+{"text": "est-ce que vous proposez des talons ?", "label": "recherche"},
+{"text": "tu as des running ?", "label": "recherche"},
+{"text": "est-ce qu'on peut trouver des mocassins ?", "label": "recherche"},
+{"text": "vous avez des chaussures imperméables ?", "label": "recherche"},
+{"text": "est-ce que vous avez quelque chose en taille 42 ?", "label": "recherche"},
+{"text": "y a-t-il des chaussures de ville ?", "label": "recherche"},
+{"text": "est-ce que vous avez des bottines ?", "label": "recherche"},
+{"text": "tu as des chaussures pour femme ?", "label": "recherche"},
+{"text": "est-ce qu'il existe des chaussures vegan ?", "label": "recherche"},
+{"text": "vous proposez des chaussures de sécurité ?", "label": "recherche"}
 ]

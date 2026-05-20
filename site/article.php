@@ -191,6 +191,7 @@ $similaires = $stmt->fetchAll();
 <script src="js/global.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/voice.js"></script>
+<script src="js/image_search.js"></script>
 <script>
   // Données du produit pour le chat
   const PRODUCT_ID   = <?= $id ?>;
@@ -276,6 +277,19 @@ function shakeElement(el) {
     el.classList.remove('shake');
   }, 400);
 }
+
+initProductContext({
+    id:          <?= $id ?>,
+    name:        "<?= htmlspecialchars($article['nom'], ENT_QUOTES) ?>",
+    price:       <?= $article['Prix'] ?>,
+    categorie:   "<?= htmlspecialchars($article['categorie'], ENT_QUOTES) ?>",
+    marque:      "<?= htmlspecialchars($article['marque'] ?? '', ENT_QUOTES) ?>",
+    url_image:   "<?= htmlspecialchars($article['url_image'] ?? '', ENT_QUOTES) ?>",
+    description: "<?= htmlspecialchars($article['description'] ?? '', ENT_QUOTES) ?>",
+    tailles:     <?= json_encode($tailles) ?>,
+    couleurs:    <?= json_encode($couleurs) ?>,
+    emoji:       "👟"
+});
 </script>
 
 </body>

@@ -45,6 +45,23 @@ if ($page === 'article' && $product_name) {
     $welcome = "Bonjour ! 👋 Je suis votre conseiller personnel. Décrivez-moi le style, l'usage ou le budget que vous recherchez et je trouve la paire parfaite pour vous.";
 }
 
+// Dans chat.php, après le calcul de $welcome
+$product_context_js = "";
+if ($page === 'article' && $product_name && isset($article)) {
+    $product_json = json_encode([
+        'id'        => $article['id_shoes'] ?? null,
+        'name'      => $article['nom'] ?? '',
+        'price'     => $article['prix'] ?? 0,
+        'categorie' => $article['categorie'] ?? '',
+        'marque'    => $article['marque'] ?? '',
+        'url_image' => $article['url_image'] ?? '',
+        'tailles'   => [],
+        'couleurs'  => [],
+        'emoji'     => '👟',
+    ], JSON_HEX_APOS | JSON_HEX_QUOT);
+    $product_context_js = "initProductContext({$product_json});";
+}
+
 /* SUGGESTIONS */
 if ($page === 'article' && $product_name) {
     $chips = [
