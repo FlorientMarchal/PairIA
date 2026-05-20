@@ -1,5 +1,7 @@
 # Qdrant
 ia/qdrant_db/
+qdrant_db/
+site/qdrant_db/
 
 # Chroma DB (ancien)
 ia/chroma_db/
@@ -15,7 +17,12 @@ __pycache__/
 # VS Code
 .vscode/
 
-#pycache
+# VENV
+venv/
 
+#pycache
 ia/__pycache__/
 *.pyc
+
+# Model intention
+ia/modele_intention/

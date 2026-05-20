@@ -3,20 +3,27 @@
 
 
 SYSTEM_PROMPT = """
-Tu es un assistant e-commerce spécialisé en chaussures pour le site PairIA.
+Tu es un conseiller personnel en chaussures pour PairIA, une boutique en ligne spécialisée.
 
 Tes règles ABSOLUES :
-- Tu réponds UNIQUEMENT en français.
-- Tu ne parles QUE de chaussures et des produits du catalogue fourni.
-- Tu ne dois JAMAIS inventer de produits qui ne sont pas dans le catalogue.
-- Si aucun produit ne correspond, dis-le clairement et propose le plus proche.
-- Tes réponses sont courtes, claires et utiles (3-5 phrases maximum).
+- Tu réponds UNIQUEMENT en français, avec un ton chaleureux et naturel.
+- Tu parles DIRECTEMENT au client, à la deuxième personne ("tu" ou "vous").
+- Ne jamais dire "le client", "l'utilisateur" ou "vous avez trouvé" en narration — tu es face au client.
+- Réponds toujours comme si tu étais un conseiller en magasin qui s'adresse au client en ce moment.
+- Si le prompt contient "Ne commence pas par Bonjour", tu ne commences JAMAIS par "Bonjour", "Salut", "Hello" ou toute formule de salutation.
+- Tu ne parles QUE des produits du catalogue fourni — jamais d'invention.
+- Si aucun produit ne correspond exactement, propose le plus proche en le précisant.
+- Tes réponses sont courtes et naturelles, comme un vrai conseiller en magasin.
 - Tu peux recommander, comparer, conseiller sur la taille ou l'usage.
-- Si l'utilisateur veut ajouter un produit au panier, confirme-le.
-- Tu ne connais que les produits fournis.
-- Si l'utilisateur pose une question sur un produit spécifique, concentre-toi dessus.
-- Tu utilises TOUJOURS le contexte des échanges précédents pour répondre.
+- Tu utilises TOUJOURS le contexte des échanges précédents.
 - Tu ne dois JAMAIS inventer de tailles, couleurs ou prix.
+- Pour les tailles, regroupe-les en intervalle quand c'est possible (ex: 37-46).
+- Ne décris jamais une image envoyée comme étant un produit du catalogue.
+- Cite TOUJOURS les noms de produits EXACTEMENT comme dans le catalogue.
+- Ne liste JAMAIS les produits comme une liste numérotée — présente-les naturellement.
+- Tiens toi au nombre de tokens indiqué !
+- Mets en avant le point fort de chaque produit en une phrase percutante.
+
 """.strip()
 
 
@@ -45,9 +52,16 @@ def _extraire_budget(question: str):
     return None
 
 
-def build_prompt(question: str, produits: list, product_id: int = None, genre: str = None) -> str:
+def build_prompt(question: str, produits: list, product_id: int = None, genre: str = None, is_image_search: bool = False, contexte_filtres: str = ""):
     prompt_parts = []
-
+    if contexte_filtres:
+        prompt_parts.append(contexte_filtres + "\n")
+    if is_image_search:
+        prompt_parts.append(
+        "NOTE : L'utilisateur a envoyé une photo de chaussures. "
+        "Présente simplement les produits similaires trouvés SANS décrire l'image envoyée "
+        "et SANS inventer de caractéristiques visuelles que tu n'as pas vues.\n"
+    )
     #Detection du genre pour contextualiser la réponse (si mentionné dans les échanges précédents)
     if genre:
         prompt_parts.append(f"Contexte : l'utilisateur recherche des chaussures pour {genre}.\n")
@@ -62,27 +76,10 @@ def build_prompt(question: str, produits: list, product_id: int = None, genre: s
             )
 
     if produits:
-        #  AJOUT : filtre par budget si détecté dans la question
-        budget = _extraire_budget(question)
-        if budget:
-            produits_filtres = [p for p in produits if p["price"] <= budget]
-            # Si aucun produit ne passe le filtre, on garde tous les produits
-            # et on laisse Mistral expliquer qu'il n'y a rien dans ce budget
-            if not produits_filtres:
-                prompt_parts.append(
-                    f"⚠️ Aucun produit dans le catalogue ne coûte moins de {budget}€. "
-                    f"Voici les produits les plus proches :"
-                )
-            else:
-                produits = produits_filtres
-                prompt_parts.append(
-                    f"Produits disponibles sous {budget}€ :"
-                )
-        else:
-            prompt_parts.append("Produits disponibles dans le catalogue :")
+        prompt_parts.append("Produits disponibles dans le catalogue :")
 
         for i, p in enumerate(produits):
-            tailles_str  = ", ".join(p.get("tailles",  [])) or "non précisé"
+            tailles_str = ", ".join(str(taille) for taille in p.get("tailles", [])) or "non précisé"
             couleurs_str = ", ".join(p.get("couleurs", [])) or "non précisé"
 
             ligne = f"{i+1}. {p['name']} ({p['price']}€) — {p['marque']}"
