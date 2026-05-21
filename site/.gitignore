@@ -26,3 +26,5 @@ ia/__pycache__/
 
 # Model intention
 ia/modele_intention/
+
+venv
