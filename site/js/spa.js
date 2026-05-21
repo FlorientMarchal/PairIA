@@ -2,8 +2,6 @@
 
 const SPA_PAGES = ['index.php', 'article.php', 'panier.php'];
 
-// Le hero est HORS de main-content (frère au-dessus de page-layout).
-// Pour "aller sous le hero", on scrolle WINDOW jusqu'à page-layout.
 function scrollToCatalogue() {
     requestAnimationFrame(() => requestAnimationFrame(() => {
         const pageLayout = document.querySelector('.page-layout');
@@ -37,7 +35,7 @@ async function navigateTo(url, pushState = true) {
         const content = doc.getElementById('ajax-content');
         if (content) document.getElementById('spa-content').innerHTML = content.innerHTML;
 
-        // Hero (full-width, hors split)
+        // Hero
         const hero = doc.getElementById('ajax-hero');
         document.getElementById('spa-hero').innerHTML = hero ? hero.innerHTML : '';
 
@@ -50,22 +48,36 @@ async function navigateTo(url, pushState = true) {
         const activeLink = document.querySelector(`nav a[href="${targetPage}"]`);
         if (activeLink) activeLink.classList.add('active');
 
-        // Scripts inline
-        doc.querySelectorAll('script').forEach(oldScript => {
-            const s = document.createElement('script');
-            if (oldScript.src) { s.src = oldScript.src; }
-            else { s.textContent = oldScript.textContent; }
-            document.body.appendChild(s);
-            document.body.removeChild(s);
+        // Scripts externes : chargés une seule fois
+        const scriptPromises = [];
+        doc.querySelectorAll('script[src]').forEach(oldScript => {
+            const alreadyLoaded = document.querySelector(`script[src="${oldScript.src}"]`);
+            if (!alreadyLoaded) {
+                const p = new Promise((resolve) => {
+                    const s = document.createElement('script');
+                    s.src = oldScript.src;
+                    s.onload = resolve;
+                    s.onerror = resolve;
+                    document.body.appendChild(s);
+                });
+                scriptPromises.push(p);
+            }
+        });
+        await Promise.all(scriptPromises);
+
+        // Scripts inline : IIFE pour isoler const/let et éviter les re-déclarations
+        doc.querySelectorAll('script:not([src])').forEach(oldScript => {
+            requestAnimationFrame(() => {
+                const s = document.createElement('script');
+                s.textContent = `(() => { ${oldScript.textContent} })();`;
+                document.body.appendChild(s);
+                document.body.removeChild(s);
+            });
         });
 
         if (pushState) history.pushState({ url }, '', url);
 
-        if (goToIndex) {
-            scrollToCatalogue();
-        } else {
-            scrollToTop();
-        }
+        goToIndex ? scrollToCatalogue() : scrollToTop();
 
     } catch (e) {
         console.error('[SPA]', e);

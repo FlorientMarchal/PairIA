@@ -121,7 +121,7 @@ def indexer_images():
                             "description": str(produit.get("description") or ""),
                             "tailles": str(produit.get("tailles") or ""),
                             "couleurs": str(produit.get("couleurs") or ""),
-                            "url_image": image_filename
+                            "url_image": "images/" + image_filename
                         }
                     )
                 ]

@@ -1099,3 +1099,25 @@ nav {
 .chat-compare-col .chat-cart-btn {
     margin-top: auto;  /* colle le bouton en bas */
 }
+
+/* ── Welcome IA — loader animé ── */
+.chat-welcome-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+.chat-dots span {
+  animation: chatDotBlink 1.2s infinite;
+  font-size: 1.1em;
+  line-height: 1;
+}
+.chat-dots span:nth-child(2) { animation-delay: 0.2s; }
+.chat-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes chatDotBlink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40%           { opacity: 1;   }
+}
