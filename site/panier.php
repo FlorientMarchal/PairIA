@@ -136,7 +136,9 @@ if (!$is_ajax) {
 </div>
 
 <script>
-initPanierContext(<?php echo json_encode($panier_js, JSON_HEX_APOS | JSON_HEX_TAG); ?>);
+requestAnimationFrame(() =>
+    initPanierContext(<?php echo json_encode($panier_js, JSON_HEX_APOS | JSON_HEX_TAG); ?>)
+);
 const LIVRAISON_SEUIL = 80;
 
 /* ── Modifier la quantité ── */

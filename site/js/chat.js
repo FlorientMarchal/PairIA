@@ -956,8 +956,8 @@ function initPanierContext(panierItems) {
     } else if (derniersProduitsChat.length > 0) {
         const resumeChat = derniersProduitsChat.map(p => `${p.name} (${p.price}€)`).join(', ');
         contexte = `L'utilisateur a un panier vide. Il vient de consulter dans le chat : ${resumeChat}.`;
-        question = `En une seule phrase courte (max 20 mots), rappelle au client qu'il regardait ${resumeChat} et encourage-le à les ajouter au panier.${sansBonjour}`;
-    }else if (visited.length > 0) {
+        question = `En 2-3 phrases, rappelle au client qu'il regardait ${resumeChat} et encourage-le à les ajouter au panier.${sansBonjour}`;
+    } else if (visited.length > 0) {
         const resumeVisites = visited.slice(-3)
             .map(p => `${p.name} (${p.price}€)`)
             .join(', ');
@@ -974,13 +974,9 @@ function initPanierContext(panierItems) {
     conversationHistory.push({ role: "system", content: contexte });
     sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
 
-    if (derniersProduitsChat.length > 0) {
-      const resumeChat = derniersProduitsChat.map(p => `${p.name} (${p.price}€)`).join(', ');
-      contexte = `L'utilisateur a un panier vide. Il vient de consulter dans le chat : ${resumeChat}.`;
-      question = `En 2-3 phrases, rappelle au client qu'il regardait ${resumeChat} et encourage-le à les ajouter au panier.${sansBonjour}`;
-      _genererMessageAccueil(question, null, derniersProduitsChat); // ← passer les produits
-    }
+    _genererMessageAccueil(question, null, derniersProduitsChat);
 }
+
 async function _genererMessageAccueil(question, productId, produitsAafficher = []) {
     const container = document.getElementById("messages");
     if (!container) return;
