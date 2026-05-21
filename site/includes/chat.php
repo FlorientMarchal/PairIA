@@ -8,7 +8,6 @@ $categorie    = isset($article['categorie']) ? $article['categorie'] : '';
 
 /* MESSAGE D'ACCUEIL */
 if ($page === 'article' && $product_name) {
-
     $determinants = [
         'Baskets lifestyle'  => 'les',
         'Baskets sport'      => 'les',
@@ -31,21 +30,14 @@ if ($page === 'article' && $product_name) {
         'Training'           => 'les chaussures de training',
         'Vegan'              => 'les',
     ];
-
-    $det = isset($determinants[$categorie]) ? $determinants[$categorie] : 'le';
-
+    $det     = isset($determinants[$categorie]) ? $determinants[$categorie] : 'le';
     $welcome = "<span style='opacity:0.5;font-size:0.85em'>✦ <span class='chat-dots'><span>.</span><span>.</span><span>.</span></span></span>";
-
 } elseif ($page === 'panier') {
-
     $welcome = "<span style='opacity:0.5;font-size:0.85em'>✦ <span class='chat-dots'><span>.</span><span>.</span><span>.</span></span></span>";
-
 } else {
-
     $welcome = "Bonjour ! 👋 Je suis votre conseiller personnel. Décrivez-moi le style, l'usage ou le budget que vous recherchez et je trouve la paire parfaite pour vous.";
 }
 
-// Dans chat.php, après le calcul de $welcome
 $product_context_js = "";
 if ($page === 'article' && $product_name && isset($article)) {
     $product_json = json_encode([
@@ -64,32 +56,17 @@ if ($page === 'article' && $product_name && isset($article)) {
 
 /* SUGGESTIONS */
 if ($page === 'article' && $product_name) {
-    $chips = [
-        'Tailles disponibles ?',
-        'Matériaux ?',
-        'Comparer avec un autre modèle',
-        'Alternatives moins chères',
-    ];
+    $chips = ['Tailles disponibles ?', 'Matériaux ?', 'Comparer avec un autre modèle', 'Alternatives moins chères'];
 } elseif ($page === 'panier') {
-    $chips = [
-        'Compléments',
-        'Code promo ?',
-        'Mon choix est bon ?',
-    ];
+    $chips = ['Compléments', 'Code promo ?', 'Mon choix est bon ?'];
 } else {
-    $chips = [
-        'Chaussures imperméables',
-        'Moins de 80€',
-        'Pour le running',
-        'Style casual',
-        'Pointure 42',
-    ];
+    $chips = ['Chaussures imperméables', 'Moins de 80€', 'Pour le running', 'Style casual', 'Pointure 42'];
 }
 ?>
 
 <div class="chat-panel" id="chat-panel">
 
-  <!-- HEADER -->
+  <!-- HEADER — bouton historique + bouton reset -->
   <div class="chat-panel-head">
     <div class="chat-avatar">
       <span class="chat-avatar-icon">✦</span>
@@ -101,13 +78,18 @@ if ($page === 'article' && $product_name) {
       <div class="chat-head-status">Personal Shopper IA · En ligne</div>
     </div>
 
-    <button class="chat-reset-btn" onclick="resetConversation()" title="Effacer la conversation">↺</button>
+    <!-- ↓ MODIFIÉ : deux boutons côte à côte -->
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <button class="chat-history-btn" onclick="openHistoryPanel()" title="Historique des conversations">
+        <i class="ti ti-history" aria-hidden="true"></i>
+      </button>
+      <button class="chat-reset-btn" onclick="resetConversation()" title="Nouvelle conversation">↺</button>
+    </div>
   </div>
 
   <!-- SUGGESTIONS -->
   <div class="chat-suggestions">
     <div class="chat-suggestions-label">Suggestions</div>
-
     <div class="chat-chips">
       <?php foreach ($chips as $chip): ?>
         <button class="chat-chip" data-msg="<?= htmlspecialchars($chip, ENT_QUOTES, 'UTF-8') ?>">
@@ -124,6 +106,7 @@ if ($page === 'article' && $product_name) {
       <div class="chat-time">maintenant</div>
     </div>
   </div>
+
   <?php if ($product_context_js): ?>
   <script><?= $product_context_js ?></script>
   <?php endif; ?>
@@ -131,7 +114,6 @@ if ($page === 'article' && $product_name) {
   <!-- INPUT -->
   <div class="chat-input-area">
     <div id="image-preview-bar"></div>
-
     <div class="chat-input-row">
       <input
         class="chat-input"
@@ -140,39 +122,28 @@ if ($page === 'article' && $product_name) {
         placeholder="Posez votre question..."
         onkeydown="if(event.key==='Enter'){ event.preventDefault(); sendFromInput(); }"
       >
-
-      <button
-        class="chat-voice-btn"
-        id="voice-btn"
-        type="button"
-        onclick="toggleVoice()"
-        title="Dicter un message"
-        style="display:none">
-        🎤
-      </button>
-
-      <button
-        class="chat-image-btn"
-        type="button"
-        onclick="openImageSearch()"
-        title="Rechercher par image">
-        📷
-      </button>
-
-      <button
-        class="chat-send-btn"
-        type="button"
-        onclick="sendFromInput()">
-        →
-      </button>
+      <button class="chat-voice-btn" id="voice-btn" type="button"
+        onclick="toggleVoice()" title="Dicter un message" style="display:none">🎤</button>
+      <button class="chat-image-btn" type="button"
+        onclick="openImageSearch()" title="Rechercher par image">📷</button>
+      <button class="chat-send-btn" type="button" onclick="sendFromInput()">→</button>
     </div>
   </div>
 
-</div>
+  <!-- panneau historique, juste avant </div> du chat-panel -->
+  <div class="history-panel" id="history-panel">
+    <div class="history-panel-head">
+      <span>Historique</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="history-new-btn" onclick="newConversation()">+ Nouvelle</button>
+        <button class="history-close-btn" onclick="closeHistoryPanel()">✕</button>
+      </div>
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+</div><!-- fin .chat-panel -->
 
 <!-- MOBILE -->
 <div class="chat-overlay" id="chat-overlay" onclick="closeChatMobile()"></div>
-
-<button class="chat-fab" id="chat-fab" onclick="toggleChatMobile()" aria-label="Ouvrir le conseiller">
-  ✦
-</button>
+<button class="chat-fab" id="chat-fab" onclick="toggleChatMobile()" aria-label="Ouvrir le conseiller">✦</button>
