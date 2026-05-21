@@ -1,4 +1,5 @@
 <?php
+session_start();
 require_once 'includes/bd.php';
 
 $stmt = $pdo->query("
@@ -48,6 +49,26 @@ if (!$is_ajax) {
     <button class="hero-chip" type="button" onclick="heroQuestion('Style casual')">Casual</button>
     <button class="hero-chip" type="button" onclick="heroQuestion('Pointure 42')">Pointure 42</button>
   </div>
+  <div style="margin-top: 15px; text-align:center;">
+
+<?php if (!isset($_SESSION['client'])): ?>
+
+  <a href="nouveau.php" class="new-client-link">Nouveau Client</a><br>
+  <a href="connexion.php" class="new-client-link">Se connecter</a>
+
+<?php else: ?>
+
+  <div class="user-welcome">
+    Bonjour <strong>
+      <?= htmlspecialchars($_SESSION['client']['prenom'] . " " . $_SESSION['client']['nom']) ?>
+    </strong>
+  </div>
+
+  <a class="logout-link" href="deconnexion.php">Se déconnecter</a>
+
+<?php endif; ?>
+
+</div>
 </div>
 </div>
 

@@ -2,7 +2,54 @@
 session_start();
 require_once 'includes/bd.php';
 
-$panier = isset($_SESSION['panier']) ? $_SESSION['panier'] : [];
+$panier = [];
+
+if (isset($_SESSION['client_id'])) {
+
+    $stmt = $pdo->prepare("
+        SELECT 
+            p.id_panier,
+            p.id_variant,
+            p.quantite,
+            sc.taille,
+            sc.couleur,
+            a.id_shoes,
+            a.nom,
+            a.categorie,
+            a.Prix,
+            a.url_image
+        FROM panier p
+        JOIN size_color sc ON sc.id_variant = p.id_variant
+        JOIN articles a ON a.id_shoes = sc.id_shoes
+        WHERE p.id_client = ?
+    ");
+    $stmt->execute([$_SESSION['client_id']]);
+    $rows = $stmt->fetchAll();
+
+    foreach ($rows as $row) {
+
+        // ✅ clé unique propre
+        $key = $row['id_variant'];
+
+        $panier[$key] = [
+            'id_variant'=> $row['id_variant'],
+            'id'        => $row['id_shoes'],
+            'nom'       => $row['nom'],
+            'categorie' => $row['categorie'],
+            'prix'      => (float)$row['Prix'],
+            'image'     => $row['url_image'],
+            'taille'    => $row['taille'],
+            'couleur'   => $row['couleur'],
+            'quantity'  => $row['quantite'],
+        ];
+    }
+
+    // sync session
+    $_SESSION['panier'] = $panier;
+
+} else {
+    $panier = $_SESSION['panier'] ?? [];
+}
 
 $sous_total  = 0;
 foreach ($panier as $item) {
