@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost:3306
--- Généré le : mer. 06 mai 2026 à 11:50
+-- Généré le : jeu. 21 mai 2026 à 07:49
 -- Version du serveur : 5.7.24
 -- Version de PHP : 8.3.1
 
@@ -106,6 +106,53 @@ INSERT INTO `articles` (`id_shoes`, `nom`, `categorie`, `marque`, `genre`, `Prix
 (56, 'GardenStep Outdoor', 'Sabots', 'HomeStep', 'Mixte', '29.90', 'Tige: EVA recyclé; Semelle: EVA; Doublure: Aucune', 'Jardinage,Extérieur,Plage', 'Prix mini,Léger,Facile à laver,Ventilation maximale,Séchage instantané', 'Les GardenStep Outdoor sont les sabots utilitaires parfaits pour toutes les activités extérieures. Fabriqués en EVA recyclé, ils ont une empreinte écologique réduite. Leur prix mini en fait un investissement sans risque pour le jardinage, la plage, les activités nautiques ou simplement pour ne pas salir ses bonnes chaussures. Les aérations généreuses assurent une ventilation maximale et un séchage quasi instantané après l\'eau. Extrêmement légers et faciles à nettoyer au tuyau d\'arrosage.', 'jardinage,plage,eau,léger,économique,EVA recyclé,extérieur,pratique,facile', 2859, 'images/image56.png'),
 (57, 'LightHiker Mid', 'Montantes légères', 'MountainEdge', 'Mixte', '109.90', 'Tige: Mesh + cuir synthétique; Semelle: Caoutchouc trail; Doublure: Textile', 'Randonnée,Trail court,Camping', 'Tige mi-haute,Légère,Protection cheville modérée,Séchage rapide,Polyvalente', 'Les LightHiker Mid occupent la niche entre la chaussure basse et la bottine haute de randonnée. Leur tige mi-haute offre une protection et un maintien de la cheville supérieurs à une chaussure basse, sans la rigidité ni le poids d\'une chaussure technique de montagne. Le mix mesh respirant et cuir synthétique assure légèreté et durabilité. Leur séchage rapide est apprécié lors des randonnées comportant des passages humides. Idéales pour les randonnées journée avec dénivelé modéré.', 'montante,mi-haute,randonnée,cheville,légère,trail court,polyvalente,camping', 1817, 'images/image57.png'),
 (58, 'CityHigh Urban', 'Montantes légères', 'UrbanStep', 'Mixte', '119.00', 'Tige: Canvas épais + cuir; Semelle: Caoutchouc; Doublure: Textile', 'Ville,Hiver,Style', 'Tige haute style,Lacets à crochets,Chaudes sans doublure lourde,Semelle robuste,Look streetwear', 'Les CityHigh Urban revisitent la sneaker montante dans un esprit streetwear contemporain. La tige haute en canvas épais renforcé de cuir offre un maintien de cheville confortable et un style affirmé. Le système de laçage à crochets métalliques vintage est à la fois fonctionnel et esthétique. La semelle en caoutchouc robuste assure une longévité supérieure sur les sols urbains. Assez chaudes pour les intersaisons et l\'hiver doux sans être étouffantes.', 'montante,urban,streetwear,lacets,hiver,ville,canvas,style,cheville', 1450, 'images/image58.png');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `clients`
+--
+
+CREATE TABLE `clients` (
+  `id_client` int(11) NOT NULL,
+  `nom` varchar(100) NOT NULL,
+  `prenom` varchar(100) NOT NULL,
+  `adresse` text NOT NULL,
+  `numero` int(20) NOT NULL,
+  `mail` varchar(150) NOT NULL,
+  `mdp` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Déchargement des données de la table `clients`
+--
+
+INSERT INTO `clients` (`id_client`, `nom`, `prenom`, `adresse`, `numero`, `mail`, `mdp`) VALUES
+(1, 'toto', 'toto', '12 rieu jnfrh', 55555, 'toto.toto@gmail.com', '$2y$10$dFrpooABGOGc494NzVB8RepI3h23W2Y.Wru0DmYwy1yEHyjSc4dcG'),
+(2, 'tata', 'toto', '13 fbhjhf jfhj', 445258, 'tata.tata@gmail.com', '$2y$10$HcrnEwQgOO1FaavJM.3nDuGbBukRgAs4M2rJ1KE/hKff3ZZTMg.9i'),
+(3, 'Martin', 'Smith', '46 rue des renoncules', 712345678, 'martin.smith@gmail.com', '$2y$10$IdWK09lJw6foUhBPRArbruV6h9lvsYerQ5I0RJ.NxmhhsokgjMp9G');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `panier`
+--
+
+CREATE TABLE `panier` (
+  `id_panier` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `quantite` int(11) DEFAULT '1',
+  `date_ajout` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `statut` varchar(20) DEFAULT 'en_cours',
+  `id_variant` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Déchargement des données de la table `panier`
+--
+
+INSERT INTO `panier` (`id_panier`, `id_client`, `quantite`, `date_ajout`, `statut`, `id_variant`) VALUES
+(6, 3, 1, '2026-05-21 07:47:45', 'en_cours', 1140);
 
 -- --------------------------------------------------------
 
@@ -1606,6 +1653,21 @@ ALTER TABLE `articles`
   ADD PRIMARY KEY (`id_shoes`);
 
 --
+-- Index pour la table `clients`
+--
+ALTER TABLE `clients`
+  ADD PRIMARY KEY (`id_client`),
+  ADD UNIQUE KEY `mail` (`mail`);
+
+--
+-- Index pour la table `panier`
+--
+ALTER TABLE `panier`
+  ADD PRIMARY KEY (`id_panier`),
+  ADD KEY `fk_panier_client` (`id_client`),
+  ADD KEY `id_variant` (`id_variant`);
+
+--
 -- Index pour la table `size_color`
 --
 ALTER TABLE `size_color`
@@ -1613,8 +1675,31 @@ ALTER TABLE `size_color`
   ADD KEY `id_shoes` (`id_shoes`);
 
 --
+-- AUTO_INCREMENT pour les tables déchargées
+--
+
+--
+-- AUTO_INCREMENT pour la table `clients`
+--
+ALTER TABLE `clients`
+  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT pour la table `panier`
+--
+ALTER TABLE `panier`
+  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- Contraintes pour les tables déchargées
 --
+
+--
+-- Contraintes pour la table `panier`
+--
+ALTER TABLE `panier`
+  ADD CONSTRAINT `fk_panier_client` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`),
+  ADD CONSTRAINT `panier_ibfk_1` FOREIGN KEY (`id_variant`) REFERENCES `size_color` (`id_variant`);
 
 --
 -- Contraintes pour la table `size_color`
