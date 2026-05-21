@@ -9,7 +9,7 @@ $stmt->execute([$id]);
 $article = $stmt->fetch();
 if (!$article) { header('Location: shell.php'); exit; }
 
-$stmt = $pdo->prepare("SELECT DISTINCT taille, couleur FROM size_color WHERE id_shoes = ? ORDER BY taille, couleur");
+$stmt = $pdo->prepare("SELECT id_variant, taille, couleur FROM size_color WHERE id_shoes = ? ORDER BY taille, couleur");
 $stmt->execute([$id]);
 $variants = $stmt->fetchAll();
 $tailles  = array_unique(array_column($variants, 'taille'));
@@ -134,16 +134,24 @@ function getCouleurCSS($couleur) {
 </div>
 
 <script>
+const variants = <?= json_encode($variants) ?>;
+</script>
+
+<script>
 const PRODUCT_ID = <?= $id ?>;
 let qty = 1, selectedSize = null, selectedColor = null;
 
-function selectSize(btn) {
+window.selectSize = function selectSize(btn) {
+  console.log("SIZE CLICK", btn.dataset.size);
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active'); selectedSize = btn.dataset.size;
+  btn.classList.add('active');
+  selectedSize = btn.dataset.size;
 }
-function selectColor(btn) {
+window.selectColor = function selectColor(btn) {
+  console.log("COLOR CLICK", btn.dataset.color);
   document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active'); selectedColor = btn.dataset.color;
+  btn.classList.add('active');
+  selectedColor = btn.dataset.color;
 }
 function changeQty(delta) {
   qty = Math.max(1, Math.min(10, qty + delta));
@@ -151,18 +159,43 @@ function changeQty(delta) {
 }
 async function addToCartPage() {
   const btn = document.getElementById('add-cart-btn');
+
+  //  Vérification taille
   if (document.querySelectorAll('.size-btn').length > 0 && !selectedSize) {
     shakeElement(document.getElementById('size-btns'));
-    showSelectionError('Veuillez sélectionner une pointure'); return;
+    showSelectionError('Veuillez sélectionner une pointure');
+    return;
   }
+
+  //  Vérification couleur
   if (document.querySelectorAll('.color-btn').length > 0 && !selectedColor) {
     shakeElement(document.getElementById('color-btns'));
-    showSelectionError('Veuillez sélectionner une couleur'); return;
+    showSelectionError('Veuillez sélectionner une couleur');
+    return;
   }
+
+  //  TROUVER LE BON VARIANT
+  const variant = variants.find(v =>
+    v.taille == selectedSize && v.couleur == selectedColor
+  );
+
+  if (!variant) {
+    showSelectionError("Combinaison indisponible");
+    return;
+  }
+
+  //  Appel API (on garde ton système existant)
   const result = await addToCart(PRODUCT_ID, qty, selectedSize, selectedColor);
+
+  //  Animation succès
   if (result && result.success) {
-    btn.textContent = '✓ Ajouté !'; btn.style.background = '#4CAF50';
-    setTimeout(() => { btn.textContent = 'Ajouter au panier'; btn.style.background = ''; }, 1500);
+    btn.textContent = '✓ Ajouté !';
+    btn.style.background = '#4CAF50';
+
+    setTimeout(() => {
+      btn.textContent = 'Ajouter au panier';
+      btn.style.background = '';
+    }, 1500);
   }
 }
 function showSelectionError(message) {
