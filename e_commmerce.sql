@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost:3306
--- Généré le : jeu. 21 mai 2026 à 07:49
+-- Généré le : jeu. 21 mai 2026 à 12:27
 -- Version du serveur : 5.7.24
 -- Version de PHP : 8.3.1
 
@@ -110,6 +110,27 @@ INSERT INTO `articles` (`id_shoes`, `nom`, `categorie`, `marque`, `genre`, `Prix
 -- --------------------------------------------------------
 
 --
+-- Structure de la table `chat_sessions`
+--
+
+CREATE TABLE `chat_sessions` (
+  `id` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `titre` varchar(150) DEFAULT 'Nouvelle conversation',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Déchargement des données de la table `chat_sessions`
+--
+
+INSERT INTO `chat_sessions` (`id`, `id_client`, `titre`, `created_at`, `updated_at`) VALUES
+(2, 3, 'Chaussures imperméables', '2026-05-21 14:24:22', '2026-05-21 14:24:47');
+
+-- --------------------------------------------------------
+
+--
 -- Structure de la table `clients`
 --
 
@@ -128,9 +149,36 @@ CREATE TABLE `clients` (
 --
 
 INSERT INTO `clients` (`id_client`, `nom`, `prenom`, `adresse`, `numero`, `mail`, `mdp`) VALUES
-(1, 'toto', 'toto', '12 rieu jnfrh', 55555, 'toto.toto@gmail.com', '$2y$10$dFrpooABGOGc494NzVB8RepI3h23W2Y.Wru0DmYwy1yEHyjSc4dcG'),
-(2, 'tata', 'toto', '13 fbhjhf jfhj', 445258, 'tata.tata@gmail.com', '$2y$10$HcrnEwQgOO1FaavJM.3nDuGbBukRgAs4M2rJ1KE/hKff3ZZTMg.9i'),
 (3, 'Martin', 'Smith', '46 rue des renoncules', 712345678, 'martin.smith@gmail.com', '$2y$10$IdWK09lJw6foUhBPRArbruV6h9lvsYerQ5I0RJ.NxmhhsokgjMp9G');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `conversations`
+--
+
+CREATE TABLE `conversations` (
+  `id` int(11) NOT NULL,
+  `id_session` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `role` enum('user','assistant') NOT NULL,
+  `message` text NOT NULL,
+  `products` json DEFAULT NULL,
+  `layout` varchar(20) DEFAULT NULL,
+  `silent` tinyint(1) DEFAULT '0',
+  `internal` tinyint(1) DEFAULT '0',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Déchargement des données de la table `conversations`
+--
+
+INSERT INTO `conversations` (`id`, `id_session`, `id_client`, `role`, `message`, `products`, `layout`, `silent`, `internal`, `created_at`) VALUES
+(3, 2, 3, 'user', 'Chaussures imperméables', '[]', NULL, 0, 0, '2026-05-21 14:24:22'),
+(4, 2, 3, 'assistant', ' Voici trois chaussures imperméables que vous pouvez trouver dans notre catalogue :\n\n1. Le StormGuard Boot, avec sa technologie DryWalk, offre une protection efficace contre les pluies et la neige. Disponible en couleurs Bordeaux, Noir ou Vert hunter.\n2. RainStep WP vous garantit une confortable marche dans tous les temps grâce à sa technologie DryWalk. Les couleurs Bleu marine, Kaki ou Noir vont bien avec tout ce qu\'il y a de stylish.\n3. Le SteelPro Light S1P est notre choix pour une chaussure légère et efficace en matière d\'imperméabilité. Elle est disponible en couleur Gris ou Noir, idéale pour les conditions pluvieuses ou neigeuses.', '[{\"id\": 49, \"name\": \"StormGuard Boot\", \"emoji\": \"👟\", \"price\": 129.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bordeaux\", \"Noir\", \"Vert hunter\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image49.png\", \"description\": \"Les StormGuard Boot sont les bottes tout-terrain pour ceux qui n\'ont pas peur des éléments. La tige en caoutchouc naturel de 20cm de hauteur offre une étanchéité absolue même dans les flaques profondes. La doublure en néoprène maintient les pieds chauds dans l\'eau froide jusqu\'à environ 5°C. Les crampons profonds de la semelle mordent efficacement dans la boue épaisse et les terrains détrempés. Idéales pour la chasse, la pêche, le jardinage ou les festivals pluvieux.\"}, {\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\"}]', NULL, 0, 0, '2026-05-21 14:24:22'),
+(5, 2, 3, 'user', 'En une seule phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire.', '[]', NULL, 1, 1, '2026-05-21 14:24:47'),
+(6, 2, 3, 'assistant', ' \"Bienvenue sur notre boutique PairIA, tu y trouveras la paire de chaussures idéale pour toi ! Découvre notre large choix de styles et de marques en un click !\"', '[]', NULL, 0, 1, '2026-05-21 14:24:47');
 
 -- --------------------------------------------------------
 
@@ -152,7 +200,9 @@ CREATE TABLE `panier` (
 --
 
 INSERT INTO `panier` (`id_panier`, `id_client`, `quantite`, `date_ajout`, `statut`, `id_variant`) VALUES
-(6, 3, 1, '2026-05-21 07:47:45', 'en_cours', 1140);
+(11, 3, 1, '2026-05-21 09:20:52', 'en_cours', 161),
+(12, 3, 1, '2026-05-21 12:05:21', 'en_cours', 730),
+(13, 3, 1, '2026-05-21 12:25:55', 'en_cours', 1140);
 
 -- --------------------------------------------------------
 
@@ -1653,11 +1703,26 @@ ALTER TABLE `articles`
   ADD PRIMARY KEY (`id_shoes`);
 
 --
+-- Index pour la table `chat_sessions`
+--
+ALTER TABLE `chat_sessions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_client` (`id_client`);
+
+--
 -- Index pour la table `clients`
 --
 ALTER TABLE `clients`
   ADD PRIMARY KEY (`id_client`),
   ADD UNIQUE KEY `mail` (`mail`);
+
+--
+-- Index pour la table `conversations`
+--
+ALTER TABLE `conversations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `id_session` (`id_session`),
+  ADD KEY `id_client` (`id_client`);
 
 --
 -- Index pour la table `panier`
@@ -1679,20 +1744,45 @@ ALTER TABLE `size_color`
 --
 
 --
+-- AUTO_INCREMENT pour la table `chat_sessions`
+--
+ALTER TABLE `chat_sessions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
 -- AUTO_INCREMENT pour la table `clients`
 --
 ALTER TABLE `clients`
   MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT pour la table `conversations`
+--
+ALTER TABLE `conversations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- AUTO_INCREMENT pour la table `panier`
 --
 ALTER TABLE `panier`
-  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- Contraintes pour les tables déchargées
 --
+
+--
+-- Contraintes pour la table `chat_sessions`
+--
+ALTER TABLE `chat_sessions`
+  ADD CONSTRAINT `chat_sessions_ibfk_1` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `conversations`
+--
+ALTER TABLE `conversations`
+  ADD CONSTRAINT `conversations_ibfk_1` FOREIGN KEY (`id_session`) REFERENCES `chat_sessions` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `conversations_ibfk_2` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `panier`
