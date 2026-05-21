@@ -67,10 +67,12 @@ async function navigateTo(url, pushState = true) {
 
         // Scripts inline : IIFE pour isoler const/let et éviter les re-déclarations
         doc.querySelectorAll('script:not([src])').forEach(oldScript => {
-            const s = document.createElement('script');
-            s.textContent = `(() => { ${oldScript.textContent} })();`;
-            document.body.appendChild(s);
-            document.body.removeChild(s);
+            requestAnimationFrame(() => {
+                const s = document.createElement('script');
+                s.textContent = `(() => { ${oldScript.textContent} })();`;
+                document.body.appendChild(s);
+                document.body.removeChild(s);
+            });
         });
 
         if (pushState) history.pushState({ url }, '', url);

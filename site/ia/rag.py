@@ -459,14 +459,15 @@ def _analyser_question(
             if not categories_candidates:
                 print("[VECTORISE] aucune catégorie détectée → recherche libre")
 
-        vec = model.encode(question_enrichie).tolist()
+        embed = ollama.embeddings(model="nomic-embed-text", prompt=question_enrichie)
+        vec = embed["embedding"]
         print(f"[VECTORISE] filtres explicites : {filtres_explicites}")
         print(f"[VECTORISE] catégories candidates : {categories_candidates}")
         return vec, False, filtres_explicites, categories_candidates
 
     except Exception as e:
         print(f"[VECTORISE] ❌ Erreur : {e}")
-        return [0] * 512, False, {}, []
+        return [0] * 768, False, {}, []
 
 # ══════════════════════════════════════════════
 # RECHERCHE QDRANT
@@ -530,7 +531,7 @@ def _recherche_qdrant(
 
     try:
         results = qdrant.query_points(
-            collection_name="produits_image",
+            collection_name="produits",
             query=question_vector,
             query_filter=qdrant_filter,
             limit=limit_qdrant,
@@ -579,7 +580,7 @@ def _recherche_qdrant(
         filtre_souple = _construire_filtre_qdrant(filtres, [])
         try:
             results_extra = qdrant.query_points(
-                collection_name="produits_image",
+                collection_name="produits",
                 query=question_vector,
                 query_filter=filtre_souple,
                 limit=8,

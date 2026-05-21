@@ -179,6 +179,40 @@ function shakeElement(el) {
   setTimeout(() => el.classList.remove('shake'), 400);
 }
 
+async function addToCart(product_id, quantity, taille, couleur) {
+  try {
+    const res = await fetch('cart/add.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id: product_id,
+        quantity: quantity,
+        taille: taille,
+        couleur: couleur
+      })
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      showSelectionError(data.error || "Erreur lors de l'ajout");
+      return null;
+    }
+
+    // 🔽 MAJ compteur panier (IMPORTANT)
+    if (document.getElementById('cart-count')) {
+      document.getElementById('cart-count').textContent = data.count;
+    }
+
+    return data;
+
+  } catch (e) {
+    console.error(e);
+    showSelectionError("Erreur serveur");
+    return null;
+  }
+}
+
 initProductContext({
   id:          <?= $id ?>,
   name:        "<?= htmlspecialchars($article['nom'], ENT_QUOTES) ?>",
