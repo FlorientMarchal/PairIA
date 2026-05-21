@@ -1,10 +1,84 @@
 // js/chat.js
 const API_URL = "http://localhost:8000";
 
-let conversationHistory = JSON.parse(sessionStorage.getItem('chatHistory') || '[]');
-let sessionId = sessionStorage.getItem('chatSessionId') || crypto.randomUUID();
-sessionStorage.setItem('chatSessionId', sessionId);
+let conversationHistory = JSON.parse(
+  sessionStorage.getItem("chatHistory") || "[]",
+);
+let sessionId = sessionStorage.getItem("chatSessionId") || crypto.randomUUID();
+sessionStorage.setItem("chatSessionId", sessionId);
 
+// ID de session BDD (null si non connecté ou pas encore créée)
+let dbSessionId = sessionStorage.getItem("dbSessionId")
+  ? parseInt(sessionStorage.getItem("dbSessionId"))
+  : null;
+
+// ── Crée une session BDD au premier message ──
+async function ensureDbSession(firstMessage) {
+  if (dbSessionId) return dbSessionId;
+  try {
+    const titre = firstMessage.slice(0, 80);
+    const res = await fetch("chat/session_new.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titre }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      dbSessionId = data.session_id;
+      sessionStorage.setItem("dbSessionId", dbSessionId);
+    }
+  } catch (e) {}
+  return dbSessionId;
+}
+
+// ── Sauvegarde un message en base ──
+async function saveMessageToDB(
+  role,
+  content,
+  products = [],
+  layout = null,
+  silent = false,
+  internal = false,
+) {
+  if (!dbSessionId) return;
+  try {
+    await fetch("chat/history_save.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        role,
+        message: content,
+        session_id: dbSessionId,
+        products,
+        layout,
+        silent,
+        internal,
+      }),
+    });
+  } catch (e) {}
+}
+
+// ── Charge la liste des sessions ──
+async function loadSessionList() {
+  try {
+    const res = await fetch("chat/session_list.php");
+    const data = await res.json();
+    return data.sessions || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// ── Charge les messages d'une session ──
+async function loadSessionMessages(sessionId) {
+  try {
+    const res = await fetch(`chat/session_load.php?session_id=${sessionId}`);
+    const data = await res.json();
+    return data.history || [];
+  } catch (e) {
+    return [];
+  }
+}
 
 /*
    CHAT TEXTE
@@ -77,7 +151,7 @@ async function sendMessage(text) {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
-            layout = data.layout || null; 
+            layout = data.layout || null;
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -108,10 +182,19 @@ async function sendMessage(text) {
     }
 
     conversationHistory.push({ role: "user", content: text });
-    conversationHistory.push({ role: "assistant", content: message, products: products,layout: layout });
+    conversationHistory.push({
+      role: "assistant",
+      content: message,
+      products: products,
+      layout: layout,
+    });
+    // Sauvegarde dans la base de données
+    await ensureDbSession(text);
+    await saveMessageToDB("user", text);
+    await saveMessageToDB("assistant", message, products, layout);
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
-    sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory)); // ← ajoute
+    sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory)); // ← ajoute
 
     console.log(
       "[HISTORIQUE MIS À JOUR]",
@@ -119,11 +202,11 @@ async function sendMessage(text) {
     );
 
     if (layout === "comparison" && products.length >= 2) {
-        showComparisonView(products[0], products[1], container);
+      showComparisonView(products[0], products[1], container);
     } else if (products.length === 1) {
-        showCartSelector(products[0], container);
+      showCartSelector(products[0], container);
     } else if (products.length > 1) {
-        showProductPicker(products, container);
+      showProductPicker(products, container);
     }
 
     if (action === "add_to_cart" && product_id) {
@@ -165,7 +248,6 @@ function sendFromInput() {
     sendMessage(text);
   }
 }
-
 
 /*
    CHAT IMAGE + TEXTE
@@ -247,7 +329,7 @@ async function sendImageWithText(file, text) {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
-            layout = data.layout || null; 
+            layout = data.layout || null;
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -288,10 +370,19 @@ async function sendImageWithText(file, text) {
       `Produits suggérés : ${productContext}`;
 
     conversationHistory.push({ role: "user", content: imageContext });
-    conversationHistory.push({ role: "assistant", content: message, products: products });
+    conversationHistory.push({
+      role: "assistant",
+      content: message,
+      products: products,
+    });
+
+    await ensureDbSession(imageContext);
+    await saveMessageToDB("user", imageContext);
+    await saveMessageToDB("assistant", message, products);
+
     if (conversationHistory.length > 20)
       conversationHistory = conversationHistory.slice(-20);
-    sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory)); // ← ajoute
+    sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory)); // ← ajoute
 
     console.log(
       "[HISTORIQUE MIS À JOUR]",
@@ -299,11 +390,11 @@ async function sendImageWithText(file, text) {
     );
 
     if (layout === "comparison" && products.length >= 2) {
-        showComparisonView(products[0], products[1], container);
+      showComparisonView(products[0], products[1], container);
     } else if (products.length === 1) {
-        showCartSelector(products[0], container);
+      showCartSelector(products[0], container);
     } else if (products.length > 1) {
-        showProductPicker(products, container);
+      showProductPicker(products, container);
     }
 
     if (action === "add_to_cart" && product_id) {
@@ -328,12 +419,23 @@ async function sendImageWithText(file, text) {
 }
 
 function resetConversation() {
-    conversationHistory = [];
-    sessionId = crypto.randomUUID();
-    sessionStorage.removeItem('chatHistory');
-    sessionStorage.setItem('chatSessionId', sessionId);
-    const container = document.getElementById("messages");
-    if (container) container.innerHTML = "";
+  // Efface la session courante en base
+  if (dbSessionId) {
+    fetch("chat/history_clear.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: dbSessionId }),
+    }).catch(() => {});
+  }
+  conversationHistory = [];
+  sessionId = crypto.randomUUID();
+  dbSessionId = null;
+  sessionStorage.removeItem("chatHistory");
+  sessionStorage.removeItem("dbSessionId");
+  sessionStorage.setItem("chatSessionId", sessionId);
+  const container = document.getElementById("messages");
+  if (container) container.innerHTML = "";
+  closeHistoryPanel();
 }
 
 /* ══════════════════════════════════════
@@ -749,77 +851,83 @@ function escapeAttr(text) {
     .replace(/>/g, "&gt;");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    updateCartCount();
+document.addEventListener("DOMContentLoaded", async () => {
+  updateCartCount();
+  const container = document.getElementById("messages");
 
-    // Rejoue l'historique visuel
-    const container = document.getElementById("messages");
-    if (container && conversationHistory.length > 0) {
-        // Vide le message de bienvenue par défaut
-        container.innerHTML = "";
-        
-        for (const msg of conversationHistory) {
-            // Ignore les messages de contexte produit injectés
-            if (msg.content.startsWith("[Page produit")) continue;
-            // Ignore les messages système
-            if (msg.role === "system") continue;
-            
-            if (msg.role === "user") {
-                // Ignore les prompts internes silencieux
-                if (msg.silent) continue;
-                appendUserMessage(msg.content);
-            } else if (msg.role === "assistant" && msg.content) {
-                appendBotMessageText(msg.content);
-                // Réaffiche les produits si présents
-                if (msg.products && msg.products.length > 0) {
-                    if (msg.products.length === 1) {
-                        showCartSelector(msg.products[0], container);
-                    } else if (msg.layout === "comparison" && msg.products.length >= 2) {
-                        showComparisonView(msg.products[0], msg.products[1], container);
-                    } else if (msg.products.length > 1) {
-                        showProductPicker(msg.products, container);
-                    }
-                }
-            }
-        }
-        container.scrollTop = container.scrollHeight;
+  // NOUVEAU : recharge depuis MySQL si session active
+  if (dbSessionId) {
+    const history = await loadSessionMessages(dbSessionId);
+    if (history.length > 0) {
+      conversationHistory = history;
+      sessionStorage.setItem(
+        "chatHistory",
+        JSON.stringify(conversationHistory),
+      );
     }
+  }
 
-    document.addEventListener("click", (e) => {
-        const chip = e.target.closest(".chat-chip");
-        if (chip && chip.dataset.msg) {
-            sendMessage(chip.dataset.msg);
+  // Rejoue l'historique visuel
+  if (container && conversationHistory.length > 0) {
+    container.innerHTML = "";
+    for (const msg of conversationHistory) {
+      if (msg.content.startsWith("[Page produit")) continue;
+      if (msg.role === "system") continue;
+      if (msg.role === "user") {
+        if (msg.silent) continue;
+        appendUserMessage(msg.content);
+      } else if (msg.role === "assistant" && msg.content) {
+        appendBotMessageText(msg.content);
+        if (msg.products && msg.products.length > 0) {
+          if (msg.products.length === 1) {
+            showCartSelector(msg.products[0], container);
+          } else if (msg.layout === "comparison" && msg.products.length >= 2) {
+            showComparisonView(msg.products[0], msg.products[1], container);
+          } else if (msg.products.length > 1) {
+            showProductPicker(msg.products, container);
+          }
         }
-    });
-
-    // ACTIVATION MICRO SI SUPPORTÉ
-    if (typeof voiceSupported === "function" && voiceSupported()) {
-        const mic = document.getElementById("voice-btn");
-        if (mic) mic.style.display = "inline-flex";
+      }
     }
+    container.scrollTop = container.scrollHeight;
+  }
+
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chat-chip");
+    if (chip && chip.dataset.msg) {
+      sendMessage(chip.dataset.msg);
+    }
+  });
+
+  if (typeof voiceSupported === "function" && voiceSupported()) {
+    const mic = document.getElementById("voice-btn");
+    if (mic) mic.style.display = "inline-flex";
+  }
 });
 
 /* ══════════════════════════════════════
    COMPARAISON CÔTE À CÔTE
 ══════════════════════════════════════ */
 function showComparisonView(p1, p2, container) {
-    if (!container) container = document.getElementById("messages");
+  if (!container) container = document.getElementById("messages");
 
-    const div = document.createElement("div");
-    div.className = "chat-msg bot";
+  const div = document.createElement("div");
+  div.className = "chat-msg bot";
 
-    function colHtml(p, idx) {
-        const tailles  = (p.tailles  || []).join(", ") || "—";
-        const couleurs = (p.couleurs || []).join(", ") || "—";
-        const resume   = p.resume || "";   // ← résumé LLM
-        return `
+  function colHtml(p, idx) {
+    const tailles = (p.tailles || []).join(", ") || "—";
+    const couleurs = (p.couleurs || []).join(", ") || "—";
+    const resume = p.resume || ""; // ← résumé LLM
+    return `
         <div class="chat-compare-col">
             <div class="chat-compare-img">
-                ${p.url_image
+                ${
+                  p.url_image
                     ? `<img src="${escapeHtml(p.url_image)}"
                             alt="${escapeHtml(p.name)}"
                             onerror="this.style.display='none'">`
-                    : "👟"}
+                    : "👟"
+                }
             </div>
             <div class="chat-compare-name">${escapeHtml(p.name)}</div>
             <div class="chat-compare-price">${p.price} €</div>
@@ -845,13 +953,13 @@ function showComparisonView(p1, p2, container) {
 
             <button class="chat-cart-btn"
                 style="margin-top:10px;width:100%"
-                onclick="showCartSelector(${JSON.stringify(p).replace(/"/g, '&quot;')}, document.getElementById('messages'))">
+                onclick="showCartSelector(${JSON.stringify(p).replace(/"/g, "&quot;")}, document.getElementById('messages'))">
                 🛒 Choisir ce modèle
             </button>
         </div>`;
-    }
+  }
 
-    div.innerHTML = `
+  div.innerHTML = `
         <div class="chat-compare-card">
             <div class="chat-compare-title">Comparaison</div>
             <div class="chat-compare-grid">
@@ -861,193 +969,364 @@ function showComparisonView(p1, p2, container) {
             </div>
         </div>`;
 
-    container.appendChild(div);
-    requestAnimationFrame(() => {
-      const cols = div.querySelectorAll(".chat-compare-col");
-      if (cols.length < 2) return;
+  container.appendChild(div);
+  requestAnimationFrame(() => {
+    const cols = div.querySelectorAll(".chat-compare-col");
+    if (cols.length < 2) return;
 
-      const imgs = div.querySelectorAll("img");
-      const loaded = Array.from(imgs).map(img =>
-          img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
-      );
+    const imgs = div.querySelectorAll("img");
+    const loaded = Array.from(imgs).map((img) =>
+      img.complete
+        ? Promise.resolve()
+        : new Promise((r) => {
+            img.onload = r;
+            img.onerror = r;
+          }),
+    );
 
-      Promise.all(loaded).then(() => {
-          cols.forEach(col => col.style.height = "");
-          const maxH = Math.max(...[...cols].map(col => col.scrollHeight));
-          cols.forEach(col => col.style.height = maxH + "px");
-      });
+    Promise.all(loaded).then(() => {
+      cols.forEach((col) => (col.style.height = ""));
+      const maxH = Math.max(...[...cols].map((col) => col.scrollHeight));
+      cols.forEach((col) => (col.style.height = maxH + "px"));
+    });
   });
-    container.scrollTop = container.scrollHeight;
+  container.scrollTop = container.scrollHeight;
 }
 
 function initProductContext(produit) {
-    // Tracker les produits visités
-    let visited = JSON.parse(sessionStorage.getItem('visitedProducts_' + sessionId) || '[]');
-    const indexExistant = visited.findIndex(p => p.id === produit.id);
-    let nbVisites = 1;
+  // Tracker les produits visités
+  let visited = JSON.parse(
+    sessionStorage.getItem("visitedProducts_" + sessionId) || "[]",
+  );
+  const indexExistant = visited.findIndex((p) => p.id === produit.id);
+  let nbVisites = 1;
 
-    if (indexExistant === -1) {
-        // Première visite de ce produit
-        visited.push({ id: produit.id, name: produit.name, price: produit.price,
-            categorie: produit.categorie, marque: produit.marque, visits: 1 });
-    } else {
-        // Déjà visité → on incrémente
-        visited[indexExistant].visits = (visited[indexExistant].visits || 1) + 1;
-        nbVisites = visited[indexExistant].visits;
-    }
-    if (visited.length > 10) visited = visited.slice(-10);
-    sessionStorage.setItem('visitedProducts_' + sessionId, JSON.stringify(visited));
-
-    // Détecter si c'est la toute première interaction de la session
-    const estPremiereVisite = conversationHistory.filter(m => m.role === "assistant").length === 0;
-    const sansBonjour = estPremiereVisite ? "" : " Ne commence pas par Bonjour.";
-
-    // Injection du contexte produit dans l'historique (remplace l'ancien)
-    conversationHistory = conversationHistory.filter(
-        msg => !(msg.role === "system" && msg.content.startsWith("L'utilisateur consulte actuellement"))
-    );
-    conversationHistory.push({
-        role: "system",
-        content:
-            `L'utilisateur consulte actuellement : "${produit.name}" ` +
-            `(${produit.categorie}, ${produit.marque}, ${produit.price}€). ` +
-            (produit.description ? `Description : ${produit.description}. ` : '') +
-            (produit.couleurs?.length ? `Couleurs dispo : ${produit.couleurs.join(', ')}. ` : '') +
-            (produit.tailles?.length  ? `Tailles dispo : ${produit.tailles.join(', ')}.` : '')
+  if (indexExistant === -1) {
+    // Première visite de ce produit
+    visited.push({
+      id: produit.id,
+      name: produit.name,
+      price: produit.price,
+      categorie: produit.categorie,
+      marque: produit.marque,
+      visits: 1,
     });
-    sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
+  } else {
+    // Déjà visité → on incrémente
+    visited[indexExistant].visits = (visited[indexExistant].visits || 1) + 1;
+    nbVisites = visited[indexExistant].visits;
+  }
+  if (visited.length > 10) visited = visited.slice(-10);
+  sessionStorage.setItem(
+    "visitedProducts_" + sessionId,
+    JSON.stringify(visited),
+  );
 
-    // Prompt adapté selon le nombre de visites sur ce produit
-    let question;
-    if (nbVisites >= 3) {
-        question = `En une à deux phrases percutantes (max 25 mots), tu remarques que le client revient encore sur "${produit.name}" (${produit.price}€). Crée un sentiment d'urgence ou mets en avant une raison décisive d'acheter maintenant (stock limité, excellent rapport qualité/prix, etc.).${sansBonjour}`;
-    } else if (nbVisites === 2) {
-        question = `En une à deux phrases (max 25 mots), tu remarques que le client revient sur "${produit.name}" (${produit.price}€). Encourage-le chaleureusement à passer à l'achat en soulignant ce qui le séduisait.${sansBonjour}`;
-    } else if (estPremiereVisite) {
-        question = `En une à deux phrases (max 20 mots), accueille le client sur la fiche "${produit.name}" en citant son point fort principal. Explique comment tu peux l'aider.`;
-    } else {
-        question = `En une à deux phrases (max 20 mots), mets en avant le point fort de "${produit.name}" (${produit.price}€) et propose ton aide pour choisir.${sansBonjour}`;
-    }
+  // Détecter si c'est la toute première interaction de la session
+  const estPremiereVisite =
+    conversationHistory.filter((m) => m.role === "assistant").length === 0;
+  const sansBonjour = estPremiereVisite ? "" : " Ne commence pas par Bonjour.";
 
-    _genererMessageAccueil(question, produit.id);
+  // Injection du contexte produit dans l'historique (remplace l'ancien)
+  conversationHistory = conversationHistory.filter(
+    (msg) =>
+      !(
+        msg.role === "system" &&
+        msg.content.startsWith("L'utilisateur consulte actuellement")
+      ),
+  );
+  conversationHistory.push({
+    role: "system",
+    content:
+      `L'utilisateur consulte actuellement : "${produit.name}" ` +
+      `(${produit.categorie}, ${produit.marque}, ${produit.price}€). ` +
+      (produit.description ? `Description : ${produit.description}. ` : "") +
+      (produit.couleurs?.length
+        ? `Couleurs dispo : ${produit.couleurs.join(", ")}. `
+        : "") +
+      (produit.tailles?.length
+        ? `Tailles dispo : ${produit.tailles.join(", ")}.`
+        : ""),
+  });
+  sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
+
+  // Prompt adapté selon le nombre de visites sur ce produit
+  let question;
+  if (nbVisites >= 3) {
+    question = `En une à deux phrases percutantes (max 25 mots), tu remarques que le client revient encore sur "${produit.name}" (${produit.price}€). Crée un sentiment d'urgence ou mets en avant une raison décisive d'acheter maintenant (stock limité, excellent rapport qualité/prix, etc.).${sansBonjour}`;
+  } else if (nbVisites === 2) {
+    question = `En une à deux phrases (max 25 mots), tu remarques que le client revient sur "${produit.name}" (${produit.price}€). Encourage-le chaleureusement à passer à l'achat en soulignant ce qui le séduisait.${sansBonjour}`;
+  } else if (estPremiereVisite) {
+    question = `En une à deux phrases (max 20 mots), accueille le client sur la fiche "${produit.name}" en citant son point fort principal. Explique comment tu peux l'aider.`;
+  } else {
+    question = `En une à deux phrases (max 20 mots), mets en avant le point fort de "${produit.name}" (${produit.price}€) et propose ton aide pour choisir.${sansBonjour}`;
+  }
+
+  _genererMessageAccueil(question, produit.id);
 }
 
 function initPanierContext(panierItems) {
-    const visited = JSON.parse(sessionStorage.getItem('visitedProducts_' + sessionId) || '[]');
-    const derniersProduitsChat = [];
-    for (let i = conversationHistory.length - 1; i >= 0; i--) {
-        const msg = conversationHistory[i];
-        if (msg.role === "assistant" && msg.products && msg.products.length > 0) {
-            derniersProduitsChat.push(...msg.products);
-            break;
-        }
+  const visited = JSON.parse(
+    sessionStorage.getItem("visitedProducts_" + sessionId) || "[]",
+  );
+  const derniersProduitsChat = [];
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    const msg = conversationHistory[i];
+    if (msg.role === "assistant" && msg.products && msg.products.length > 0) {
+      derniersProduitsChat.push(...msg.products);
+      break;
     }
-    const estPremiereVisite = conversationHistory.filter(m => m.role === "assistant").length === 0;
-    const sansBonjour = estPremiereVisite ? "" : " Ne commence pas par Bonjour.";
+  }
+  const estPremiereVisite =
+    conversationHistory.filter((m) => m.role === "assistant").length === 0;
+  const sansBonjour = estPremiereVisite ? "" : " Ne commence pas par Bonjour.";
 
-    let contexte, question;
+  let contexte, question;
 
-    if (panierItems && panierItems.length > 0) {
-        const resume = panierItems
-            .map(it => `${it.nom} ×${it.quantity} à ${it.prix}€`)
-            .join(', ');
-        contexte = `L'utilisateur est sur sa page panier. Contenu : ${resume}.`;
-        question = `En une seule phrase courte (max 20 mots), parle directement au client de son panier (${resume}) et encourage-le à finaliser sa commande.${sansBonjour}`;
-    } else if (derniersProduitsChat.length > 0) {
-        const resumeChat = derniersProduitsChat.map(p => `${p.name} (${p.price}€)`).join(', ');
-        contexte = `L'utilisateur a un panier vide. Il vient de consulter dans le chat : ${resumeChat}.`;
-        question = `En 2-3 phrases, rappelle au client qu'il regardait ${resumeChat} et encourage-le à les ajouter au panier.${sansBonjour}`;
-    } else if (visited.length > 0) {
-        const resumeVisites = visited.slice(-3)
-            .map(p => `${p.name} (${p.price}€)`)
-            .join(', ');
-        contexte = `L'utilisateur a un panier vide. Il a récemment consulté : ${resumeVisites}.`;
-        question = `En une seule phrase courte (max 20 mots), dis directement au client que tu as vu qu'il a regardé ${resumeVisites} et propose de l'aider à décider.${sansBonjour}`;
-    } else {
-        contexte = `L'utilisateur arrive sur sa page panier vide.`;
-        question = `En une seule phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire.${sansBonjour}`;
-    }
+  if (panierItems && panierItems.length > 0) {
+    const resume = panierItems
+      .map((it) => `${it.nom} ×${it.quantity} à ${it.prix}€`)
+      .join(", ");
+    contexte = `L'utilisateur est sur sa page panier. Contenu : ${resume}.`;
+    question = `En une seule phrase courte (max 20 mots), parle directement au client de son panier (${resume}) et encourage-le à finaliser sa commande.${sansBonjour}`;
+  } else if (derniersProduitsChat.length > 0) {
+    const resumeChat = derniersProduitsChat
+      .map((p) => `${p.name} (${p.price}€)`)
+      .join(", ");
+    contexte = `L'utilisateur a un panier vide. Il vient de consulter dans le chat : ${resumeChat}.`;
+    question = `En 2-3 phrases, rappelle au client qu'il regardait ${resumeChat} et encourage-le à les ajouter au panier.${sansBonjour}`;
+  } else if (visited.length > 0) {
+    const resumeVisites = visited
+      .slice(-3)
+      .map((p) => `${p.name} (${p.price}€)`)
+      .join(", ");
+    contexte = `L'utilisateur a un panier vide. Il a récemment consulté : ${resumeVisites}.`;
+    question = `En une seule phrase courte (max 20 mots), dis directement au client que tu as vu qu'il a regardé ${resumeVisites} et propose de l'aider à décider.${sansBonjour}`;
+  } else {
+    contexte = `L'utilisateur arrive sur sa page panier vide.`;
+    question = `En une seule phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire.${sansBonjour}`;
+  }
 
-    conversationHistory = conversationHistory.filter(
-        msg => !(msg.role === "system" && msg.content.startsWith("L'utilisateur"))
-    );
-    conversationHistory.push({ role: "system", content: contexte });
-    sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
+  conversationHistory = conversationHistory.filter(
+    (msg) =>
+      !(msg.role === "system" && msg.content.startsWith("L'utilisateur")),
+  );
+  conversationHistory.push({ role: "system", content: contexte });
+  sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
-    _genererMessageAccueil(question, null, derniersProduitsChat);
+  _genererMessageAccueil(question, null, derniersProduitsChat);
 }
 
-async function _genererMessageAccueil(question, productId, produitsAafficher = []) {
-    const container = document.getElementById("messages");
-    if (!container) return;
+async function _genererMessageAccueil(
+  question,
+  productId,
+  produitsAafficher = [],
+) {
+  const container = document.getElementById("messages");
+  if (!container) return;
 
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "chat-msg bot";
-    const bubble = document.createElement("div");
-    bubble.className = "chat-bubble";
-    bubble.innerHTML = `<span style="opacity:0.5;font-size:0.85em">✦ <span class="chat-dots"><span>.</span><span>.</span><span>.</span></span></span>`;
-    const time = document.createElement("div");
-    time.className = "chat-time";
-    time.textContent = "maintenant";
-    msgDiv.appendChild(bubble);
-    msgDiv.appendChild(time);
-    container.appendChild(msgDiv);
-    container.scrollTop = container.scrollHeight;
+  const msgDiv = document.createElement("div");
+  msgDiv.className = "chat-msg bot";
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+  bubble.innerHTML = `<span style="opacity:0.5;font-size:0.85em">✦ <span class="chat-dots"><span>.</span><span>.</span><span>.</span></span></span>`;
+  const time = document.createElement("div");
+  time.className = "chat-time";
+  time.textContent = "maintenant";
+  msgDiv.appendChild(bubble);
+  msgDiv.appendChild(time);
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
 
-    try {
-        const body = {
-            question:   question,
-            history:    conversationHistory,
-            session_id: sessionId,
-        };
-        if (productId) body.product_id = productId;
+  try {
+    const body = {
+      question: question,
+      history: conversationHistory,
+      session_id: sessionId,
+    };
+    if (productId) body.product_id = productId;
 
-        const response = await fetch(`${API_URL}/chat/stream`, {
-            method:  "POST",
-            headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify(body)
-        });
+    const response = await fetch(`${API_URL}/chat/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-        const reader  = response.body.getReader();
-        const decoder = new TextDecoder();
-        let text = "", started = false, products = [];
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let text = "",
+      started = false,
+      products = [];
 
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            for (const line of decoder.decode(value).split("\n")) {
-                if (!line.startsWith("data: ")) continue;
-                const raw = line.slice(6).trim();
-                if (raw === "[DONE]") break;
-                try {
-                    const data = JSON.parse(raw);
-                    if (data.type === "products_final") {
-                        products = data.products || [];
-                    } else if (data.chunk !== undefined) {
-                        if (!started) { bubble.innerHTML = ""; started = true; }
-                        text += data.chunk;
-                        bubble.textContent = text;
-                    }
-                } catch(e) {}
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      for (const line of decoder.decode(value).split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (raw === "[DONE]") break;
+        try {
+          const data = JSON.parse(raw);
+          if (data.type === "products_final") {
+            products = data.products || [];
+          } else if (data.chunk !== undefined) {
+            if (!started) {
+              bubble.innerHTML = "";
+              started = true;
             }
-        }
-
-        // ← NOUVEAU : utiliser les produits passés en paramètre si le backend n'en retourne pas
-        const produitsFinaux = products.length > 0 ? products : produitsAafficher;
-
-        conversationHistory.push({ role: "user", content: question, silent: true, internal: true });
-        conversationHistory.push({ role: "assistant", content: text, products: produitsFinaux, internal: true });
-        if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
-        sessionStorage.setItem('chatHistory', JSON.stringify(conversationHistory));
-
-        // ← NOUVEAU : afficher la carte produit
-        if (produitsFinaux.length === 1) {
-            showCartSelector(produitsFinaux[0], container);
-        } else if (produitsFinaux.length > 1) {
-            showProductPicker(produitsFinaux, container);
-        }
-
-    } catch(e) {
-        bubble.textContent = "Bonjour ! Je suis votre conseiller PairIA, posez-moi vos questions 👟";
+            text += data.chunk;
+            bubble.textContent = text;
+          }
+        } catch (e) {}
+      }
     }
+
+    // ← NOUVEAU : utiliser les produits passés en paramètre si le backend n'en retourne pas
+    const produitsFinaux = products.length > 0 ? products : produitsAafficher;
+
+    conversationHistory.push({
+      role: "user",
+      content: question,
+      silent: true,
+      internal: true,
+    });
+    conversationHistory.push({
+      role: "assistant",
+      content: text,
+      products: produitsFinaux,
+      internal: true,
+    });
+
+    await saveMessageToDB("user", question, [], null, true, true);
+    await saveMessageToDB("assistant", text, produitsFinaux, null, false, true);
+
+    if (conversationHistory.length > 20)
+      conversationHistory = conversationHistory.slice(-20);
+    sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
+
+    // NOUVEAU : afficher la carte produit
+    if (produitsFinaux.length === 1) {
+      showCartSelector(produitsFinaux[0], container);
+    } else if (produitsFinaux.length > 1) {
+      showProductPicker(produitsFinaux, container);
+    }
+  } catch (e) {
+    bubble.textContent =
+      "Bonjour ! Je suis votre conseiller PairIA, posez-moi vos questions 👟";
+  }
+}
+
+// ── Panneau historique ──
+async function openHistoryPanel() {
+  const panel = document.getElementById("history-panel");
+  if (!panel) return;
+  panel.classList.add("open");
+
+  const list = document.getElementById("history-list");
+  list.innerHTML = '<div class="history-loading">Chargement…</div>';
+
+  const sessions = await loadSessionList();
+  if (sessions.length === 0) {
+    list.innerHTML =
+      '<div class="history-empty">Aucune conversation sauvegardée.</div>';
+    return;
+  }
+
+  // Grouper par date comme
+  const groups = {};
+  const now = new Date();
+  sessions.forEach((s) => {
+    const d = new Date(s.updated_at);
+    const diff = Math.floor((now - d) / 86400000);
+    let label;
+    if (diff === 0) label = "Aujourd'hui";
+    else if (diff === 1) label = "Hier";
+    else if (diff <= 7) label = "Cette semaine";
+    else if (diff <= 30) label = "Ce mois-ci";
+    else label = "Plus ancien";
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(s);
+  });
+
+  list.innerHTML = Object.entries(groups)
+    .map(
+      ([label, items]) => `
+        <div class="history-group">
+            <div class="history-group-label">${label}</div>
+            ${items
+              .map(
+                (s) => `
+                <div class="history-item ${s.id === dbSessionId ? "active" : ""}"
+                     onclick="loadSession(${s.id})">
+                    <span class="history-item-title">${escapeHtml(s.titre)}</span>
+                    <button class="history-item-del" onclick="deleteSession(event, ${s.id})" title="Supprimer">
+                        <i class="ti ti-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+            `,
+              )
+              .join("")}
+        </div>
+    `,
+    )
+    .join("");
+}
+
+function closeHistoryPanel() {
+  document.getElementById("history-panel")?.classList.remove("open");
+}
+
+async function loadSession(sessionDbId) {
+  const history = await loadSessionMessages(sessionDbId);
+  dbSessionId = sessionDbId;
+  sessionStorage.setItem("dbSessionId", dbSessionId);
+  conversationHistory = history;
+  sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
+
+  const container = document.getElementById("messages");
+  container.innerHTML = "";
+  for (const msg of conversationHistory) {
+    if (msg.role === "system" || (msg.role === "user" && msg.silent)) continue;
+    if (msg.role === "user") appendUserMessage(msg.content);
+    else if (msg.role === "assistant" && msg.content) {
+      appendBotMessageText(msg.content);
+      if (msg.products?.length > 0) {
+        if (msg.products.length === 1)
+          showCartSelector(msg.products[0], container);
+        else if (msg.layout === "comparison" && msg.products.length >= 2)
+          showComparisonView(msg.products[0], msg.products[1], container);
+        else showProductPicker(msg.products, container);
+      }
+    }
+  }
+  container.scrollTop = container.scrollHeight;
+  closeHistoryPanel();
+}
+
+async function deleteSession(e, sessionDbId) {
+  e.stopPropagation();
+  await fetch("chat/history_clear.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionDbId }),
+  });
+  if (sessionDbId === dbSessionId) {
+    dbSessionId = null;
+    sessionStorage.removeItem("dbSessionId");
+    conversationHistory = [];
+    sessionStorage.removeItem("chatHistory");
+    document.getElementById("messages").innerHTML = "";
+  }
+  openHistoryPanel(); // Rafraîchit la liste
+}
+
+function newConversation() {
+  dbSessionId = null;
+  sessionStorage.removeItem("dbSessionId");
+  conversationHistory = [];
+  sessionId = crypto.randomUUID();
+  sessionStorage.removeItem("chatHistory");
+  sessionStorage.setItem("chatSessionId", sessionId);
+  document.getElementById("messages").innerHTML = "";
+  closeHistoryPanel();
 }
