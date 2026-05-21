@@ -1132,25 +1132,25 @@ nav {
 }
 
 /* ── Bouton historique ── */
-.chat-history-btn {
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.55);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 1rem;
+.chat-history-band {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 0.5rem 1rem;
+  background: #f5ede4;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--accent);
+  transition: background 0.15s;
   flex-shrink: 0;
-  transition:
-    color 0.2s,
-    border-color 0.2s;
 }
-.chat-history-btn:hover {
-  color: white;
-  border-color: rgba(255, 255, 255, 0.6);
+.chat-history-band:hover {
+  background: #eeddd0;
+}
+.chat-history-band i {
+  font-size: 15px;
 }
 
 /* ── Panneau historique (glisse par-dessus les messages) ── */

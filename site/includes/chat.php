@@ -1,5 +1,6 @@
 <?php
 // includes/chat.php
+session_start(); // ← AJOUTÉ : indispensable pour $_SESSION
 
 $page = basename($_SERVER['PHP_SELF'], '.php');
 
@@ -66,26 +67,29 @@ if ($page === 'article' && $product_name) {
 
 <div class="chat-panel" id="chat-panel">
 
-  <!-- HEADER — bouton historique + bouton reset -->
+  <!-- HEADER -->
   <div class="chat-panel-head">
     <div class="chat-avatar">
       <span class="chat-avatar-icon">✦</span>
       <span class="chat-online-dot"></span>
     </div>
-
     <div class="chat-head-info">
       <div class="chat-head-name">Conseiller PairIA</div>
       <div class="chat-head-status">Personal Shopper IA · En ligne</div>
     </div>
-
-    <!-- ↓ MODIFIÉ : deux boutons côte à côte -->
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-      <button class="chat-history-btn" onclick="openHistoryPanel()" title="Historique des conversations">
-        <i class="ti ti-history" aria-hidden="true"></i>
-      </button>
       <button class="chat-reset-btn" onclick="resetConversation()" title="Nouvelle conversation">↺</button>
     </div>
   </div>
+
+  <!-- BANDEAU HISTORIQUE — uniquement si connecté -->
+  <?php if (isset($_SESSION['client_id'])): ?>
+  <div class="chat-history-band" onclick="openHistoryPanel()">
+    <i class="ti ti-history" aria-hidden="true"></i>
+    <span>Historique des conversations</span>
+    <i class="ti ti-chevron-right" aria-hidden="true" style="margin-left:auto"></i>
+  </div>
+  <?php endif; ?>
 
   <!-- SUGGESTIONS -->
   <div class="chat-suggestions">
@@ -130,7 +134,7 @@ if ($page === 'article' && $product_name) {
     </div>
   </div>
 
-  <!-- panneau historique, juste avant </div> du chat-panel -->
+  <!-- PANNEAU HISTORIQUE -->
   <div class="history-panel" id="history-panel">
     <div class="history-panel-head">
       <span>Historique</span>

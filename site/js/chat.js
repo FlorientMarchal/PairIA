@@ -419,20 +419,14 @@ async function sendImageWithText(file, text) {
 }
 
 function resetConversation() {
-  // Efface la session courante en base
-  if (dbSessionId) {
-    fetch("chat/history_clear.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: dbSessionId }),
-    }).catch(() => {});
-  }
+  // On démarre une nouvelle session SANS supprimer les anciennes en base
   conversationHistory = [];
   sessionId = crypto.randomUUID();
-  dbSessionId = null;
+  dbSessionId = null; // nouvelle session sera créée au prochain message
   sessionStorage.removeItem("chatHistory");
   sessionStorage.removeItem("dbSessionId");
   sessionStorage.setItem("chatSessionId", sessionId);
+
   const container = document.getElementById("messages");
   if (container) container.innerHTML = "";
   closeHistoryPanel();
