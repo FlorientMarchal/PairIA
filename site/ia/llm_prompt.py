@@ -15,6 +15,7 @@ Règles strictes :
 - Présente les produits naturellement, JAMAIS en liste numérotée.
 - Si le prompt contient "Ne commence pas par Bonjour", ne commence JAMAIS par une salutation.
 - Ne décris jamais une image envoyée comme un produit du catalogue.
+- N'utilise JAMAIS de markdown : pas de **, *, #, listes à tirets ou numérotées. Texte brut uniquement.
 """.strip()
 
 

@@ -28,7 +28,7 @@ _LIMITES = {
     "suivi":          {"num_predict": 220,  "consigne": "Réponds en 2-3 phrases maximum.", "nb_produits": 1},
     "comparaison":    {"num_predict": 120,  "consigne": "Dis juste en une phrase que ci dessous le client trouvera la comparaison du produit 1 et 2", "nb_produits": 2},
     "recommandation": {"num_predict": 220,  "consigne": "Conseille en 2-3 phrases maximum.", "nb_produits": 1},
-    "recherche":      {"num_predict": 280,  "consigne": "Présente chaque produit en 1 phrase max.", "nb_produits": 3},
+    "recherche":      {"num_predict": 350,  "consigne": "Présente chaque produit en 1-2 phrases en soulignant pourquoi il convient. Si ce ne sont pas des correspondances exactes, présente-les comme les meilleures alternatives disponibles.", "nb_produits": 3},
     "salutation":     {"num_predict": 150,   "consigne": "Réponds en 1 phrase de bienvenue.", "nb_produits": 0},
 }
 
@@ -656,12 +656,15 @@ def get_response_stream(
     question: str = "",
     product_id: int = None,
     history: list = None,
+    context_messages: list = None,
     image_path: str = None,
     image_vector: list = None,
 ):
     question = question or ""
     if history is None:
         history = []
+    if context_messages is None:
+        context_messages = []
 
     print(f"\n{'='*50}")
     print(f"[RAG] question : {question!r} | history : {len(history)} messages")
@@ -749,9 +752,24 @@ def get_response_stream(
         print(f"[INTENTION] image + texte → intention {intention} ignorée → recherche")
 
 
-    # ════════════════════════════════════════════
-    # CAS 1 — HORS SUJET
-    # ════════════════════════════════════════════
+    # ── Garde-fou : si le classifier dit hors_sujet mais que la question
+    # contient des mots clairement liés aux chaussures → on force recherche
+    _MOTS_CHAUSSURES = [
+        "chaussure", "basket", "sandale", "botte", "bottine", "mocassin",
+        "espadrille", "talon", "running", "trail", "randonn\u00e9e", "sneaker",
+        "slip-on", "indoor", "paire", "pointure", "taille", "semelle",
+        "plage", "\u00e9t\u00e9", "hiver", "sport", "confort", "marche", "travail",
+        "soir\u00e9e", "mariage", "festival", "gym", "danse", "cuir", "vegan",
+        "imperm\u00e9able", "l\u00e9g\u00e8re", "l\u00e9g\u00e8res", "respirant",
+    ]
+    if intention == "hors_sujet" and any(mot in question.lower() for mot in _MOTS_CHAUSSURES):
+        intention = "recherche"
+        confiance = 1.0
+        print(f"[INTENTION] override hors_sujet \u2192 recherche (mot-cl\u00e9 chaussures d\u00e9tect\u00e9)")
+
+    # \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+    # CAS 1 \u2014 HORS SUJET
+    # \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
     if intention == "hors_sujet":
         print("[CAS] 1 — hors_sujet")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
@@ -934,7 +952,7 @@ def get_response_stream(
                 produit_suivi = msg["products"][0]
                 break
         if not produit_suivi:
-            for msg in history:
+            for msg in context_messages:
                 if msg.get("role") == "system" and "consulte actuellement" in msg.get("content", ""):
                     import re
                     match = re.search(r'consulte actuellement\s*:\s*"([^"]+)"', msg["content"])
@@ -1111,6 +1129,17 @@ def get_response_stream(
         print(f"[CAS] 6 — recherche image → top 3 Qdrant forcé")
     else:
         nb_a_presenter = min(nb_produits, len(produits_trouves))
+        # Si on a assez de produits dans la catégorie principale, on ne donne
+        # que ceux-là au LLM — il ne peut pas "déborder" sur les similaires.
+        if categories_candidates:
+            cat_principale = categories_candidates[0]
+            produits_cat = [p for p in produits_trouves if p["categorie"] == cat_principale]
+            if len(produits_cat) >= nb_a_presenter:
+                produits_trouves = produits_cat
+                print(f"[CAS] 6 — LLM limité aux {len(produits_trouves)} produits '{cat_principale}'")
+            else:
+                produits_autres = [p for p in produits_trouves if p["categorie"] != cat_principale]
+                produits_trouves = produits_cat + produits_autres
     description_visuelle = ""
     if is_image_search and produits_trouves:
        description_visuelle = (
@@ -1128,12 +1157,17 @@ def get_response_stream(
     nb_produits = _nb_produits_from_history(history, intention)
     nb_a_presenter = min(nb_produits, len(produits_trouves))
     consigne_nb = (
+        f"Les produits ci-dessus sont les plus adaptés disponibles — présente-les, "
+        f"ne dis JAMAIS qu'il n'y a pas de stock ou que le catalogue est vide. "
         f"Présente exactement {nb_a_presenter} produit(s) du catalogue ci-dessus. "
         f"Ne mentionne aucun autre produit."
     ) if nb_a_presenter > 0 else ""
 
     question_complete = (
-        f"{description_visuelle}{question or ''}"
+        f"{description_visuelle}"
+        f"Le client demande : \u00ab {question or ''} \u00bb\n"
+        f"Voici les mod\u00e8les les plus proches disponibles. "
+        f"Pr\u00e9sente-les comme alternatives adapt\u00e9es, sans dire que le catalogue est vide ou qu'il n'y a pas de stock. "
         f"{suffixe_recommandation}\n{limite['consigne']} {consigne_nb}"
     )
 
