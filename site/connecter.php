@@ -52,16 +52,17 @@ $items = $stmt->fetchAll();
 
 $_SESSION['panier'] = [];
 foreach ($items as $item) {
-    $key = $item['id_shoes'] . '_' . $item['taille'] . '_' . $item['couleur'];
+    $key = $item['id_variant']; // 🔥 cohérent avec panier.php
     $_SESSION['panier'][$key] = [
-        'id'       => $item['id_shoes'],
-        'nom'      => $item['nom'],
-        'categorie'=> $item['categorie'],
-        'prix'     => (float)$item['Prix'],
-        'image'    => $item['url_image'],
-        'taille'   => $item['taille'],
-        'couleur'  => $item['couleur'],
-        'quantity' => $item['quantite'],
+        'id_variant'=> $item['id_variant'],
+        'id'        => $item['id_shoes'],
+        'nom'       => $item['nom'],
+        'categorie' => $item['categorie'],
+        'prix'      => (float)$item['Prix'],
+        'image'     => $item['url_image'],
+        'taille'    => $item['taille'],
+        'couleur'   => $item['couleur'],
+        'quantity'  => $item['quantite'],
     ];
 }
 

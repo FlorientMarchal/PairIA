@@ -1303,3 +1303,193 @@ nav {
   font-size: 0.8125rem;
   padding: 2rem 1rem;
 }
+
+/* ── Bouton Compte ── */
+/* ══════════════════════════════════════
+   PAGE COMPTE
+══════════════════════════════════════ */
+.compte-area {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.compte-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.compte-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.compte-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 4px;
+}
+
+.compte-mail {
+  font-size: 0.875rem;
+  color: var(--gray);
+}
+
+.compte-alert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+.compte-alert.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+.compte-alert.error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.compte-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .compte-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.compte-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.compte-card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--dark);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.compte-field {
+  margin-bottom: 1rem;
+}
+
+.compte-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--gray);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.compte-field input,
+.compte-field textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: var(--font-main);
+  color: var(--dark);
+  background: var(--cream);
+  transition: border-color 0.2s;
+  resize: vertical;
+}
+
+.compte-field input:focus,
+.compte-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.compte-btn {
+  width: 100%;
+  padding: 0.6rem;
+  background: var(--dark);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.2s;
+  margin-top: 0.5rem;
+}
+
+.compte-btn:hover {
+  background: var(--accent);
+}
+
+.compte-actions {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.compte-logout {
+  font-size: 0.875rem;
+  color: var(--gray);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  transition: color 0.2s;
+}
+.compte-logout:hover {
+  color: #e53935;
+}
+
+/* ===== COMPTE HERO ===== */
+.compte-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, #1a1410, #2a1f1a);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  color: white;
+}
+
+.compte-hero-info h1 {
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+
+.compte-hero-info p {
+  font-size: 0.85rem;
+  color: #cbb8a8;
+}
+
+/* avatar plus premium */
+.compte-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}

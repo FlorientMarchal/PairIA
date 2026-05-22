@@ -1,6 +1,6 @@
 // js/spa.js — navigation SPA
 
-const SPA_PAGES = ["index.php", "article.php", "panier.php"];
+const SPA_PAGES = ["index.php", "article.php", "panier.php", "compte.php"];
 
 function scrollToCatalogue() {
   requestAnimationFrame(() =>
@@ -103,7 +103,7 @@ document.addEventListener("click", (e) => {
     href.startsWith("tel:")
   )
     return;
-  const pageName = href.split("?")[0];
+  const pageName = href.replace(/(\?.*)$/, "");
   if (!SPA_PAGES.includes(pageName)) return;
   e.preventDefault();
   navigateTo(href);
