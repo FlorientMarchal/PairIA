@@ -16,6 +16,8 @@ from filters import extraire_filtres, user_wants_cart, DB
 from PIL import Image
 from qdrant_client.models import Filter, FieldCondition, Range, MatchValue, MatchAny, MinShould
 
+LLM_MODEL = "gemma"
+
 # ══════════════════════════════════════════════
 # LIMITES DE GÉNÉRATION PAR INTENTION
 # ══════════════════════════════════════════════
@@ -242,7 +244,7 @@ def _resumer_description(produit: dict) -> str:
 
     try:
         resp = ollama.chat(
-            model="mistral",
+            model=LLM_MODEL,
              messages=[{"role": "user", "content": (
                 f"Tu es un assistant francophone. Réponds UNIQUEMENT en français.\n"
                 f"Résume en une phrase de 10 à 15 mots MAXIMUM le point fort principal de cette chaussure.\n"
@@ -271,7 +273,7 @@ def _identifier_produits_a_comparer(question: str, produits: list) -> tuple[dict
     )
     try:
         resp = ollama.chat(
-            model="mistral",
+            model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 20, "temperature": 0},
         )
@@ -308,7 +310,7 @@ def _llm_enrichir_question(question: str, history: list) -> str:
     )
     try:
         resp = ollama.chat(
-            model="mistral",
+            model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 100, "temperature": 0},
         )
@@ -338,7 +340,7 @@ def _llm_categories_candidates(question: str, history: list) -> list[str]:
     )
     try:
         resp = ollama.chat(
-            model="mistral",
+            model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 250, "temperature": 0},
         )
@@ -459,15 +461,14 @@ def _analyser_question(
             if not categories_candidates:
                 print("[VECTORISE] aucune catégorie détectée → recherche libre")
 
-        embed = ollama.embeddings(model="nomic-embed-text", prompt=question_enrichie)
-        vec = embed["embedding"]
+        vec = model.encode(question_enrichie).tolist()
         print(f"[VECTORISE] filtres explicites : {filtres_explicites}")
         print(f"[VECTORISE] catégories candidates : {categories_candidates}")
         return vec, False, filtres_explicites, categories_candidates
 
     except Exception as e:
         print(f"[VECTORISE] ❌ Erreur : {e}")
-        return [0] * 768, False, {}, []
+        return [0] * 512, False, {}, []
 
 # ══════════════════════════════════════════════
 # RECHERCHE QDRANT
@@ -531,7 +532,7 @@ def _recherche_qdrant(
 
     try:
         results = qdrant.query_points(
-            collection_name="produits",
+            collection_name="produits_image",
             query=question_vector,
             query_filter=qdrant_filter,
             limit=limit_qdrant,
@@ -580,7 +581,7 @@ def _recherche_qdrant(
         filtre_souple = _construire_filtre_qdrant(filtres, [])
         try:
             results_extra = qdrant.query_points(
-                collection_name="produits",
+                collection_name="produits_image",
                 query=question_vector,
                 query_filter=filtre_souple,
                 limit=8,
@@ -766,7 +767,7 @@ def get_response_stream(
         ]
         try:
             stream = ollama.chat(
-                model="mistral", messages=messages, stream=True,
+                model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history, 1024),
                     "num_predict": _LIMITES["hors_sujet"]["num_predict"],
@@ -811,7 +812,7 @@ def get_response_stream(
 
         try:
             stream = ollama.chat(
-                model="mistral", messages=messages, stream=True,
+                model=LLM_MODEL, messages=messages, stream=True,
                 options={"num_ctx": 2048, "num_predict": 120, "temperature": 0.8},
             )
             for chunk in stream:
@@ -840,7 +841,7 @@ def get_response_stream(
         ]
         try:
             stream = ollama.chat(
-                model="mistral", messages=messages, stream=True,
+                model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history, 1024),
                     "num_predict": _LIMITES["livraison"]["num_predict"],
@@ -888,7 +889,7 @@ def get_response_stream(
         texte_complet = ""
         try:
             stream = ollama.chat(
-                model="mistral", messages=messages, stream=True,
+                model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history, 1024),
                     "num_predict": _LIMITES["panier"]["num_predict"],
@@ -983,7 +984,7 @@ def get_response_stream(
             ]
             try:
                 stream = ollama.chat(
-                    model="mistral", messages=messages, stream=True,
+                    model=LLM_MODEL, messages=messages, stream=True,
                     options={
                         "num_ctx":     _calculer_ctx(history),
                         "num_predict": _LIMITES["suivi"]["num_predict"],
@@ -1077,7 +1078,7 @@ def get_response_stream(
         ]
         try:
             stream = ollama.chat(
-                model="mistral", messages=messages, stream=True,
+                model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history),
                     "num_predict": _LIMITES["recherche"]["num_predict"],
@@ -1147,7 +1148,7 @@ def get_response_stream(
     texte_complet = ""
     try:
         stream = ollama.chat(
-            model="mistral", messages=messages, stream=True,
+            model=LLM_MODEL, messages=messages, stream=True,
             options={
                 "num_ctx":     _calculer_ctx(history),
                 "num_predict": limite["num_predict"],

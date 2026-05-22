@@ -60,7 +60,7 @@ if (!$is_ajax) {
 
   <div class="user-welcome">
     Bonjour <strong>
-      <?= htmlspecialchars($_SESSION['client']['prenom'] . " " . $_SESSION['client']['nom']) ?>
+      <?= htmlspecialchars($_SESSION['client']['prenom']) ?>
     </strong>
   </div>
 

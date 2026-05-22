@@ -32,7 +32,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ✅ Charger le modèle Whisper une seule fois au démarrage
+
 print("Chargement du modèle Whisper...")
 whisper_model = whisper.load_model("small")
 print("Whisper prêt ✓")
@@ -215,7 +215,7 @@ async def transcribe(file: UploadFile = File(...)):
                 "-ar", "16000",
                 "-ac", "1",
                 "-c:a", "pcm_s16le",
-                "-af", "loudnorm",   # 🔥 Normalisation du volume
+                "-af", "loudnorm",
                 wav_path
             ],
             check=True,
