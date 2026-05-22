@@ -1,5 +1,5 @@
 <?php
-// includes/nav.php
+session_start();
 $current = basename($_SERVER['PHP_SELF'], '.php');
 ?>
 <nav>
@@ -11,9 +11,21 @@ $current = basename($_SERVER['PHP_SELF'], '.php');
         Catalogue
       </a>
     </li>
+    <?php if (isset($_SESSION['client_id'])): ?>
+    <li>
+      <a href="compte.php?ajax=1" class="<?= $current === 'compte' ? 'active' : '' ?>">
+        Mon compte
+      </a>
+    </li>
+    <?php endif; ?>
   </ul>
 
   <div class="nav-right">
+    <?php if (!isset($_SESSION['client_id'])): ?>
+      <a href="connexion.php" class="cart-btn" style="background:var(--dark);border:1px solid rgba(255,255,255,0.2)">
+        Se connecter
+      </a>
+    <?php endif; ?>
     <a href="panier.php" class="cart-btn">
       Panier
       <span class="cart-count" id="cart-count">0</span>
