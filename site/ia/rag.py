@@ -16,7 +16,7 @@ from filters import extraire_filtres, user_wants_cart, DB
 from PIL import Image
 from qdrant_client.models import Filter, FieldCondition, Range, MatchValue, MatchAny, MinShould
 
-LLM_MODEL = "gemma"
+LLM_MODEL = "llama3.1"
 
 # ══════════════════════════════════════════════
 # LIMITES DE GÉNÉRATION PAR INTENTION
@@ -1197,10 +1197,25 @@ def get_response_stream(
                 "temperature": 0.4 if is_image_search else 0.7,
             },
         )
+        buffer = ""
         for chunk in stream:
             token = chunk["message"]["content"]
-            texte_complet += token
-            yield token
+            buffer += token
+            # Flush le buffer dès qu'on est sûr qu'il ne commence pas un marqueur markdown
+            while len(buffer) >= 2:
+                if buffer[:2] == "**":
+                    buffer = buffer[2:]
+                elif buffer[0] == "*" and buffer[1] != "*":
+                    buffer = buffer[1:]
+                else:
+                    texte_complet += buffer[0]
+                    yield buffer[0]
+                    buffer = buffer[1:]
+        # Vider le buffer restant
+        clean = buffer.replace("**", "").replace("*", "")
+        texte_complet += clean
+        if clean:
+            yield clean
     except Exception as e:
         yield f"Erreur Mistral : {str(e)}"
         return

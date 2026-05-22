@@ -362,7 +362,7 @@ async function sendImageWithText(file, text) {
     // Historique : description textuelle de l'image + produits trouvés
     const productContext =
       products.length > 0
-        ? products.map((p) => `${p.name} (${p.price}€)`).join(", ")
+        ? products.map((p) => `${p.name} (${p.price.toFixed(2)}€)`).join(", ")
         : "aucun produit trouvé";
 
     const imageContext =
@@ -1031,9 +1031,10 @@ function initProductContext(produit) {
   );
   conversationHistory.push({
     role: "system",
+    internal: true,
     content:
       `L'utilisateur consulte actuellement : "${produit.name}" ` +
-      `(${produit.categorie}, ${produit.marque}, ${produit.price}€). ` +
+      `(${produit.categorie}, ${produit.marque}, ${produit.price.toFixed(2)}€). ` +
       (produit.description ? `Description : ${produit.description}. ` : "") +
       (produit.couleurs?.length
         ? `Couleurs dispo : ${produit.couleurs.join(", ")}. `
@@ -1046,14 +1047,24 @@ function initProductContext(produit) {
 
   // Prompt adapté selon le nombre de visites sur ce produit
   let question;
+  const variantesPremiere = [
+    `En une à deux phrases (max 20 mots), accueille le client sur la fiche "${produit.name}" en citant son point fort principal. Utilise "tu" et parle comme un vendeur enthousiaste.`,
+    `En une à deux phrases (max 20 mots), présente le point fort des ${produit.name} (${produit.price.toFixed(2)}€) de façon percutante. Tutoie le client.`,
+    `En une à deux phrases (max 20 mots), accroche le client avec ce qui rend les ${produit.name} uniques. Tutoie-le, sois naturel.`,
+  ];
+  const variantesRetour = [
+    `En une à deux phrases (max 20 mots), mets en avant le point fort des "${produit.name}" (${produit.price.toFixed(2)}€) et propose ton aide pour choisir la taille ou la couleur. Tutoie le client.`,
+    `En une à deux phrases (max 20 mots), rappelle ce qui fait le charme des ${produit.name} et demande au client ce qui l'intéresse. Tutoie-le.`,
+    `En une à deux phrases (max 20 mots), souligne la qualité des ${produit.name} (${produit.price.toFixed(2)}€) et propose de répondre à ses questions. Tutoie le client.`,
+  ];
   if (nbVisites >= 3) {
-    question = `En une à deux phrases percutantes (max 25 mots), tu remarques que le client revient encore sur "${produit.name}" (${produit.price}€). Crée un sentiment d'urgence ou mets en avant une raison décisive d'acheter maintenant (stock limité, excellent rapport qualité/prix, etc.).${sansBonjour}`;
+    question = `En une à deux phrases percutantes (max 25 mots), tu remarques que le client revient encore sur "${produit.name}" (${produit.price.toFixed(2)}€). Crée un sentiment d'urgence ou mets en avant une raison décisive d'acheter maintenant. Tutoie le client.${sansBonjour}`;
   } else if (nbVisites === 2) {
-    question = `En une à deux phrases (max 25 mots), tu remarques que le client revient sur "${produit.name}" (${produit.price}€). Encourage-le chaleureusement à passer à l'achat en soulignant ce qui le séduisait.${sansBonjour}`;
+    question = `En une à deux phrases (max 25 mots), tu remarques que le client revient sur "${produit.name}" (${produit.price.toFixed(2)}€). Encourage-le chaleureusement à passer à l'achat en soulignant ce qui le séduisait. Tutoie-le.${sansBonjour}`;
   } else if (estPremiereVisite) {
-    question = `En une à deux phrases (max 20 mots), accueille le client sur la fiche "${produit.name}" en citant son point fort principal. Explique comment tu peux l'aider.`;
+    question = variantesPremiere[Math.floor(Math.random() * variantesPremiere.length)];
   } else {
-    question = `En une à deux phrases (max 20 mots), mets en avant le point fort de "${produit.name}" (${produit.price}€) et propose ton aide pour choisir.${sansBonjour}`;
+    question = variantesRetour[Math.floor(Math.random() * variantesRetour.length)] + sansBonjour;
   }
 
   _genererMessageAccueil(question, produit.id);
@@ -1082,30 +1093,51 @@ function initPanierContext(panierItems) {
       .map((it) => `${it.nom} ×${it.quantity} à ${it.prix}€`)
       .join(", ");
     contexte = `L'utilisateur est sur sa page panier. Contenu : ${resume}.`;
-    question = `En une seule phrase courte (max 20 mots), parle directement au client de son panier (${resume}) et encourage-le à finaliser sa commande.${sansBonjour}`;
+    const variantes = [
+      `En une phrase (max 20 mots), encourage le client à finaliser sa commande avec ${resume}.`,
+      `En une phrase (max 20 mots), fais un commentaire positif sur le choix du client (${resume}) et invite-le à commander.`,
+      `En une phrase (max 20 mots), dis au client que son panier est prêt (${resume}) et qu'il n'a plus qu'à valider.`,
+      `En une phrase (max 20 mots), félicite le client pour son choix (${resume}) et encourage-le à passer commande.`,
+    ];
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else if (derniersProduitsChat.length > 0) {
     const resumeChat = derniersProduitsChat
-      .map((p) => `${p.name} (${p.price}€)`)
+      .map((p) => `${p.name} (${p.price.toFixed(2)}€)`)
       .join(", ");
     contexte = `L'utilisateur a un panier vide. Il vient de consulter dans le chat : ${resumeChat}.`;
-    question = `En 2-3 phrases, rappelle au client qu'il regardait ${resumeChat} et encourage-le à les ajouter au panier.${sansBonjour}`;
+    const variantes = [
+      `En 1-2 phrases, rappelle au client qu'il regardait ${resumeChat} et propose de l'aider à choisir.`,
+      `En 1-2 phrases, dis au client que ${resumeChat} l'attend et qu'il peut les ajouter facilement.`,
+      `En 1-2 phrases, encourage le client à craquer pour ${resumeChat} qu'il vient de consulter.`,
+    ];
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else if (visited.length > 0) {
     const resumeVisites = visited
       .slice(-3)
-      .map((p) => `${p.name} (${p.price}€)`)
+      .map((p) => `${p.name} (${p.price.toFixed(2)}€)`)
       .join(", ");
     contexte = `L'utilisateur a un panier vide. Il a récemment consulté : ${resumeVisites}.`;
-    question = `En une seule phrase courte (max 20 mots), dis directement au client que tu as vu qu'il a regardé ${resumeVisites} et propose de l'aider à décider.${sansBonjour}`;
+    const variantes = [
+      `En une phrase (max 20 mots), dis au client que tu as vu qu'il regardait ${resumeVisites} et propose de l'aider.`,
+      `En une phrase (max 20 mots), rappelle au client ses consultations récentes (${resumeVisites}) et invite-le à se décider.`,
+      `En une phrase (max 20 mots), interpelle le client sur ${resumeVisites} qu'il a consulté et propose ton aide.`,
+    ];
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else {
     contexte = `L'utilisateur arrive sur sa page panier vide.`;
-    question = `En une seule phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire.${sansBonjour}`;
+    const variantes = [
+      `En une phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire.`,
+      `En une phrase (max 20 mots), propose au client de l'aider à trouver la chaussure parfaite dans le catalogue.`,
+      `En une phrase (max 20 mots), encourage le client à explorer le catalogue et à se faire plaisir.`,
+    ];
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   }
 
   conversationHistory = conversationHistory.filter(
     (msg) =>
       !(msg.role === "system" && msg.content.startsWith("L'utilisateur")),
   );
-  conversationHistory.push({ role: "system", content: contexte });
+  conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
   _genererMessageAccueil(question, null, derniersProduitsChat);
