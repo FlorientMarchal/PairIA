@@ -186,7 +186,7 @@ if (!$is_ajax) {
 requestAnimationFrame(() =>
     initPanierContext(<?php echo json_encode($panier_js, JSON_HEX_APOS | JSON_HEX_TAG); ?>)
 );
-const LIVRAISON_SEUIL = 80;
+var LIVRAISON_SEUIL = 80;
 
 /* ── Modifier la quantité ── */
 async function changeItemQty(key, delta) {

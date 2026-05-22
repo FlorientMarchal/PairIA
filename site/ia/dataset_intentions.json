@@ -7827,94 +7827,371 @@
     "text": "c est quoi le modele qui vous surprend le plus positivement ?",
     "label": "recommandation"
   },
-  {"text": "tu peux comparer les NeoUrban Street et les CloudStep Lite", "label": "comparaison"},
-  {"text": "compare le modèle A avec le modèle B", "label": "comparaison"},
-  {"text": "quelle différence entre les Air Max et les Stan Smith", "label": "comparaison"},
-  {"text": "compare ces deux paires", "label": "comparaison"},
-  {"text": "lequel est mieux entre X et Y", "label": "comparaison"},
-  {"text": "tu peux faire un comparatif", "label": "comparaison"},
-{"text": "fais un comparatif", "label": "comparaison"},
-{"text": "comparatif entre les deux", "label": "comparaison"},
-{"text": "tu peux comparer", "label": "comparaison"},
-{"text": "compare les deux", "label": "comparaison"},
-{"text": "compare ces modèles", "label": "comparaison"},
-{"text": "quelle différence entre les deux", "label": "comparaison"},
-{"text": "c'est quoi la différence", "label": "comparaison"},
-{"text": "lequel est mieux entre les deux", "label": "comparaison"},
-{"text": "tu peux me faire une comparaison", "label": "comparaison"},
-{"text": "compare les pour moi", "label": "comparaison"},
-{"text": "côte à côte", "label": "comparaison"},
-{"text": "mets les en comparaison", "label": "comparaison"},
-{"text": "versus", "label": "comparaison"},
-{"text": "l'un vs l'autre", "label": "comparaison"},
-{"text": "tu peux comparer les NeoUrban Street et les CloudStep Lite", "label": "comparaison"},
-{"text": "compare le premier et le deuxième", "label": "comparaison"},
-{"text": "quelles sont les différences entre ces deux modèles", "label": "comparaison"},
-{"text": "ils se ressemblent ces deux là ?", "label": "comparaison"},
-{"text": "c'est quoi les différences", "label": "comparaison"},
-{"text": "tu as des chaussures de soirée ?", "label": "recherche"},
-{"text": "je cherche des chaussures pour une soirée", "label": "recherche"},
-{"text": "vous avez des chaussures habillées pour sortir ?", "label": "recherche"},
-{"text": "des chaussures pour une occasion spéciale ?", "label": "recherche"},
-{"text": "je veux des chaussures élégantes pour ce soir", "label": "recherche"},
-{"text": "des chaussures pour un mariage ?", "label": "recherche"},
-{"text": "des chaussures pour une cérémonie ?", "label": "recherche"},
-{"text": "des chaussures habillées ?", "label": "recherche"},
-{"text": "quelque chose d'élégant pour sortir le soir ?", "label": "recherche"},
-{"text": "des chaussures pour une soirée chic ?", "label": "recherche"},
-{"text": "je cherche des escarpins", "label": "recherche"},
-{"text": "vous avez des talons pour soirée ?", "label": "recherche"},
-{"text": "des chaussures pour aller au restaurant ?", "label": "recherche"},
-{"text": "quelque chose de chic pour une soirée ?", "label": "recherche"},
-{"text": "des chaussures pour un anniversaire ?", "label": "recherche"},
-{"text": "est-ce que tu as des chaussures de marche ?", "label": "recherche"},
-{"text": "est-ce que vous avez des baskets ?", "label": "recherche"},
-{"text": "avez-vous des chaussures de sport ?", "label": "recherche"},
-{"text": "est-ce qu'il y a des sandales ?", "label": "recherche"},
-{"text": "vous avez quelque chose pour la randonnée ?", "label": "recherche"},
-{"text": "est-ce que vous proposez des talons ?", "label": "recherche"},
-{"text": "tu as des running ?", "label": "recherche"},
-{"text": "est-ce qu'on peut trouver des mocassins ?", "label": "recherche"},
-{"text": "vous avez des chaussures imperméables ?", "label": "recherche"},
-{"text": "est-ce que vous avez quelque chose en taille 42 ?", "label": "recherche"},
-{"text": "y a-t-il des chaussures de ville ?", "label": "recherche"},
-{"text": "est-ce que vous avez des bottines ?", "label": "recherche"},
-{"text": "tu as des chaussures pour femme ?", "label": "recherche"},
-{"text": "est-ce qu'il existe des chaussures vegan ?", "label": "recherche"},
-{"text": "vous proposez des chaussures de sécurité ?", "label": "recherche"},
-{"text": "présente ce produit en une phrase", "label": "recommandation"},
-{"text": "décris ce modèle en une phrase", "label": "recommandation"},
-{"text": "donne moi le point fort de ce produit", "label": "recommandation"},
-{"text": "c'est quoi le point fort principal de ce modèle", "label": "recommandation"},
-{"text": "présente les NeoUrban Street en une phrase", "label": "recommandation"},
-{"text": "mets en avant le meilleur atout de cette chaussure", "label": "recommandation"},
-{"text": "c'est quoi l'atout principal de ce modèle", "label": "recommandation"},
-{"text": "présente ce modèle avec son point fort", "label": "recommandation"},
-{"text": "décris en une phrase ce que ce modèle a de particulier", "label": "recommandation"},
-{"text": "c'est quoi ce qui rend ce modèle unique", "label": "recommandation"},
-{"text": "donne une phrase percutante sur ce produit", "label": "recommandation"},
-{"text": "résume ce produit en une phrase", "label": "recommandation"},
-{"text": "c'est quoi le meilleur argument pour ce modèle", "label": "recommandation"},
-{"text": "présente brièvement ce modèle", "label": "recommandation"},
-{"text": "donne moi une accroche sur ce produit", "label": "recommandation"},
-{"text": "c'est quoi le meilleur atout de ces baskets", "label": "recommandation"},
-{"text": "tu peux me présenter ce modèle rapidement", "label": "recommandation"},
-{"text": "c'est quoi ce que ce modèle fait de mieux", "label": "recommandation"},
-{"text": "donne moi une bonne raison d'acheter ce modèle", "label": "recommandation"},
-{"text": "propose moi quelque chose pour ce modèle", "label": "recommandation"},
-{"text": "résume mon panier en une phrase", "label": "recommandation"},
-{"text": "c'est quoi un bon résumé de ma sélection", "label": "recommandation"},
-{"text": "tu peux me résumer ce que j'ai dans mon panier", "label": "recommandation"},
-{"text": "je veux un avis sur mon panier", "label": "recommandation"},
-{"text": "mon panier te semble bien", "label": "recommandation"},
-{"text": "c'est quoi ton avis sur ma sélection", "label": "recommandation"},
-{"text": "j'ai regardé des baskets lifestyle tu peux m'aider à choisir", "label": "recommandation"},
-{"text": "j'ai vu plusieurs modèles tu peux m'orienter", "label": "recommandation"},
-{"text": "j'ai consulté des modèles running aide moi à décider", "label": "recommandation"},
-{"text": "je reviens sur le site aide moi à reprendre mon choix", "label": "recommandation"},
-{"text": "j'avais regardé des chaussures tu peux me conseiller", "label": "recommandation"},
-{"text": "j'ai vu des modèles intéressants aide moi à trancher", "label": "recommandation"},
+  {
+    "text": "tu peux comparer les NeoUrban Street et les CloudStep Lite",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare le modèle A avec le modèle B",
+    "label": "comparaison"
+  },
+  {
+    "text": "quelle différence entre les Air Max et les Stan Smith",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare ces deux paires",
+    "label": "comparaison"
+  },
+  {
+    "text": "lequel est mieux entre X et Y",
+    "label": "comparaison"
+  },
+  {
+    "text": "tu peux faire un comparatif",
+    "label": "comparaison"
+  },
+  {
+    "text": "fais un comparatif",
+    "label": "comparaison"
+  },
+  {
+    "text": "comparatif entre les deux",
+    "label": "comparaison"
+  },
+  {
+    "text": "tu peux comparer",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les deux",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare ces modèles",
+    "label": "comparaison"
+  },
+  {
+    "text": "quelle différence entre les deux",
+    "label": "comparaison"
+  },
+  {
+    "text": "c'est quoi la différence",
+    "label": "comparaison"
+  },
+  {
+    "text": "lequel est mieux entre les deux",
+    "label": "comparaison"
+  },
+  {
+    "text": "tu peux me faire une comparaison",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare les pour moi",
+    "label": "comparaison"
+  },
+  {
+    "text": "côte à côte",
+    "label": "comparaison"
+  },
+  {
+    "text": "mets les en comparaison",
+    "label": "comparaison"
+  },
+  {
+    "text": "versus",
+    "label": "comparaison"
+  },
+  {
+    "text": "l'un vs l'autre",
+    "label": "comparaison"
+  },
+  {
+    "text": "tu peux comparer les NeoUrban Street et les CloudStep Lite",
+    "label": "comparaison"
+  },
+  {
+    "text": "compare le premier et le deuxième",
+    "label": "comparaison"
+  },
+  {
+    "text": "quelles sont les différences entre ces deux modèles",
+    "label": "comparaison"
+  },
+  {
+    "text": "ils se ressemblent ces deux là ?",
+    "label": "comparaison"
+  },
+  {
+    "text": "c'est quoi les différences",
+    "label": "comparaison"
+  },
+  {
+    "text": "tu as des chaussures de soirée ?",
+    "label": "recherche"
+  },
+    {
+    "text": "vous avez des chaussures de soirée ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour la plage ?",
+    "label": "recherche"
+  },
 
+    {
+    "text": "tu as des chaussures pour la plage ?",
+    "label": "recherche"
+  },
+    {
+    "text": "tu as des chaussures pour jardiner ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche des chaussures pour une soirée",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures habillées pour sortir ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures pour une occasion spéciale ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux des chaussures élégantes pour ce soir",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures pour un mariage ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures pour une cérémonie ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures habillées ?",
+    "label": "recherche"
+  },
+  {
+    "text": "quelque chose d'élégant pour sortir le soir ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures pour une soirée chic ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche des escarpins",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des talons pour soirée ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures pour aller au restaurant ?",
+    "label": "recherche"
+  },
+  {
+    "text": "quelque chose de chic pour une soirée ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures pour un anniversaire ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que tu as des chaussures de marche ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que vous avez des baskets ?",
+    "label": "recherche"
+  },
+  {
+    "text": "avez-vous des chaussures de sport ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce qu'il y a des sandales ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez quelque chose pour la randonnée ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que vous proposez des talons ?",
+    "label": "recherche"
+  },
+  {
+    "text": "tu as des running ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce qu'on peut trouver des mocassins ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures imperméables ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que vous avez quelque chose en taille 42 ?",
+    "label": "recherche"
+  },
+  {
+    "text": "y a-t-il des chaussures de ville ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce que vous avez des bottines ?",
+    "label": "recherche"
+  },
+  {
+    "text": "tu as des chaussures pour femme ?",
+    "label": "recherche"
+  },
+  {
+    "text": "est-ce qu'il existe des chaussures vegan ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous proposez des chaussures de sécurité ?",
+    "label": "recherche"
+  },
+  {
+    "text": "présente ce produit en une phrase",
+    "label": "recommandation"
+  },
+  {
+    "text": "décris ce modèle en une phrase",
+    "label": "recommandation"
+  },
+  {
+    "text": "donne moi le point fort de ce produit",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le point fort principal de ce modèle",
+    "label": "recommandation"
+  },
+  {
+    "text": "présente les NeoUrban Street en une phrase",
+    "label": "recommandation"
+  },
+  {
+    "text": "mets en avant le meilleur atout de cette chaussure",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi l'atout principal de ce modèle",
+    "label": "recommandation"
+  },
+  {
+    "text": "présente ce modèle avec son point fort",
+    "label": "recommandation"
+  },
+  {
+    "text": "décris en une phrase ce que ce modèle a de particulier",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi ce qui rend ce modèle unique",
+    "label": "recommandation"
+  },
+  {
+    "text": "donne une phrase percutante sur ce produit",
+    "label": "recommandation"
+  },
+  {
+    "text": "résume ce produit en une phrase",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le meilleur argument pour ce modèle",
+    "label": "recommandation"
+  },
+  {
+    "text": "présente brièvement ce modèle",
+    "label": "recommandation"
+  },
+  {
+    "text": "donne moi une accroche sur ce produit",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi le meilleur atout de ces baskets",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu peux me présenter ce modèle rapidement",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi ce que ce modèle fait de mieux",
+    "label": "recommandation"
+  },
+  {
+    "text": "donne moi une bonne raison d'acheter ce modèle",
+    "label": "recommandation"
+  },
+  {
+    "text": "propose moi quelque chose pour ce modèle",
+    "label": "recommandation"
+  },
+  {
+    "text": "résume mon panier en une phrase",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi un bon résumé de ma sélection",
+    "label": "recommandation"
+  },
+  {
+    "text": "tu peux me résumer ce que j'ai dans mon panier",
+    "label": "recommandation"
+  },
+  {
+    "text": "je veux un avis sur mon panier",
+    "label": "recommandation"
+  },
+  {
+    "text": "mon panier te semble bien",
+    "label": "recommandation"
+  },
+  {
+    "text": "c'est quoi ton avis sur ma sélection",
+    "label": "recommandation"
+  },
+  {
+    "text": "j'ai regardé des baskets lifestyle tu peux m'aider à choisir",
+    "label": "recommandation"
+  },
+  {
+    "text": "j'ai vu plusieurs modèles tu peux m'orienter",
+    "label": "recommandation"
+  },
+  {
+    "text": "j'ai consulté des modèles running aide moi à décider",
+    "label": "recommandation"
+  },
+  {
+    "text": "je reviens sur le site aide moi à reprendre mon choix",
+    "label": "recommandation"
+  },
+  {
+    "text": "j'avais regardé des chaussures tu peux me conseiller",
+    "label": "recommandation"
+  },
+  {
+    "text": "j'ai vu des modèles intéressants aide moi à trancher",
+    "label": "recommandation"
+  },
   {
     "text": "vous avez les Nova Air Lifestyle ?",
     "label": "recherche"
@@ -8734,5 +9011,89 @@
   {
     "text": "mets les AeroBoost React dans mon panier",
     "label": "panier"
+  },
+  {
+    "text": "vous avez des chaussures pour la plage ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour l'été ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez quelque chose pour la plage ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures d'été ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour aller à la plage ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures légères pour l'été ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez quelque chose d'ouvert pour l'été ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour les vacances ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour l'automne ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour les festivals ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour la gym ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour la danse ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour le quotidien ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour le running en été ?",
+    "label": "recherche"
+  },
+  {
+    "text": "vous avez des chaussures pour faire du sport dehors ?",
+    "label": "recherche"
+  },
+  {
+    "text": "je cherche des chaussures pour la plage",
+    "label": "recherche"
+  },
+  {
+    "text": "quelque chose pour la plage ?",
+    "label": "recherche"
+  },
+  {
+    "text": "des chaussures pour aller à la plage",
+    "label": "recherche"
+  },
+  {
+    "text": "chaussures légères pour la plage",
+    "label": "recherche"
+  },
+  {
+    "text": "je veux des chaussures pour l'été",
+    "label": "recherche"
+  },
+  {
+    "text": "des sandales ou chaussures pour la plage ?",
+    "label": "recherche"
   }
 ]

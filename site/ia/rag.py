@@ -810,10 +810,18 @@ def get_response_stream(
                 {"role": "user", "content": question_llm},
             ]
 
+        # Les prompts internes (accueil page produit/panier) ont un format très contraint.
+        # On réduit la température et le nombre de tokens pour éviter les hallucinations.
+        gen_options = (
+            {"num_ctx": 2048, "num_predict": 60, "temperature": 0.3}
+            if est_prompt_interne
+            else {"num_ctx": 2048, "num_predict": 120, "temperature": 0.8}
+        )
+
         try:
             stream = ollama.chat(
                 model=LLM_MODEL, messages=messages, stream=True,
-                options={"num_ctx": 2048, "num_predict": 120, "temperature": 0.8},
+                options=gen_options,
             )
             for chunk in stream:
                 yield chunk["message"]["content"]

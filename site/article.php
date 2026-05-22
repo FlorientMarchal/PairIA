@@ -134,12 +134,12 @@ function getCouleurCSS($couleur) {
 </div>
 
 <script>
-const variants = <?= json_encode($variants) ?>;
+var variants = <?= json_encode($variants) ?>;
 </script>
 
 <script>
-const PRODUCT_ID = <?= $id ?>;
-let qty = 1, selectedSize = null, selectedColor = null;
+var PRODUCT_ID = <?= $id ?>;
+var qty = 1, selectedSize = null, selectedColor = null;
 
 window.selectSize = function selectSize(btn) {
   console.log("SIZE CLICK", btn.dataset.size);
