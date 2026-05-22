@@ -58,12 +58,6 @@ if (!$is_ajax) {
 
 <?php else: ?>
 
-  <div class="user-welcome">
-    Bonjour <strong>
-      <?= htmlspecialchars($_SESSION['client']['prenom']) ?>
-    </strong>
-  </div>
-
   <a class="logout-link" href="deconnexion.php">Se déconnecter</a>
 
 <?php endif; ?>
