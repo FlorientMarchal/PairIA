@@ -1419,6 +1419,7 @@ nav {
   background: var(--cream);
   transition: border-color 0.2s;
   resize: vertical;
+  min-height: 80px;
 }
 
 .compte-field input:focus,

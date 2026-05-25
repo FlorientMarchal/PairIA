@@ -99,8 +99,10 @@ document.addEventListener("click", (e) => {
     href.startsWith("http") ||
     href.startsWith("#") ||
     href.startsWith("cart/") ||
+    href.startsWith("chat/") ||
     href.startsWith("mailto:") ||
-    href.startsWith("tel:")
+    href.startsWith("tel:") ||
+    href === "deconnexion.php"
   )
     return;
   const pageName = href.replace(/(\?.*)$/, "");
