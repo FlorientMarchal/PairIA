@@ -64,7 +64,7 @@ def build_prompt(question: str, produits: list, product_id: int = None, genre: s
         if produit_actuel:
             prompt_parts.append(
                 f"L'utilisateur consulte actuellement :\n"
-                f"- {produit_actuel['name']} à {produit_actuel['price']}€\n"
+                f"- {produit_actuel['name']} à {produit_actuel['price']:.2f}€\n"
             )
 
     if produits:
@@ -74,7 +74,7 @@ def build_prompt(question: str, produits: list, product_id: int = None, genre: s
             tailles_str = ", ".join(str(taille) for taille in p.get("tailles", [])) or "non précisé"
             couleurs_str = ", ".join(p.get("couleurs", [])) or "non précisé"
 
-            ligne = f"{i+1}. {p['name']} ({p['price']}€) — {p['marque']}"
+            ligne = f"{i+1}. {p['name']} — prix : {p['price']:.2f}€ — marque : {p['marque']}"
 
             if tailles_str != "non précisé":
                 ligne += f"\n   Tailles disponibles : {tailles_str}"
