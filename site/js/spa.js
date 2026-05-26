@@ -1,6 +1,12 @@
 // js/spa.js — navigation SPA
 
-const SPA_PAGES = ["index.php", "article.php", "panier.php", "compte.php"];
+const SPA_PAGES = [
+  "index.php",
+  "article.php",
+  "panier.php",
+  "compte.php",
+  "favoris.php",
+];
 
 function scrollToCatalogue() {
   requestAnimationFrame(() =>

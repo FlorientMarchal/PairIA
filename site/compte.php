@@ -102,15 +102,6 @@ $stmt = $pdo->prepare("SELECT * FROM clients WHERE id_client = ?");
 $stmt->execute([$client_id]);
 $client = $stmt->fetch();
 
-// ================= CHARGEMENT articles favoris =================
-$stmt = $pdo->prepare("
-    SELECT a.* FROM favoris f
-    JOIN articles a ON a.id_shoes = f.id_shoes
-    WHERE f.id_client = ?
-    ORDER BY f.created_at DESC
-");
-$stmt->execute([$client_id]);
-$favoris = $stmt->fetchAll();
 
 // ================= AJAX =================
 $is_ajax = isset($_GET['ajax']);
@@ -224,31 +215,6 @@ if (!$is_ajax) {
       </form>
     </div>
 
-    <!-- FAVORIS -->
-  <div class="compte-card compte-card-full">
-  <div class="compte-card-title">❤️ Mes favoris</div>
-
-  <?php if (empty($favoris)): ?>
-    <p style="color:var(--gray);font-size:0.875rem">Aucun favori pour le moment.</p>
-  <?php else: ?>
-    <div class="favoris-grid">
-      <?php foreach ($favoris as $f): ?>
-        <div class="fav-item" id="fav-<?= $f['id_shoes'] ?>">
-          <a href="article.php?id=<?= $f['id_shoes'] ?>" class="fav-item-link">
-            <img src="<?= htmlspecialchars($f['url_image']) ?>"
-                 alt="<?= htmlspecialchars($f['nom']) ?>"
-                 onerror="this.style.display='none'">
-            <div class="fav-item-name"><?= htmlspecialchars($f['nom']) ?></div>
-            <div class="fav-item-price"><?= number_format($f['Prix'], 2, ',', ' ') ?> €</div>
-          </a>
-          <button class="fav-remove-btn"
-                  onclick="retirerFavori(<?= $f['id_shoes'] ?>, this)"
-                  title="Retirer des favoris">✕</button>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  <?php endif; ?>
-</div>  
 
   <!-- ACTIONS -->
   <div class="compte-actions">
