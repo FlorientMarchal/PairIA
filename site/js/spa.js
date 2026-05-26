@@ -120,6 +120,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const initialUrl = window.location.pathname + window.location.search;
   const pageName = initialUrl.split("/").pop().split("?")[0];
 
+  // Détecte le hash APRÈS que la page soit prête
+  const hash = window.location.hash.replace("#", "");
+  if (hash && SPA_PAGES.includes(hash)) {
+    // Nettoie le hash de l'URL immédiatement
+    history.replaceState({ url: hash }, "", hash);
+    navigateTo(hash, false);
+    return;
+  }
+
   if (pageName === "shell.php" || pageName === "") {
     navigateTo("index.php", true);
     history.replaceState({ url: "index.php" }, "", "index.php");

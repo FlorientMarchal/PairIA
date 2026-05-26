@@ -1,6 +1,7 @@
 <?php
 // shell.php — coquille SPA permanente
 require_once 'includes/bd.php';
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">

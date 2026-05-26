@@ -102,10 +102,20 @@ $stmt = $pdo->prepare("SELECT * FROM clients WHERE id_client = ?");
 $stmt->execute([$client_id]);
 $client = $stmt->fetch();
 
+// ================= CHARGEMENT articles favoris =================
+$stmt = $pdo->prepare("
+    SELECT a.* FROM favoris f
+    JOIN articles a ON a.id_shoes = f.id_shoes
+    WHERE f.id_client = ?
+    ORDER BY f.created_at DESC
+");
+$stmt->execute([$client_id]);
+$favoris = $stmt->fetchAll();
+
 // ================= AJAX =================
 $is_ajax = isset($_GET['ajax']);
 if (!$is_ajax) {
-    header('Location: shell.php');
+    header('Location: shell.php#compte.php');
     exit;
 }
 ?>
@@ -214,7 +224,31 @@ if (!$is_ajax) {
       </form>
     </div>
 
-  </div>
+    <!-- FAVORIS -->
+  <div class="compte-card compte-card-full">
+  <div class="compte-card-title">❤️ Mes favoris</div>
+
+  <?php if (empty($favoris)): ?>
+    <p style="color:var(--gray);font-size:0.875rem">Aucun favori pour le moment.</p>
+  <?php else: ?>
+    <div class="favoris-grid">
+      <?php foreach ($favoris as $f): ?>
+        <div class="fav-item" id="fav-<?= $f['id_shoes'] ?>">
+          <a href="article.php?id=<?= $f['id_shoes'] ?>" class="fav-item-link">
+            <img src="<?= htmlspecialchars($f['url_image']) ?>"
+                 alt="<?= htmlspecialchars($f['nom']) ?>"
+                 onerror="this.style.display='none'">
+            <div class="fav-item-name"><?= htmlspecialchars($f['nom']) ?></div>
+            <div class="fav-item-price"><?= number_format($f['Prix'], 2, ',', ' ') ?> €</div>
+          </a>
+          <button class="fav-remove-btn"
+                  onclick="retirerFavori(<?= $f['id_shoes'] ?>, this)"
+                  title="Retirer des favoris">✕</button>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</div>  
 
   <!-- ACTIONS -->
   <div class="compte-actions">
@@ -225,7 +259,6 @@ if (!$is_ajax) {
 </div>
 
 <script>
-// AJAX FORM
 document.querySelectorAll('.compte-card form').forEach(form => {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -236,13 +269,13 @@ document.querySelectorAll('.compte-card form').forEach(form => {
         document.querySelectorAll('.compte-alert').forEach(el => el.remove());
 
         try {
+            // ← URL propre sans ajax=1 dans la barre d'adresse
             const res = await fetch('compte.php?ajax=1', {
                 method: 'POST',
                 body: formData
             });
 
             const html = await res.text();
-
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
@@ -250,16 +283,60 @@ document.querySelectorAll('.compte-card form').forEach(form => {
             if (alert) {
                 const area = document.querySelector('.compte-area');
                 const grid = document.querySelector('.compte-grid');
-                area.insertBefore(alert, grid);
+                if (area && grid) area.insertBefore(alert, grid);
+            }
+
+            // Met à jour les champs infos si succès
+            if (action === 'infos') {
+                const newPrenom = formData.get('prenom');
+                const heroH1 = document.querySelector('.compte-hero-info h1');
+                if (heroH1 && newPrenom) heroH1.textContent = 'Bonjour ' + newPrenom;
             }
 
             if (action === 'mdp') {
                 this.querySelectorAll('input[type="password"]').forEach(i => i.value = '');
             }
 
+            // ← IMPORTANT : remet l'URL propre sans ?ajax=1
+            history.replaceState({ url: 'compte.php' }, '', 'compte.php');
+
         } catch(err) {
             console.error('Erreur AJAX compte:', err);
         }
     });
 });
+
+// Pour retirer un article en favoris
+async function retirerFavori(productId, btn) {
+  try {
+    const res = await fetch('favorites/toggle.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: productId })
+    });
+    const data = await res.json();
+
+    if (data.success && data.action === 'removed') {
+      // Supprime la carte avec animation
+      const item = document.getElementById('fav-' + productId);
+      if (item) {
+        item.style.transition = 'opacity .3s, transform .3s';
+        item.style.opacity = '0';
+        item.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+          item.remove();
+          // Si plus aucun favori, affiche le message vide
+          const grid = document.querySelector('.favoris-grid');
+          if (grid && grid.children.length === 0) {
+            grid.parentElement.innerHTML +=
+              '<p style="color:var(--gray);font-size:0.875rem">Aucun favori pour le moment.</p>';
+            grid.remove();
+          }
+        }, 300);
+      }
+    }
+  } catch(e) {
+    console.error(e);
+  }
+}
 </script>
