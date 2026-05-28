@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import ollama
 from database import qdrant
-from llm_prompt import build_prompt, SYSTEM_PROMPT
+from llm_prompt import build_prompt, SYSTEM_PROMPT, get_system_prompt
 from image_search import model
 from intention_classifier import classifier_intention
 from filters import extraire_filtres, user_wants_cart, DB
@@ -28,7 +28,7 @@ _LIMITES = {
     "suivi":          {"num_predict": 220,  "consigne": "Réponds en 2-3 phrases maximum.", "nb_produits": 1},
     "comparaison":    {"num_predict": 120,  "consigne": "Dis juste en une phrase que ci dessous le client trouvera la comparaison du produit 1 et 2", "nb_produits": 2},
     "recommandation": {"num_predict": 220,  "consigne": "Conseille en 2-3 phrases maximum.", "nb_produits": 1},
-    "recherche":      {"num_predict": 350,  "consigne": "Présente chaque produit en 1-2 phrases en soulignant pourquoi il convient. Si ce ne sont pas des correspondances exactes, présente-les comme les meilleures alternatives disponibles.", "nb_produits": 3},
+    "recherche":      {"num_predict": 350,  "consigne": "Parle naturellement comme un vendeur : une phrase par produit, sans liste, sans tirets, sans ':'. Enchaine les produits avec des connecteurs ('aussi', 'et', 'sinon'). Si pas de correspondance exacte, présente-les comme les plus adaptés sans le mentionner explicitement.", "nb_produits": 3},
     "salutation":     {"num_predict": 150,   "consigne": "Réponds en 1 phrase de bienvenue.", "nb_produits": 0},
 }
 
@@ -68,6 +68,28 @@ def _extraire_genre(history: list, question: str) -> str | None:
         if msg["role"] == "user":
             texte_complet += " " + msg["content"].lower()
     return _chercher_genre(texte_complet)
+
+
+def _detecter_tutoiement(history: list, question: str) -> str:
+    """Détecte si l'utilisateur tutoie ou vouvoie, retourne 'tu' ou 'vous'.
+    Par défaut 'tu'. Se base sur tous les messages utilisateur."""
+    _MOTS_VOUVOIEMENT = [
+        "vous avez", "vous êtes", "avez-vous", "avez vous",
+        "pouvez-vous", "pouvez vous", "avez-vous", "faites-vous",
+    ]
+    _MOTS_TUTOIEMENT = [
+        "tu as", "t'as", "tu es", "t'es", "as-tu", "es-tu",
+        "peux-tu", "peux tu", "fais-tu", "fais tu",
+    ]
+    messages_user = [question.lower()] + [
+        m["content"].lower() for m in history if m.get("role") == "user"
+    ]
+    texte = " ".join(messages_user)
+    nb_vous = sum(1 for mot in _MOTS_VOUVOIEMENT if mot in texte)
+    nb_tu   = sum(1 for mot in _MOTS_TUTOIEMENT  if mot in texte)
+    if nb_vous > nb_tu:
+        return "vous"
+    return "tu"  # par défaut
 
 
 
@@ -448,16 +470,13 @@ def _analyser_question(
         if "categorie" in filtres_explicites:
             # extraire_filtres a trouvé une catégorie explicite → elle prime
             cat_explicite = filtres_explicites.pop("categorie")
-            # Le LLM peut avoir trouvé des catégories similaires pertinentes
-            # On garde uniquement celles qui ne sont pas aberrantes (score implicite :
-            # on les filtre en ne gardant que celles détectées par le LLM ET
-            # qui ne sont pas déjà la catégorie principale)
             cats_llm_valides = [c for c in categories_candidates if c != cat_explicite]
             categories_candidates = [cat_explicite] + cats_llm_valides[:2]  # max 2 similaires
             print(f"[VECTORISE] catégorie explicite prioritaire : {cat_explicite} + similaires LLM : {cats_llm_valides[:2]}")
         else:
-            # Pas de catégorie explicite → on se fie au LLM
             filtres_explicites.pop("categorie", None)
+
+            # Persistance catégorie gérée dans extraire_filtres (filters.py)
             if not categories_candidates:
                 print("[VECTORISE] aucune catégorie détectée → recherche libre")
 
@@ -560,9 +579,10 @@ def _recherche_qdrant(
             "categorie":   r.payload.get("categorie",   ""),
             "marque":      r.payload.get("marque",      ""),
             "url_image":   r.payload.get("url_image",   ""),
-            "description": r.payload.get("description", ""),
-            "tailles":     tailles,
-            "couleurs":    couleurs,
+            "description":      r.payload.get("description",      ""),
+            "caracteristiques": r.payload.get("caracteristiques", ""),
+            "tailles":          tailles,
+            "couleurs":         couleurs,
         }
 
     produits = [_construire_produit(r) for r in results]
@@ -652,6 +672,26 @@ def _filtres_depuis_produit(produit: dict) -> dict:
 # STREAMING PRINCIPAL
 # ══════════════════════════════════════════════
 
+# Familles de couleurs : si une couleur exacte n'est pas disponible,
+# on propose les couleurs de la même famille
+_FAMILLES_COULEURS = {
+    "Rouge":   ["Rouge", "Bordeaux", "Corail", "Terracotta", "Rose", "Orange"],
+    "Bordeaux":["Bordeaux", "Rouge"],
+    "Bleu":    ["Bleu", "Bleu marine", "Bleu nuit", "Bleu ciel", "Bleu électrique", "Bleu indigo", "Bleu océan"],
+    "Vert":    ["Vert", "Kaki", "Vert hunter", "Vert menthe"],
+    "Marron":  ["Marron", "Camel", "Cognac", "Terracotta"],
+    "Gris":    ["Gris", "Gris anthracite", "Charbon"],
+    "Blanc":   ["Blanc", "Blanc cassé", "Crème", "Beige"],
+    "Beige":   ["Beige", "Beige naturel", "Crème", "Blanc cassé", "Camel"],
+}
+
+def _couleurs_famille(couleur: str) -> list:
+    """Retourne les couleurs de la même famille, couleur demandée en premier."""
+    for famille, couleurs in _FAMILLES_COULEURS.items():
+        if couleur in couleurs:
+            return couleurs
+    return [couleur]
+
 def get_response_stream(
     question: str = "",
     product_id: int = None,
@@ -665,6 +705,9 @@ def get_response_stream(
         history = []
     if context_messages is None:
         context_messages = []
+
+    # Détecter dès le début pour cohérence dans tous les CAS
+    tutoiement = _detecter_tutoiement(history, question)
 
     print(f"\n{'='*50}")
     print(f"[RAG] question : {question!r} | history : {len(history)} messages")
@@ -687,6 +730,20 @@ def get_response_stream(
         "encourage-le chaleureusement à passer à l'achat",
         "En une à deux phrases (max",   # ← couvre tous les prompts auto
         "En une seule phrase courte (max",  # ← panier
+        "En une phrase (max",            # ← variantes panier
+        "encourage le client à valider",
+        "fais un commentaire positif sur le choix",
+        "dis au client que son panier",
+        "félicite le client pour son choix",
+        "rappelle au client qu'il regardait",
+        "encourage le client à craquer",
+        "invite le client à",
+        "propose au client de l'aider",
+        "encourage le client à explorer",
+        "Le client a",                   # ← nouvelles variantes panier
+        "dans son panier. En une phrase",
+        "tutoie le client",
+        "tutoie-le",
     ]
     est_prompt_interne = any(marqueur in question for marqueur in _MARQUEURS_INTERNES)
 
@@ -724,9 +781,13 @@ def get_response_stream(
                         }
                         # Injecter comme si l'assistant avait déjà présenté ce produit
                         history = history + [{"role": "assistant", "content": "", "products": [produit_detecte]}]
-                        intention = "suivi"
-                        confiance = 1.0
-                        print(f"[INTENTION] override → suivi (nom exact détecté : {row['nom']})")
+                        # Ne pas override en suivi si l'utilisateur veut ajouter au panier
+                        if not user_wants_cart(question, history):
+                            intention = "suivi"
+                            confiance = 1.0
+                            print(f"[INTENTION] override → suivi (nom exact détecté : {row['nom']})")
+                        else:
+                            print(f"[INTENTION] nom exact détecté ({row['nom']}) mais intention panier conservée")
                         break
             except Exception as e:
                 print(f"[INTENTION] override nom exact échoué : {e}")
@@ -774,7 +835,7 @@ def get_response_stream(
         print("[CAS] 1 — hors_sujet")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": get_system_prompt(tutoiement)},
             *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
             {"role": "user", "content": (
                 f"L'utilisateur dit : « {question} »\n"
@@ -800,6 +861,29 @@ def get_response_stream(
         return
 
     # ════════════════════════════════════════════
+    # ── Override PRIORITAIRE : si le dernier message bot posait une question taille/couleur
+    # s'applique AVANT tous les CAS, même salutation
+    _MOTS_QUESTION_TAILLE_COULEUR = [
+        "quelle taille", "quelle pointure", "quelle couleur",
+        "taille souhaitée", "couleur souhaitée", "taille préférée",
+        "quelle est ta taille", "quelle est votre taille",
+        "tu chausses du", "vous chaussez du",
+        "tu préfères quelle couleur", "tu veux quelle couleur",
+        "tu veux quelle taille", "tu veux quelle pointure",
+        "ta pointure", "votre pointure",
+        "pointure (disponibles", "couleur (disponibles",
+        "quelle est ta pointure", "quelle est votre pointure",
+    ]
+    if history:
+        for msg in reversed(history):
+            if msg.get("role") == "assistant":
+                bot_text = msg.get("content", "").lower()
+                if any(kw in bot_text for kw in _MOTS_QUESTION_TAILLE_COULEUR):
+                    intention = "suivi"
+                    confiance = 1.0
+                    print(f"[INTENTION] override → suivi (bot posait une question taille/couleur)")
+                break
+
     # CAS 1b — SALUTATION
     # ════════════════════════════════════════════
     # CAS 1b — SALUTATION
@@ -818,12 +902,12 @@ def get_response_stream(
         # sans polluer avec l'historique de produits
         if est_prompt_interne:
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": get_system_prompt(tutoiement)},
                 {"role": "user", "content": question_llm},
             ]
         else:
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": get_system_prompt(tutoiement)},
                 *[{"role": m["role"], "content": m["content"]} for m in history[-6:] if m["role"] in ("user", "assistant")],
                 {"role": "user", "content": question_llm},
             ]
@@ -831,7 +915,7 @@ def get_response_stream(
         # Les prompts internes (accueil page produit/panier) ont un format très contraint.
         # On réduit la température et le nombre de tokens pour éviter les hallucinations.
         gen_options = (
-            {"num_ctx": 2048, "num_predict": 60, "temperature": 0.3}
+            {"num_ctx": 2048, "num_predict": 120, "temperature": 0.6}
             if est_prompt_interne
             else {"num_ctx": 2048, "num_predict": 120, "temperature": 0.8}
         )
@@ -856,7 +940,7 @@ def get_response_stream(
         print("[CAS] 2 — livraison")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": get_system_prompt(tutoiement)},
             *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
             {"role": "user", "content": (
                 f"L'utilisateur demande : « {question} »\n"
@@ -884,27 +968,52 @@ def get_response_stream(
     # ════════════════════════════════════════════
     # CAS 3 — PANIER
     # ════════════════════════════════════════════
-    if (intention == "panier" or user_wants_cart(question)) and \
-       (user_wants_cart(question) or confiance >= 0.95):
-        print(f"[CAS] 3 — panier (intention={intention}, user_wants_cart={user_wants_cart(question)})")
+    if (intention == "panier" or user_wants_cart(question, history)) and \
+       (user_wants_cart(question, history) or (intention == "panier" and confiance >= 0.75)):
+        print(f"[CAS] 3 — panier (intention={intention}, user_wants_cart={user_wants_cart(question, history)})")
         produits_historique = _produits_depuis_historique(history)
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
 
+        # Extraire taille et couleur dès maintenant pour adapter la consigne
+        filtres_panier = extraire_filtres(question, history)
+        taille_panier  = filtres_panier.get("pointure")
+        couleur_panier = filtres_panier.get("couleur")
+
         if produits_historique:
-            contexte_produits = "\n".join([f"- {p['name']} ({p['price']}€)" for p in produits_historique])
+            contexte_produits = "\n".join([
+                f"- {p['name']} ({p['price']}€) | tailles: {', '.join(str(t) for t in p.get('tailles', []))} | couleurs: {', '.join(p.get('couleurs', []))}"
+                for p in produits_historique
+            ])
+            # Construire la consigne selon ce qu'on sait déjà
+            manque = []
+            if not taille_panier and any(p.get("tailles") for p in produits_historique):
+                manque.append("la pointure")
+            if not couleur_panier and any(p.get("couleurs") for p in produits_historique):
+                manque.append("la couleur")
+
+            if manque:
+                consigne_panier = (
+                    f"Identifie le produit voulu, confirme-le et demande {' et '.join(manque)} en une seule question courte. "
+                    f"{_LIMITES['panier']['consigne']}"
+                )
+            else:
+                consigne_panier = (
+                    f"Identifie lequel il veut, confirme chaleureusement et cite son nom exact. "
+                    f"{_LIMITES['panier']['consigne']}"
+                )
+
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": get_system_prompt(tutoiement)},
                 *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
                 {"role": "user", "content": (
                     f"Produits disponibles :\n{contexte_produits}\n\n"
                     f"L'utilisateur dit : « {question} »\n"
-                    f"Identifie lequel il veut, confirme chaleureusement et cite son nom exact. "
-                    f"{_LIMITES['panier']['consigne']}"
+                    f"{consigne_panier}"
                 )},
             ]
         else:
             messages = [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": get_system_prompt(tutoiement)},
                 {"role": "user", "content": (
                     f"L'utilisateur dit : « {question} »\n"
                     f"Aucun produit présenté. Demande ce qu'il recherche. "
@@ -934,12 +1043,32 @@ def get_response_stream(
             mentionnes    = _produits_mentionnes(texte_complet, produits_historique)
             produit_cible = mentionnes[0] if mentionnes else produits_historique[0]
 
+        # Normaliser la couleur contre les couleurs réelles du produit
+        if couleur_panier and produit_cible:
+            couleurs_produit = produit_cible.get("couleurs", [])
+            famille = _couleurs_famille(couleur_panier)
+            # Chercher d'abord une correspondance exacte
+            match_exact = next((c for c in couleurs_produit if couleur_panier.lower() in c.lower() or c.lower().startswith(couleur_panier.lower())), None)
+            # Sinon chercher dans la famille de couleurs
+            match_famille = next((c for c in couleurs_produit if c in famille), None)
+            if match_exact:
+                couleur_panier = match_exact
+            elif match_famille:
+                print(f"[CAS] 3 — couleur normalisée via famille : {couleur_panier} → {match_famille}")
+                couleur_panier = match_famille
+
+        print(f"[CAS] 3 — taille={taille_panier} | couleur={couleur_panier}")
+
         yield {
-            "type":       "products_final",
-            "products":   [],
-            "action":     "add_to_cart" if produit_cible else None,
-            "product_id": produit_cible["id"] if produit_cible else None,
-            "quantity":   1,
+            "type":            "products_final",
+            "products":        [produit_cible] if produit_cible else [],
+            "action":          "add_to_cart" if produit_cible else None,
+            "product_id":      produit_cible["id"] if produit_cible else None,
+            "quantity":        1,
+            "taille":          taille_panier,
+            "couleur":         couleur_panier,
+            # Confirmation nécessaire seulement si une info manque encore
+            "confirm_required": not (taille_panier and couleur_panier),
         }
         return
 
@@ -988,22 +1117,218 @@ def get_response_stream(
                             print(f"[CAS] 4 — ERREUR DB : {traceback.format_exc()}")  # ← AJOUT
                     break
 
-        # ← NOUVEAU : si on a trouvé produit_suivi, on l'utilise directement
-        produits_a_utiliser = [produit_suivi] if produit_suivi else _produits_depuis_historique(history)
+        # Utiliser tous les produits du dernier message assistant
+        # (pas seulement produit_suivi qui ne prend que le premier)
+        produits_depuis_hist = _produits_depuis_historique(history)
+        produits_a_utiliser = produits_depuis_hist if produits_depuis_hist else ([produit_suivi] if produit_suivi else [])
+
+        # Filtrer par couleur si demandée dans la question
+        filtres_suivi  = extraire_filtres(question, history)
+        couleur_suivi  = filtres_suivi.get("couleur")
+        couleur_originale = couleur_suivi  # sauvegarder avant normalisation
+        taille_suivi   = filtres_suivi.get("pointure")
+
+        # Normaliser la couleur contre les couleurs réelles des produits AVANT le filtrage
+        if couleur_suivi and produits_a_utiliser:
+            for p in produits_a_utiliser:
+                for c in p.get("couleurs", []):
+                    if couleur_suivi.lower() in c.lower() or c.lower().startswith(couleur_suivi.lower()):
+                        couleur_suivi = c
+                        break
+                else:
+                    continue
+                break
+
+        if couleur_suivi:
+            # Normaliser via famille de couleurs : "Rouge" peut matcher "Bordeaux"
+            famille = _couleurs_famille(couleur_suivi)
+            produits_couleur = [
+                p for p in produits_a_utiliser
+                if any(c in famille for c in p.get("couleurs", []))
+            ]
+            # Normaliser couleur_suivi vers la valeur exacte du produit si possible
+            if produits_couleur:
+                for p in produits_couleur:
+                    for c in p.get("couleurs", []):
+                        if c in famille and c != couleur_suivi:
+                            print(f"[CAS] 4 — couleur normalisée : {couleur_suivi} → {c}")
+                            couleur_suivi = c
+                            break
+                    break
+            print(f"[CAS] 4 — filtre couleur={couleur_suivi} : {len(produits_couleur)}/{len(produits_a_utiliser)} produits")
+
+            if not produits_couleur:
+                # Aucun des produits présentés n'a cette couleur → nouvelle recherche Qdrant
+                print(f"[CAS] 4 — 0 résultat en {couleur_suivi} → fallback recherche Qdrant")
+                cat_hist = extraire_filtres("", history).get("categorie")
+
+                # 1er essai : avec couleur + catégorie
+                filtres_nouveaux = {"couleur": couleur_suivi}
+                if cat_hist:
+                    filtres_nouveaux["categorie"] = cat_hist
+                vec_fallback = model.encode(question).tolist()
+                produits_fallback, contexte_fallback = _recherche_qdrant(
+                    question_vector=vec_fallback,
+                    question=question,
+                    filtres=filtres_nouveaux,
+                    categories_candidates=[cat_hist] if cat_hist else [],
+                    history=history,
+                )
+
+                # 2ème essai : sans filtre couleur (montrer ce qui est dispo dans la catégorie)
+                if not produits_fallback and cat_hist:
+                    print(f"[CAS] 4→6 — 0 résultat en {couleur_suivi}, recherche sans couleur")
+                    produits_fallback, contexte_fallback = _recherche_qdrant(
+                        question_vector=vec_fallback,
+                        question=question,
+                        filtres={"categorie": cat_hist},
+                        categories_candidates=[cat_hist],
+                        history=history,
+                    )
+                    if produits_fallback:
+                        contexte_fallback = (
+                            f"IMPORTANT : aucun modèle disponible en {couleur_suivi}. "
+                            f"Voici les modèles disponibles dans cette catégorie avec leurs couleurs. "
+                            f"Dis-le clairement au client et propose les couleurs disponibles :"
+                        )
+
+                if produits_fallback:
+                    print(f"[CAS] 4→6 — {len(produits_fallback)} produits trouvés en {couleur_suivi}")
+                    # Rediriger vers CAS 6 directement
+                    yield {"products": [], "action": None, "product_id": None, "quantity": 1}
+                    nb_a = min(3, len(produits_fallback))
+                    if cat_hist:
+                        p_cat = [p for p in produits_fallback if p["categorie"] == cat_hist]
+                        p_autres = [p for p in produits_fallback if p["categorie"] != cat_hist]
+                        produits_fallback = (p_cat + p_autres)[:nb_a]
+                    else:
+                        produits_fallback = produits_fallback[:nb_a]
+                    prompt_fb = build_prompt(
+                        question=question,
+                        produits=produits_fallback,
+                        genre=_extraire_genre(history, question),
+                        contexte_filtres=contexte_fallback,
+                    )
+                    msgs_fb = [
+                        {"role": "system", "content": get_system_prompt(tutoiement)},
+                        *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
+                        {"role": "user", "content": prompt_fb},
+                    ]
+                    texte_fb = ""
+                    try:
+                        stream_fb = ollama.chat(model=LLM_MODEL, messages=msgs_fb, stream=True,
+                            options={"num_ctx": _calculer_ctx(history), "num_predict": 350, "temperature": 0.7})
+                        for chunk in stream_fb:
+                            token = chunk["message"]["content"]
+                            texte_fb += token
+                            yield token
+                    except Exception as e:
+                        yield f"Erreur : {e}"
+                    produits_mentionnes_fb = _produits_mentionnes(texte_fb, produits_fallback)
+                    produits_finaux_fb = produits_mentionnes_fb or produits_fallback
+                    yield {
+                        "type":          "products_final",
+                        "products":      produits_finaux_fb,
+                        "action":        None,
+                        "product_id":    None,
+                        "quantity":      1,
+                        "tutoiement":    tutoiement,
+                        "show_products": True,
+                    }
+                    return
+                else:
+                    # Vraiment rien → laisser le LLM expliquer
+                    produits_avec = []
+                    produits_sans = produits_a_utiliser
+            else:
+                produits_avec = produits_couleur
+                produits_sans = [p for p in produits_a_utiliser if couleur_suivi not in p.get("couleurs", [])]
+        else:
+            produits_avec = produits_a_utiliser
+            produits_sans = []
+
+        # Si intention panier avec info manquante → demander directement
+        if produits_a_utiliser and user_wants_cart(question, history):
+            produit_cible_panier = (produits_avec[0] if produits_avec else produits_a_utiliser[0])
+            manque = []
+            if not taille_suivi and produit_cible_panier.get("tailles"):
+                tailles_dispo = ", ".join(str(t) for t in produit_cible_panier["tailles"])
+                manque.append(f"pointure (disponibles : {tailles_dispo})")
+            if not couleur_suivi and produit_cible_panier.get("couleurs"):
+                couleurs_dispo = ", ".join(produit_cible_panier["couleurs"])
+                manque.append(f"couleur (disponibles : {couleurs_dispo})")
+
+            if manque:
+                yield {"products": [], "action": None, "product_id": None, "quantity": 1}
+                question_manque = (
+                    f"Le client veut ajouter {produit_cible_panier['name']} au panier. "
+                    f"Il manque : {' et '.join(manque)}. "
+                    f"Demande-lui {'ces informations' if len(manque) > 1 else 'cette information'} "
+                    f"en une seule question courte et naturelle. {_LIMITES['panier']['consigne']}"
+                )
+                messages_manque = [
+                    {"role": "system", "content": get_system_prompt(tutoiement)},
+                    *[{"role": m["role"], "content": m["content"]} for m in history[-4:]],
+                    {"role": "user", "content": question_manque},
+                ]
+                texte_manque = ""
+                try:
+                    stream = ollama.chat(
+                        model=LLM_MODEL, messages=messages_manque, stream=True,
+                        options={"num_ctx": 1024, "num_predict": 80, "temperature": 0.4},
+                    )
+                    for chunk in stream:
+                        token = chunk["message"]["content"]
+                        texte_manque += token
+                        yield token
+                except Exception as e:
+                    info = " et ".join(m.split(" (")[0] for m in manque)
+                    yield f"Quelle {info} souhaites-tu pour les {produit_cible_panier['name']} ?"
+                yield {
+                    "type": "products_final", "products": [], "action": None,
+                    "product_id": None, "quantity": 1, "show_products": False,
+                }
+                return
 
         if produits_a_utiliser:
             yield {"products": [], "action": None, "product_id": None, "quantity": 1}
-            contexte_produits = "\n".join([
-                f"- {p['name']} ({p.get('marque', '')}, {p['price']}€) : {p.get('description', '')}\n"
-                f"  Tailles : {', '.join(str(t) for t in p.get('tailles', []))}\n"
-                f"  Couleurs : {', '.join(p.get('couleurs', []))}"
-                for p in produits_a_utiliser
-            ])
+
+            def _fmt_produit(p):
+                return (
+                    f"- {p['name']} ({p.get('marque', '')}, {p['price']}€)"
+                    f" | Tailles : {', '.join(str(t) for t in p.get('tailles', []))}"
+                    f" | Couleurs : {', '.join(p.get('couleurs', []))}"
+                )
+
+            if couleur_suivi and (produits_avec or produits_sans):
+                lignes = []
+                if produits_avec:
+                    lignes.append(f"Disponibles en {couleur_suivi} :")
+                    lignes += [_fmt_produit(p) for p in produits_avec]
+                if produits_sans:
+                    lignes.append(f"Non disponibles en {couleur_suivi} :")
+                    lignes += [_fmt_produit(p) for p in produits_sans]
+                contexte_produits = "\n".join(lignes)
+            else:
+                contexte_produits = "\n".join([_fmt_produit(p) for p in produits_a_utiliser])
+
+            # Construire une note explicative si la couleur a été normalisée
+            note_couleur = ""
+            if couleur_suivi and couleur_originale and couleur_suivi != couleur_originale:
+                note_couleur = (
+                    f"Note : le client demande '{couleur_originale}'. "
+                    f"'{couleur_suivi}' est la nuance disponible la plus proche. "
+                    f"Présente-la comme telle.\n"
+                )
+
             messages = [
+                {"role": "system", "content": get_system_prompt(tutoiement)},
+                *[{"role": m["role"], "content": m["content"]} for m in history[-4:]],
                 {"role": "user", "content": (
-                    f"Produits déjà présentés :\n{contexte_produits}\n\n"
+                    f"{note_couleur}"
+                    f"Produits présentés :\n{contexte_produits}\n\n"
                     f"Question : {question}\n"
-                    f"Réponds en 1-2 phrases naturelles et directes, en te basant UNIQUEMENT sur les informations ci-dessus. "
+                    f"Réponds en 1-2 phrases naturelles en te basant UNIQUEMENT sur les informations ci-dessus. "
                     f"Ne mentionne AUCUN autre produit. "
                     f"{_LIMITES['suivi']['consigne']}"
                 )},
@@ -1021,12 +1346,43 @@ def get_response_stream(
                     yield chunk["message"]["content"]
             except Exception as e:
                 yield f"Erreur Mistral : {str(e)}"
+            # Si bot posait une question taille/couleur → déclencher ajout panier
+            dernier_bot = next((m.get("content","") for m in reversed(history) if m.get("role")=="assistant"), "")
+            # Déclencher add_to_cart seulement si le bot posait une question explicite
+            # sur la taille/couleur DANS LE CADRE d'un ajout panier (pas juste informatif)
+            _MOTS_QUESTION_AJOUT = [
+                "quelle taille", "quelle pointure", "quelle couleur",
+                "ta pointure", "ta taille", "ta couleur",
+                "tu veux quelle", "choisis", "pointure (disponibles",
+                "couleur (disponibles", "quelle est ta pointure",
+            ]
+            action_suivi = "add_to_cart" if (taille_suivi or couleur_suivi) and any(
+                kw in dernier_bot.lower() for kw in _MOTS_QUESTION_AJOUT
+            ) else None
+            produits_finaux = produits_avec if (couleur_suivi and produits_avec) else produits_a_utiliser
+            produit_cible_suivi = produits_finaux[0] if produits_finaux else None
+            # Afficher les cartes si on a filtré par couleur (pour que l'utilisateur voie ce qui est dispo)
+            afficher_cartes = bool(couleur_suivi and produits_avec)
+            print(f"[CAS] 4 — taille={taille_suivi} | couleur={couleur_suivi} | action={action_suivi}")
+
+            # Vérifier si toutes les infos nécessaires sont présentes pour l'ajout
+            infos_completes = bool(action_suivi) and (
+                not produit_cible_suivi or (
+                    (taille_suivi or not produit_cible_suivi.get("tailles")) and
+                    (couleur_suivi or not produit_cible_suivi.get("couleurs"))
+                )
+            )
+
             yield {
-                "type":       "products_final",
-                "products":   produits_a_utiliser,
-                "action":     None,
-                "product_id": None,
-                "quantity":   1,
+                "type":             "products_final",
+                "products":         produits_finaux,
+                "action":           action_suivi,
+                "product_id":       produit_cible_suivi["id"] if produit_cible_suivi and action_suivi else None,
+                "quantity":         1,
+                "taille":           taille_suivi,
+                "couleur":          couleur_suivi,
+                "show_products":    afficher_cartes,
+                "confirm_required": True,
             }
             return
         print("[CAS] 4 — suivi sans produits → fallback recherche")
@@ -1091,7 +1447,7 @@ def get_response_stream(
         print("[CAS] 6 — aucun produit → réponse Mistral directe")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": get_system_prompt(tutoiement)},
             *[{"role": m["role"], "content": m["content"]} for m in history[-10:]],
             {"role": "user", "content": (
                 f"{contexte_filtres}\n"
@@ -1120,6 +1476,7 @@ def get_response_stream(
 
     # 3. Prompt Mistral
     genre       = _extraire_genre(history, question)
+    tutoiement  = _detecter_tutoiement(history, question)
     nb_produits = _nb_produits_from_history(history,intention)
     limite      = _LIMITES.get(intention, _LIMITES["recherche"])
     print(f"[CAS] 6 — {len(produits_trouves)} produits | genre={genre} | nb_à_afficher={nb_produits}")
@@ -1138,8 +1495,11 @@ def get_response_stream(
                 produits_trouves = produits_cat
                 print(f"[CAS] 6 — LLM limité aux {len(produits_trouves)} produits '{cat_principale}'")
             else:
+                # Pas assez dans la catégorie principale : on complète avec les similaires
+                # mais on tronque à nb_a_presenter pour que le LLM n'ait pas le choix
                 produits_autres = [p for p in produits_trouves if p["categorie"] != cat_principale]
-                produits_trouves = produits_cat + produits_autres
+                produits_trouves = (produits_cat + produits_autres)[:nb_a_presenter]
+                print(f"[CAS] 6 — LLM forcé : {len(produits_cat)} '{cat_principale}' + {len(produits_trouves) - len(produits_cat)} similaires")
     description_visuelle = ""
     if is_image_search and produits_trouves:
        description_visuelle = (
@@ -1164,10 +1524,7 @@ def get_response_stream(
     ) if nb_a_presenter > 0 else ""
 
     question_complete = (
-        f"{description_visuelle}"
-        f"Le client demande : \u00ab {question or ''} \u00bb\n"
-        f"Voici les mod\u00e8les les plus proches disponibles. "
-        f"Pr\u00e9sente-les comme alternatives adapt\u00e9es, sans dire que le catalogue est vide ou qu'il n'y a pas de stock. "
+        f"{description_visuelle}{question or ''}"
         f"{suffixe_recommandation}\n{limite['consigne']} {consigne_nb}"
     )
 
@@ -1180,7 +1537,7 @@ def get_response_stream(
         contexte_filtres=contexte_filtres,
     )
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": get_system_prompt(tutoiement)}]
     for msg in history[-10:]:
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": prompt})
@@ -1221,13 +1578,14 @@ def get_response_stream(
         return
 
     produits_affiches = _produits_mentionnes(texte_complet, produits_trouves)
-    action = "add_to_cart" if user_wants_cart(question) and produits_affiches else None
+    action = "add_to_cart" if user_wants_cart(question, history) and produits_affiches else None
 
     print(f"[CAS] 6 — affichés : {[p['name'] for p in produits_affiches[:nb_produits]]}")
     yield {
-        "type":       "products_final",
-        "products":   produits_affiches[:nb_a_presenter],
-        "action":     action,
-        "product_id": produits_affiches[0]["id"] if produits_affiches and action else None,
-        "quantity":   1,
+        "type":        "products_final",
+        "products":    produits_affiches[:nb_a_presenter],
+        "action":      action,
+        "product_id":  produits_affiches[0]["id"] if produits_affiches and action else None,
+        "quantity":    1,
+        "tutoiement":  tutoiement,
     }

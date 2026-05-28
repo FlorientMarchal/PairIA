@@ -190,12 +190,42 @@ def _chercher_pointure(texte: str) -> str | None:
     return None
 
 
-def user_wants_cart(question: str) -> bool:
+# Mots de confirmation courts qui ne valent que si le bot vient de parler d'ajout panier
+_CONFIRMATIONS_COURTES = {
+    "ok vas y", "vas y", "ok go", "go", "oui vas y", "oui confirme",
+    "confirme", "c'est bon", "c bon", "parfait", "ok c'est bon",
+    "valide", "yes", "ouais vas y", "allez vas y", "ok ajoute",
+    "oui ajoute", "ajoute le", "ajoute la", "ok", "oui", "ouais",
+}
+
+_MOTS_CONTEXTE_PANIER_BOT = [
+    "ajouter au panier", "ajoute au panier", "confirme", "valide",
+    "veux-tu que j'ajoute", "je peux ajouter", "dois-je ajouter",
+    "c'est bien cela", "c'est bien ça", "voulez-vous que j'ajoute",
+    "je vais ajouter", "souhaitez-vous", "est-ce correct",
+]
+
+def user_wants_cart(question: str, history: list = None) -> bool:
     """Détecte une intention panier — matching exact uniquement, pas de fuzzy.
-    Le fuzzy causait trop de faux positifs ("running" → "prendre" etc.)
+    Les confirmations courtes (ok, vas y...) ne valent que si le bot vient
+    de proposer un ajout panier dans le message précédent.
     """
     q = question.lower().strip()
-    return any(kw in q for kw in _MOTS_PANIER)
+
+    # Mots panier explicites → toujours vrai
+    if any(kw in q for kw in _MOTS_PANIER):
+        return True
+
+    # Confirmation courte → vrai seulement si le dernier message bot parlait de panier
+    if q in _CONFIRMATIONS_COURTES and history:
+        for msg in reversed(history):
+            if msg.get("role") == "assistant":
+                bot_text = msg.get("content", "").lower()
+                if any(kw in bot_text for kw in _MOTS_CONTEXTE_PANIER_BOT):
+                    return True
+                break
+
+    return False
 
 
 # ══════════════════════════════════════════════
@@ -209,10 +239,9 @@ def extraire_filtres(question: str, history: list) -> dict:
     Règles de fallback :
       Genre / pointure / budget  → persistants, exact sur TOUT l'historique
                                    (l'utilisateur ne répète pas "je chausse du 42" à chaque message)
-      Couleur / marque / catégorie → ponctuels :
-        - question courante : fuzzy (tolérant aux fautes)
-        - historique        : exact uniquement, 1 seul tour en arrière
-                              → empêche "jaune bellemode" de contaminer les requêtes suivantes
+      Couleur / marque / catégorie → persistants sur TOUT l'historique
+                                   Une nouvelle valeur dans la question courante remplace l'ancienne.
+                                   Si la question n'en mentionne pas, on garde celle de l'historique.
     """
     texte_question = question.lower()
 
@@ -222,8 +251,8 @@ def extraire_filtres(question: str, history: list) -> dict:
         if msg["role"] == "user"
     ]
 
-    # Pour les filtres ponctuels : 1 seul tour en arrière maximum
-    dernier_msg = [historique_user[0]] if historique_user else []
+    # Pour les filtres ponctuels : 1 seul tour en arrière maximum (le plus récent)
+    dernier_msg = [historique_user[-1]] if historique_user else []
 
     filtres = {}
 
@@ -257,30 +286,45 @@ def extraire_filtres(question: str, history: list) -> dict:
     if pointure:
         filtres["pointure"] = pointure
 
-    # ── Couleur (ponctuelle) ──
+    # Pour la persistance couleur/catégorie/marque : limiter aux 6 derniers messages
+    # Inverser pour prendre la valeur la plus RÉCENTE en premier
+    historique_recent = list(reversed(historique_user[-6:])) if historique_user else []
+
+    # ── Couleur (persistante sur l'historique récent) ──
+    # Chercher d'abord un tag explicite [couleur:X] injecté par le JS lors de normalisations
+    import re as _re
     couleur = _chercher_dans_map_fuzzy(texte_question, DB["couleurs_map"])
+    # Chercher tag [couleur:X] dans la question courante
+    _tag_match = _re.search(r'\[couleur:([^\]]+)\]', texte_question)
+    if _tag_match:
+        couleur = _tag_match.group(1)
     if not couleur:
-        for msg in dernier_msg:                              # 1 tour max, exact
+        for msg in historique_recent:
+            # Chercher tag [couleur:X] en priorité
+            _tag = _re.search(r'\[couleur:([^\]]+)\]', msg)
+            if _tag:
+                couleur = _tag.group(1)
+                break
             couleur = _chercher_dans_map_exact(msg, DB["couleurs_map"])
             if couleur:
                 break
     if couleur:
         filtres["couleur"] = couleur
 
-    # ── Marque (ponctuelle) ──
+    # ── Marque (persistante sur l'historique récent) ──
     marque = _chercher_marque_fuzzy(texte_question)
     if not marque:
-        for msg in dernier_msg:                              # 1 tour max, exact
+        for msg in historique_recent:  # déjà inversé
             marque = _chercher_marque_exact(msg)
             if marque:
                 break
     if marque:
         filtres["marque"] = marque
 
-    # ── Catégorie (ponctuelle) ──
+    # ── Catégorie (persistante sur l'historique récent) ──
     categorie = _chercher_dans_map_fuzzy(texte_question, DB["categories_map"])
     if not categorie:
-        for msg in dernier_msg:                              # 1 tour max, exact
+        for msg in historique_recent:  # déjà inversé
             categorie = _chercher_dans_map_exact(msg, DB["categories_map"])
             if categorie:
                 break

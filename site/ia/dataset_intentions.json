@@ -7931,23 +7931,6 @@
     "text": "tu as des chaussures de soirée ?",
     "label": "recherche"
   },
-    {
-    "text": "vous avez des chaussures de soirée ?",
-    "label": "recherche"
-  },
-  {
-    "text": "vous avez des chaussures pour la plage ?",
-    "label": "recherche"
-  },
-
-    {
-    "text": "tu as des chaussures pour la plage ?",
-    "label": "recherche"
-  },
-    {
-    "text": "tu as des chaussures pour jardiner ?",
-    "label": "recherche"
-  },
   {
     "text": "je cherche des chaussures pour une soirée",
     "label": "recherche"
@@ -9095,5 +9078,77 @@
   {
     "text": "des sandales ou chaussures pour la plage ?",
     "label": "recherche"
+  },
+  {
+    "text": "En une phrase, encourage le client à finaliser son achat avec RainStep WP",
+    "label": "salutation"
+  },
+  {
+    "text": "En une phrase, félicite le client pour son choix et invite-le à valider",
+    "label": "salutation"
+  },
+  {
+    "text": "En une phrase, dis au client que son panier est prêt et qu'il peut payer",
+    "label": "salutation"
+  },
+  {
+    "text": "En une phrase, encourage le client à passer à la caisse avec ses articles",
+    "label": "salutation"
+  },
+  {
+    "text": "En une phrase, invite le client à valider son panier pour recevoir ses chaussures",
+    "label": "salutation"
+  },
+  {
+    "text": "encourage le client à finaliser sa commande",
+    "label": "salutation"
+  },
+  {
+    "text": "encourage à finaliser l'achat avec les articles du panier",
+    "label": "salutation"
+  },
+  {
+    "text": "félicite le client pour son choix et encourage à commander",
+    "label": "salutation"
+  },
+  {
+    "text": "tu les ajoutes du coup ?",
+    "label": "panier"
+  },
+  {
+    "text": "et tu les ajoutes ?",
+    "label": "panier"
+  },
+  {
+    "text": "tu peux ajouter les rainstep wp au panier",
+    "label": "panier"
+  },
+  {
+    "text": "tu peux ajouter les nike air au panier en taille 42",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute les au panier",
+    "label": "panier"
+  },
+  {
+    "text": "tu peux les mettre au panier",
+    "label": "panier"
+  },
+  {
+    "text": "vas-y ajoute les",
+    "label": "panier"
+  },
+  {
+    "text": "du coup tu les mets au panier ?",
+    "label": "panier"
+  },
+  {
+    "text": "tu les mets dans le panier ?",
+    "label": "panier"
+  },
+  {
+    "text": "ajoute donc ces chaussures au panier",
+    "label": "panier"
   }
 ]

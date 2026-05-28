@@ -83,10 +83,70 @@ async function loadSessionMessages(sessionId) {
 /*
    CHAT TEXTE
 */
+// Mots de confirmation pour valider une carte panier par message
+const _CONFIRMATIONS_MSG = [
+  "oui", "yes", "ok", "ouais", "c'est bon", "c bon", "parfait",
+  "confirme", "go", "vas y", "vas-y", "d'accord", "exact", "correct",
+  "oui je confirme", "oui c'est ça", "oui c'est bon", "allez", "yep",
+  "je confirme", "je valide", "c'est ça", "c'est exact", "ajoute",
+  "ajoute le", "ajoute la", "ajoute les", "ok c'est bon", "nickel",
+  "super", "top", "impeccable", "parfait merci",
+];
+
 async function sendMessage(text) {
   let layout = null;
   const container = document.getElementById("messages");
   if (!container || !text.trim()) return;
+
+  // Vérifier si le bot attend une réponse à une question ouverte (panier)
+  const pendingFollowUp = sessionStorage.getItem("pendingFollowUp");
+  if (pendingFollowUp === "panier") {
+    const textLower = text.trim().toLowerCase().replace(/[?!.]/g, "");
+    // Réponse négative → effacer et laisser passer normalement
+    if (["non", "non merci", "ça va", "c'est bon", "pas besoin", "no", "nope"].includes(textLower)) {
+      sessionStorage.removeItem("pendingFollowUp");
+      // Laisser passer au backend normalement
+    }
+    // Réponse affirmative courte → transformer en vraie question
+    else if (["oui", "yes", "ok", "ouais", "yep", "volontiers", "avec plaisir"].includes(textLower)) {
+      sessionStorage.removeItem("pendingFollowUp");
+      appendUserMessage(text);
+      // Envoyer une vraie question au bot
+      await sendMessage("je cherche d'autres chaussures, tu peux m'aider ?");
+      return;
+    }
+    // Sinon (vraie phrase) → effacer le pending et laisser passer
+    else {
+      sessionStorage.removeItem("pendingFollowUp");
+    }
+  }
+
+  // Vérifier si une confirmation panier est en attente
+  const pendingRaw = sessionStorage.getItem("pendingCartConfirm");
+  if (pendingRaw && _CONFIRMATIONS_MSG.includes(text.trim().toLowerCase().replace(/[?!.]/g, ""))) {
+    try {
+      const pending = JSON.parse(pendingRaw);
+      appendUserMessage(text);
+      const result = await addToCart(pending.id, 1, pending.taille, pending.couleur);
+      if (result?.success) {
+        sessionStorage.removeItem("pendingCartConfirm");
+        // Marquer le bouton de la carte comme confirmé
+        const btns = document.querySelectorAll(".chat-cart-btn");
+        btns.forEach(btn => {
+          if (btn.textContent.includes("Confirmer")) {
+            btn.textContent = "✓ Ajouté au panier !";
+            btn.style.background = "#2f855a";
+            btn.disabled = true;
+            btn.closest(".chat-product-card")?.querySelector("button[style*='e53e3e']")?.remove();
+          }
+        });
+        appendBotMessageText(`✓ ${pending.name} (${[pending.taille ? "taille " + pending.taille : "", pending.couleur].filter(Boolean).join(", ")}) ajouté au panier !`);
+      } else {
+        appendBotMessageText(result?.error || "Erreur lors de l'ajout au panier.");
+      }
+      return;
+    } catch (e) {}
+  }
 
   const input = document.getElementById("chat-input");
   const sendBtn = document.querySelector(".chat-send-btn");
@@ -131,6 +191,10 @@ async function sendMessage(text) {
     let products = [];
     let action = null;
     let product_id = null;
+    let taille = null;
+    let couleur = null;
+    let show_products = true;
+    let confirm_required = true;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -152,6 +216,17 @@ async function sendMessage(text) {
             action = data.action;
             product_id = data.product_id;
             layout = data.layout || null;
+            taille = data.taille || null;
+            couleur = data.couleur || null;
+            show_products = data.show_products !== false;  // true par défaut sauf si explicitement false
+            confirm_required = data.confirm_required !== false;  // true par défaut
+            if (data.tutoiement) {
+              sessionStorage.setItem("chatTutoiement", data.tutoiement);
+            }
+            // Stocker la couleur normalisée pour les messages suivants
+            if (data.couleur) {
+              sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+            }
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -181,7 +256,14 @@ async function sendMessage(text) {
       }
     }
 
-    conversationHistory.push({ role: "user", content: text });
+    // Si une couleur a été normalisée (ex: Rouge→Bordeaux), l'intégrer dans le message user
+    const normalizedCouleur = sessionStorage.getItem("lastNormalizedCouleur");
+    const textToStore = (normalizedCouleur && couleur && normalizedCouleur !== couleur)
+      ? text + ` [couleur:${normalizedCouleur}]`
+      : text;
+    if (normalizedCouleur) sessionStorage.removeItem("lastNormalizedCouleur");
+
+    conversationHistory.push({ role: "user", content: textToStore });
     conversationHistory.push({
       role: "assistant",
       content: message,
@@ -201,17 +283,32 @@ async function sendMessage(text) {
       JSON.parse(JSON.stringify(conversationHistory)),
     );
 
-    if (layout === "comparison" && products.length >= 2) {
-      showComparisonView(products[0], products[1], container);
-    } else if (products.length === 1) {
-      showCartSelector(products[0], container);
-    } else if (products.length > 1) {
-      showProductPicker(products, container);
+    if (show_products) {
+      if (layout === "comparison" && products.length >= 2) {
+        showComparisonView(products[0], products[1], container);
+      } else if (products.length === 1 && !action) {
+        showCartSelector(products[0], container);
+      } else if (products.length > 1 && !action) {
+        showProductPicker(products, container);
+      }
     }
 
     if (action === "add_to_cart" && product_id) {
       const produit = products.find((p) => p.id === product_id) || products[0];
-      if (produit) showCartSelector(produit);
+      if (produit) {
+        const needsTaille = (produit.tailles || []).length > 0;
+        const needsCouleur = (produit.couleurs || []).length > 0;
+        const hasTaille = !!taille;
+        const hasCouleur = !!couleur;
+        const infoComplete = (!needsTaille || hasTaille) && (!needsCouleur || hasCouleur);
+
+        if (infoComplete) {
+          // Toujours afficher la carte de confirmation
+          showCartConfirm(produit, taille, couleur, container);
+        } else {
+          // Infos manquantes → le bot a déjà demandé, pas de carte
+        }
+      }
     }
 
     container.scrollTop = container.scrollHeight;
@@ -330,6 +427,17 @@ async function sendImageWithText(file, text) {
             action = data.action;
             product_id = data.product_id;
             layout = data.layout || null;
+            taille = data.taille || null;
+            couleur = data.couleur || null;
+            show_products = data.show_products !== false;  // true par défaut sauf si explicitement false
+            confirm_required = data.confirm_required !== false;  // true par défaut
+            if (data.tutoiement) {
+              sessionStorage.setItem("chatTutoiement", data.tutoiement);
+            }
+            // Stocker la couleur normalisée pour les messages suivants
+            if (data.couleur) {
+              sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+            }
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -537,7 +645,7 @@ function showProductPicker(produits, container) {
 
       return `
       <div class="chat-pick-item">
-        <div class="chat-pick-top">
+        <a href="article.php?id=${p.id}" class="chat-pick-top" title="Voir ${escapeHtml(p.name)}">
           <div class="chat-product-pick-img">
             ${
               p.url_image
@@ -549,7 +657,7 @@ function showProductPicker(produits, container) {
             <div class="chat-product-name">${escapeHtml(p.name)}</div>
             <div class="chat-product-price">${p.price} €</div>
           </div>
-        </div>
+        </a>
         <button class="chat-pick-toggle-btn" onclick="chatToggleSelector(this)">
           🛒 Ajouter au panier
         </button>
@@ -656,6 +764,76 @@ async function confirmChatCartFromPicker(productId, btn) {
 /* ══════════════════════════════════════
    CARTE SÉLECTEUR TAILLE / COULEUR
 ══════════════════════════════════════ */
+function showCartConfirm(produit, taille, couleur, container) {
+  if (!container) container = document.getElementById("messages");
+
+  // Mémoriser l'état en attente de confirmation
+  sessionStorage.setItem("pendingCartConfirm", JSON.stringify({
+    id: produit.id,
+    name: produit.name,
+    price: produit.price,
+    taille: taille || null,
+    couleur: couleur || null,
+  }));
+
+  const div = document.createElement("div");
+  div.className = "chat-msg bot";
+
+  const tailleStr = taille ? `taille ${taille}` : "";
+  const couleurStr = couleur || "";
+  const details = [tailleStr, couleurStr].filter(Boolean).join(", ");
+
+  div.innerHTML = `
+    <div class="chat-product-card">
+      <div class="chat-product-top">
+        <div class="chat-product-img">
+          ${produit.url_image
+            ? `<img src="${escapeHtml(produit.url_image)}" alt="${escapeHtml(produit.name)}" onerror="this.style.display='none'">`
+            : "👟"}
+        </div>
+        <div>
+          <div class="chat-product-name">${escapeHtml(produit.name)}</div>
+          <div class="chat-product-price">${produit.price.toFixed(2)} €</div>
+          ${details ? `<div style="font-size:12px;color:#666;margin-top:2px">${escapeHtml(details)}</div>` : ""}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="chat-cart-btn" style="flex:1"
+          onclick="confirmCartDirect(${produit.id}, '${escapeAttr(taille || "")}', '${escapeAttr(couleur || "")}', this)">
+          ✓ Confirmer l'ajout
+        </button>
+        <button class="chat-cart-btn" style="flex:1;background:#e53e3e"
+          onclick="sessionStorage.removeItem('pendingCartConfirm'); this.closest('.chat-msg').remove()">
+          ✗ Annuler
+        </button>
+      </div>
+      <div class="chat-selector-error" style="font-size:12px;color:#e53e3e;margin-top:6px;min-height:16px;"></div>
+    </div>`;
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function confirmCartDirect(productId, taille, couleur, btn) {
+  const card = btn.closest(".chat-product-card");
+  const errEl = card.querySelector(".chat-selector-error");
+  btn.disabled = true;
+  btn.textContent = "…";
+
+  const result = await addToCart(productId, 1, taille || null, couleur || null);
+
+  if (result?.success) {
+    sessionStorage.removeItem("pendingCartConfirm");
+    btn.textContent = "✓ Ajouté au panier !";
+    btn.style.background = "#2f855a";
+    card.querySelector("button[style*='e53e3e']")?.remove();
+  } else {
+    btn.disabled = false;
+    btn.textContent = "✓ Confirmer l'ajout";
+    if (errEl) errEl.textContent = result?.error || "Erreur lors de l'ajout.";
+  }
+}
+
 function showCartSelector(produit, container) {
   if (!container) container = document.getElementById("messages");
 
@@ -988,6 +1166,9 @@ function showComparisonView(p1, p2, container) {
 }
 
 function initProductContext(produit) {
+  const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
+  const pronom = tutoiement === "vous" ? "Vouvoyez" : "Tutoie";
+  const pronLe = tutoiement === "vous" ? "Vouvoyez-le" : "Tutoie-le";
   // Tracker les produits visités
   let visited = JSON.parse(
     sessionStorage.getItem("visitedProducts_" + sessionId) || "[]",
@@ -1049,18 +1230,18 @@ function initProductContext(produit) {
   let question;
   const variantesPremiere = [
     `En une à deux phrases (max 20 mots), accueille le client sur la fiche "${produit.name}" en citant son point fort principal. Utilise "tu" et parle comme un vendeur enthousiaste.`,
-    `En une à deux phrases (max 20 mots), présente le point fort des ${produit.name} (${produit.price.toFixed(2)}€) de façon percutante. Tutoie le client.`,
-    `En une à deux phrases (max 20 mots), accroche le client avec ce qui rend les ${produit.name} uniques. Tutoie-le, sois naturel.`,
+    `En une à deux phrases (max 20 mots), présente le point fort des ${produit.name} (${produit.price.toFixed(2)}€) de façon percutante. ${pronom} le client.`,
+    `En une à deux phrases (max 20 mots), accroche le client avec ce qui rend les ${produit.name} uniques. ${pronLe}, sois naturel.`,
   ];
   const variantesRetour = [
-    `En une à deux phrases (max 20 mots), mets en avant le point fort des "${produit.name}" (${produit.price.toFixed(2)}€) et propose ton aide pour choisir la taille ou la couleur. Tutoie le client.`,
-    `En une à deux phrases (max 20 mots), rappelle ce qui fait le charme des ${produit.name} et demande au client ce qui l'intéresse. Tutoie-le.`,
-    `En une à deux phrases (max 20 mots), souligne la qualité des ${produit.name} (${produit.price.toFixed(2)}€) et propose de répondre à ses questions. Tutoie le client.`,
+    `En une à deux phrases (max 20 mots), mets en avant le point fort des "${produit.name}" (${produit.price.toFixed(2)}€) et propose ton aide pour choisir la taille ou la couleur. ${pronom} le client.`,
+    `En une à deux phrases (max 20 mots), rappelle ce qui fait le charme des ${produit.name} et demande au client ce qui l'intéresse. ${pronLe}.`,
+    `En une à deux phrases (max 20 mots), souligne la qualité des ${produit.name} (${produit.price.toFixed(2)}€) et propose de répondre à ses questions. ${pronom} le client.`,
   ];
   if (nbVisites >= 3) {
-    question = `En une à deux phrases percutantes (max 25 mots), tu remarques que le client revient encore sur "${produit.name}" (${produit.price.toFixed(2)}€). Crée un sentiment d'urgence ou mets en avant une raison décisive d'acheter maintenant. Tutoie le client.${sansBonjour}`;
+    question = `En une à deux phrases percutantes (max 25 mots), tu remarques que le client revient encore sur "${produit.name}" (${produit.price.toFixed(2)}€). Crée un sentiment d'urgence ou mets en avant une raison décisive d'acheter maintenant. ${pronom} le client.${sansBonjour}`;
   } else if (nbVisites === 2) {
-    question = `En une à deux phrases (max 25 mots), tu remarques que le client revient sur "${produit.name}" (${produit.price.toFixed(2)}€). Encourage-le chaleureusement à passer à l'achat en soulignant ce qui le séduisait. Tutoie-le.${sansBonjour}`;
+    question = `En une à deux phrases (max 25 mots), tu remarques que le client revient sur "${produit.name}" (${produit.price.toFixed(2)}€). Encourage-le chaleureusement à passer à l'achat en soulignant ce qui le séduisait. ${pronLe}.${sansBonjour}`;
   } else if (estPremiereVisite) {
     question = variantesPremiere[Math.floor(Math.random() * variantesPremiere.length)];
   } else {
@@ -1071,6 +1252,9 @@ function initProductContext(produit) {
 }
 
 function initPanierContext(panierItems) {
+  const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
+  const pronom = tutoiement === "vous" ? "Vouvoyez" : "Tutoie";
+  const pronLe = tutoiement === "vous" ? "Vouvoyez-le" : "Tutoie-le";
   const visited = JSON.parse(
     sessionStorage.getItem("visitedProducts_" + sessionId) || "[]",
   );
@@ -1093,11 +1277,14 @@ function initPanierContext(panierItems) {
       .map((it) => `${it.nom} ×${it.quantity} à ${it.prix}€`)
       .join(", ");
     contexte = `L'utilisateur est sur sa page panier. Contenu : ${resume}.`;
+    const resumeNoms = panierItems.map((it) => it.nom).join(", ");
+    const interdiction = "Ne cite AUCUN autre produit que tu n'as pas dans le catalogue fourni.";
     const variantes = [
-      `En une phrase (max 20 mots), encourage le client à finaliser sa commande avec ${resume}.`,
-      `En une phrase (max 20 mots), fais un commentaire positif sur le choix du client (${resume}) et invite-le à commander.`,
-      `En une phrase (max 20 mots), dis au client que son panier est prêt (${resume}) et qu'il n'a plus qu'à valider.`,
-      `En une phrase (max 20 mots), félicite le client pour son choix (${resume}) et encourage-le à passer commande.`,
+      `Le client a ${resumeNoms} dans son panier. En 2 phrases : félicite-le pour ce choix, puis demande-lui s'il cherche autre chose ou si tu peux l'aider. ${interdiction} ${pronLe}.`,
+      `Le client a ${resumeNoms} dans son panier. En 2 phrases : rassure-le sur son excellent choix, puis propose ton aide s'il a besoin d'une autre paire. ${interdiction} ${pronLe}.`,
+      `Le client a ${resumeNoms} dans son panier. En 2 phrases : dis-lui que c'est un super choix, puis demande s'il cherche quelque chose pour compléter. ${interdiction} ${pronLe}.`,
+      `Le client a ${resumeNoms} dans son panier. En 2 phrases : valorise son choix, puis demande s'il a trouvé tout ce qu'il cherchait ou s'il veut explorer d'autres modèles. ${interdiction} ${pronLe}.`,
+      `Le client a ${resumeNoms} dans son panier. En 2 phrases : félicite-le pour ce choix et rappelle une qualité clé, puis demande si tu peux l'aider pour autre chose. ${interdiction} ${pronLe}.`,
     ];
     question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else if (derniersProduitsChat.length > 0) {
@@ -1140,13 +1327,14 @@ function initPanierContext(panierItems) {
   conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
-  _genererMessageAccueil(question, null, derniersProduitsChat);
+  _genererMessageAccueil(question, null, derniersProduitsChat, panierItems && panierItems.length > 0);
 }
 
 async function _genererMessageAccueil(
   question,
   productId,
   produitsAafficher = [],
+  produitsDejaAuPanier = false,
 ) {
   const container = document.getElementById("messages");
   if (!container) return;
@@ -1230,11 +1418,22 @@ async function _genererMessageAccueil(
       conversationHistory = conversationHistory.slice(-20);
     sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
-    // NOUVEAU : afficher la carte produit
-    if (produitsFinaux.length === 1) {
-      showCartSelector(produitsFinaux[0], container);
-    } else if (produitsFinaux.length > 1) {
-      showProductPicker(produitsFinaux, container);
+    // Afficher les cartes seulement si les produits ne sont pas déjà au panier
+    if (!produitsDejaAuPanier) {
+      if (produitsFinaux.length === 1) {
+        showCartSelector(produitsFinaux[0], container);
+      } else if (produitsFinaux.length > 1) {
+        showProductPicker(produitsFinaux, container);
+      }
+    }
+
+    // Si le message bot pose une question ouverte (panier avec items), stocker le contexte
+    // pour que "oui" / "non" seuls soient bien traités
+    if (produitsDejaAuPanier && text) {
+      const questionOuverte = text.match(/\?/) !== null;
+      if (questionOuverte) {
+        sessionStorage.setItem("pendingFollowUp", "panier");
+      }
     }
   } catch (e) {
     bubble.textContent =
