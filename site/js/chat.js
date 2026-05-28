@@ -100,6 +100,19 @@ const _CONFIRMATIONS_MSG = [
   "super", "top", "impeccable", "parfait merci",
 ];
 
+
+// Détecte le tutoiement depuis le texte de l'utilisateur et le stocke
+function _detecterEtStockerTutoiement(text) {
+  const q = text.toLowerCase();
+  const moisVous = ["vous avez", "vous êtes", "avez-vous", "pouvez-vous", "faites-vous"];
+  const moisTu = ["tu as", "t'as", "tu es", "t'es", "as-tu", "es-tu", "peux-tu"];
+  if (moisVous.some(m => q.includes(m))) {
+    sessionStorage.setItem("chatTutoiement", "vous");
+  } else if (moisTu.some(m => q.includes(m))) {
+    sessionStorage.setItem("chatTutoiement", "tu");
+  }
+}
+
 async function sendMessage(text) {
   let layout = null;
   const container = document.getElementById("messages");
@@ -160,6 +173,7 @@ async function sendMessage(text) {
   if (input) input.disabled = true;
   if (sendBtn) sendBtn.disabled = true;
 
+  _detecterEtStockerTutoiement(text);
   appendUserMessage(text);
   const typing = appendTyping();
 
@@ -869,7 +883,7 @@ function showCartSelector(produit, container) {
 
   div.innerHTML = `
     <div class="chat-product-card">
-      <div class="chat-product-top">
+      <a href="article.php?id=${produit.id}" class="chat-pick-top" title="Voir ${escapeHtml(produit.name)}">
         <div class="chat-product-img">
           ${
             produit.url_image
@@ -881,7 +895,7 @@ function showCartSelector(produit, container) {
           <div class="chat-product-name">${escapeHtml(produit.name)}</div>
           <div class="chat-product-price">${produit.price} €</div>
         </div>
-      </div>
+      </a>
 
       ${
         hasTailles
@@ -1046,6 +1060,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         "chatHistory",
         JSON.stringify(conversationHistory),
       );
+    }
+  }
+
+  // Détecter le tutoiement depuis l'historique existant
+  if (!sessionStorage.getItem("chatTutoiement")) {
+    for (const msg of conversationHistory) {
+      if (msg.role === "user" && msg.content) {
+        _detecterEtStockerTutoiement(msg.content);
+        if (sessionStorage.getItem("chatTutoiement")) break;
+      }
     }
   }
 

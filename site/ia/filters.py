@@ -85,10 +85,12 @@ DB = _charger_valeurs_db()
 # HELPERS FUZZY — question courante uniquement
 # ══════════════════════════════════════════════
 
-def _fuzzy_match(mot: str, candidats: list[str], seuil: int = 80) -> str | None:
+def _fuzzy_match(mot: str, candidats: list[str], seuil: int = 80, scorer=None) -> str | None:
     if not candidats:
         return None
-    result = process.extractOne(mot, candidats, scorer=fuzz.WRatio, score_cutoff=seuil)
+    if scorer is None:
+        scorer = fuzz.WRatio
+    result = process.extractOne(mot, candidats, scorer=scorer, score_cutoff=seuil)
     return result[0] if result else None
 
 
@@ -106,9 +108,15 @@ def _chercher_dans_map_fuzzy(texte: str, mapping: dict, seuil: int = 88) -> str 
     for n in (3, 2, 1):
         for i in range(len(mots) - n + 1):
             fragment = " ".join(mots[i:i+n])
-            # Exact toujours prioritaire
+            # Exact toujours prioritaire — mais mots courts (<= 3 chars) uniquement
+            # s'ils sont des mots entiers (pas dans un mot plus long)
             if fragment in mapping:
-                return mapping[fragment]
+                if n > 1 or len(fragment) >= 4:
+                    return mapping[fragment]
+                # Mot court (2-3 chars) : vérifier que c'est un mot isolé dans le texte original
+                import re as _re2
+                if _re2.search(r'(?<!\w)' + _re2.escape(fragment) + r'(?!\w)', texte.lower()):
+                    return mapping[fragment]
             # 1 mot trop court → skip
             if n == 1 and len(fragment) < 4:
                 continue
@@ -118,10 +126,16 @@ def _chercher_dans_map_fuzzy(texte: str, mapping: dict, seuil: int = 88) -> str 
                     if abs(len(c) - len(fragment)) <= 1
                 ]
             else:
-                candidats_valides = candidats
-            # 1 mot → seuil plus strict
+                # Pour n>=2, exclure les candidats beaucoup plus courts que le fragment
+                # évite "de sport" (8 chars) de matcher "or" (2 chars) via partial_ratio
+                candidats_valides = [
+                    c for c in candidats
+                    if len(c) >= len(fragment) * 0.6
+                ]
+            # 1 mot → seuil plus strict + scorer exact (pas WRatio qui matche les sous-chaînes)
             seuil_effectif = 92 if n == 1 else seuil
-            match = _fuzzy_match(fragment, candidats_valides, seuil=seuil_effectif)
+            scorer = fuzz.ratio if n == 1 else fuzz.WRatio
+            match = _fuzzy_match(fragment, candidats_valides, seuil=seuil_effectif, scorer=scorer)
             if match:
                 return mapping[match]
     return None
@@ -129,11 +143,17 @@ def _chercher_dans_map_fuzzy(texte: str, mapping: dict, seuil: int = 88) -> str 
 
 def _chercher_dans_map_exact(texte: str, mapping: dict) -> str | None:
     """Matching EXACT — à utiliser sur l'historique pour éviter les faux positifs."""
+    import re as _re
     texte_lower = texte.lower()
     # Du plus long au plus court pour éviter qu'un synonyme court masque un synonyme long
     for synonyme in sorted(mapping.keys(), key=len, reverse=True):
-        if synonyme in texte_lower:
-            return mapping[synonyme]
+        # Mots courts (<=3 chars) : vérifier word boundary pour éviter "or" dans "sport"
+        if len(synonyme) <= 3:
+            if _re.search(r'(?<!\w)' + _re.escape(synonyme) + r'(?!\w)', texte_lower):
+                return mapping[synonyme]
+        else:
+            if synonyme in texte_lower:
+                return mapping[synonyme]
     return None
 
 

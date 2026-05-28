@@ -106,7 +106,6 @@
   "champagne": "Champagne",
   "doré": "Champagne",
   "dore": "Champagne",
-  "or": "Champagne",
   "pêche": "Corail",
   "peche": "Corail",
   "rouge bordeaux": "Bordeaux",
@@ -115,5 +114,7 @@
   "grenat": "Bordeaux",
   "cramoisi": "Bordeaux",
   "burgondy": "Bordeaux",
-  "burgundy": "Bordeaux"
+  "burgundy": "Bordeaux",
+  "couleur or": "Champagne",
+  "or": "Champagne"
 }

@@ -9,14 +9,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import ollama
 from database import qdrant
-from llm_prompt import build_prompt, SYSTEM_PROMPT, get_system_prompt
+from llm_prompt import build_prompt, get_system_prompt
 from image_search import model
 from intention_classifier import classifier_intention
 from filters import extraire_filtres, user_wants_cart, DB
 from PIL import Image
 from qdrant_client.models import Filter, FieldCondition, Range, MatchValue, MatchAny, MinShould
 
-LLM_MODEL = "llama3.1"
+LLM_MODEL = "gemma"
 
 # ══════════════════════════════════════════════
 # LIMITES DE GÉNÉRATION PAR INTENTION
