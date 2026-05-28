@@ -6,6 +6,8 @@ const SPA_PAGES = [
   "panier.php",
   "compte.php",
   "favoris.php",
+  "acheter.php",
+  "confirmation.php",
 ];
 
 function scrollToCatalogue() {

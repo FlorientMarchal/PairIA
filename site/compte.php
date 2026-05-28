@@ -1,8 +1,8 @@
+```php
 <?php
 session_start();
 require_once 'includes/bd.php';
 
-// DEBUG (à enlever en prod)
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -19,79 +19,58 @@ $error     = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    // ===== INFOS =====
     if ($action === 'infos') {
-        $nom     = trim($_POST['nom']    ?? '');
-        $prenom  = trim($_POST['prenom'] ?? '');
-        $mail    = trim($_POST['mail']   ?? '');
-        $tel     = trim($_POST['tel']    ?? '');
-
+        $nom    = trim($_POST['nom']    ?? '');
+        $prenom = trim($_POST['prenom'] ?? '');
+        $mail   = trim($_POST['mail']   ?? '');
+        $tel    = trim($_POST['tel']    ?? '');
         if (empty($nom) || empty($prenom) || empty($mail)) {
             $error = 'Nom, prénom et email sont obligatoires.';
         } else {
             $check = $pdo->prepare("SELECT id_client FROM clients WHERE mail = ? AND id_client != ?");
             $check->execute([$mail, $client_id]);
-
             if ($check->fetch()) {
                 $error = 'Cet email est déjà utilisé.';
             } else {
-                $pdo->prepare("
-                    UPDATE clients 
-                    SET nom=?, prenom=?, mail=?, numero=? 
-                    WHERE id_client=?
-                ")->execute([$nom, $prenom, $mail, $tel, $client_id]);
-
+                $pdo->prepare("UPDATE clients SET nom=?, prenom=?, mail=?, numero=? WHERE id_client=?")
+                    ->execute([$nom, $prenom, $mail, $tel, $client_id]);
                 $_SESSION['client']['nom']    = $nom;
                 $_SESSION['client']['prenom'] = $prenom;
                 $_SESSION['client']['mail']   = $mail;
-
                 $success = 'Informations mises à jour avec succès.';
             }
         }
     }
 
-    // ===== MOT DE PASSE =====
     elseif ($action === 'mdp') {
         $ancien  = $_POST['ancien_mdp']  ?? '';
         $nouveau = $_POST['nouveau_mdp'] ?? '';
         $confirm = $_POST['confirm_mdp'] ?? '';
-
         $stmt = $pdo->prepare("SELECT mdp FROM clients WHERE id_client = ?");
         $stmt->execute([$client_id]);
         $row = $stmt->fetch();
-
         if (!$row || !password_verify($ancien, $row['mdp'])) {
             $error = 'Mot de passe actuel incorrect.';
-        }
-        elseif (password_verify($nouveau, $row['mdp'])) {
+        } elseif (password_verify($nouveau, $row['mdp'])) {
             $error = 'Le nouveau mot de passe doit être différent de l\'ancien.';
-        }
-        elseif (strlen($nouveau) < 6) {
+        } elseif (strlen($nouveau) < 6) {
             $error = 'Le mot de passe doit contenir au moins 6 caractères.';
-        }
-        elseif ($nouveau !== $confirm) {
+        } elseif ($nouveau !== $confirm) {
             $error = 'Les mots de passe ne correspondent pas.';
-        }
-        else {
-            $hash = password_hash($nouveau, PASSWORD_DEFAULT);
-
+        } else {
             $pdo->prepare("UPDATE clients SET mdp=? WHERE id_client=?")
-                ->execute([$hash, $client_id]);
-
+                ->execute([password_hash($nouveau, PASSWORD_DEFAULT), $client_id]);
             $success = 'Mot de passe modifié avec succès.';
         }
     }
 
-    // ===== ADRESSE =====
     elseif ($action === 'adresse') {
         $adresse = trim($_POST['adresse'] ?? '');
-
         if (empty($adresse)) {
             $error = "L'adresse ne peut pas être vide.";
         } else {
             $pdo->prepare("UPDATE clients SET adresse=? WHERE id_client=?")
                 ->execute([$adresse, $client_id]);
-
             $success = "Adresse mise à jour avec succès.";
         }
     }
@@ -102,18 +81,39 @@ $stmt = $pdo->prepare("SELECT * FROM clients WHERE id_client = ?");
 $stmt->execute([$client_id]);
 $client = $stmt->fetch();
 
+// ================= HISTORIQUE COMMANDES =================
+$stmtCmds = $pdo->prepare("
+    SELECT c.*,
+           COUNT(lc.id_ligne) AS nb_articles
+    FROM commandes c
+    LEFT JOIN lignes_commande lc ON lc.id_commande = c.id_commande
+    WHERE c.id_client = ?
+    GROUP BY c.id_commande
+    ORDER BY c.date_commande DESC
+");
+$stmtCmds->execute([$client_id]);
+$commandes = $stmtCmds->fetchAll();
 
-// ================= AJAX =================
 $is_ajax = isset($_GET['ajax']);
 if (!$is_ajax) {
     header('Location: shell.php#compte.php');
     exit;
 }
+
+// Statut → label lisible
+function statutLabel(string $statut): array {
+    return match($statut) {
+        'en_attente' => ['label' => 'En attente',    'color' => '#f59e0b', 'bg' => '#fffbeb'],
+        'payée'      => ['label' => 'Payée ✓',        'color' => '#16a34a', 'bg' => '#f0fdf4'],
+        'expédiée'   => ['label' => 'Expédiée 🚚',    'color' => '#2563eb', 'bg' => '#eff6ff'],
+        'livrée'     => ['label' => 'Livrée ✓✓',      'color' => '#059669', 'bg' => '#ecfdf5'],
+        'annulée'    => ['label' => 'Annulée',         'color' => '#dc2626', 'bg' => '#fef2f2'],
+        default      => ['label' => ucfirst($statut), 'color' => '#6b7280', 'bg' => '#f9fafb'],
+    };
+}
 ?>
 
 <title>PairIA — Mon compte</title>
-
-<div id="ajax-hero"></div>
 
 <div id="ajax-content">
 <div class="compte-area">
@@ -123,7 +123,6 @@ if (!$is_ajax) {
     <div class="compte-avatar">
       <?= strtoupper(substr($client['prenom'], 0, 1)) ?>
     </div>
-
     <div class="compte-hero-info">
       <h1>Bonjour <?= htmlspecialchars($client['prenom']) ?></h1>
       <p><?= htmlspecialchars($client['mail']) ?></p>
@@ -134,90 +133,159 @@ if (!$is_ajax) {
   <?php if ($success): ?>
     <div class="compte-alert success"><?= htmlspecialchars($success) ?></div>
   <?php endif; ?>
-
   <?php if ($error): ?>
     <div class="compte-alert error"><?= htmlspecialchars($error) ?></div>
   <?php endif; ?>
 
-  <!-- GRID -->
-  <div class="compte-grid">
+  <!-- INFOS -->
+  <div>
+    <div class="compte-grid">
 
-    <!-- INFOS -->
-    <div class="compte-card">
-      <div class="compte-card-title">Informations personnelles</div>
+      <!-- Infos personnelles -->
+      <div class="compte-card">
+        <div class="compte-card-title">Informations personnelles</div>
+        <form method="POST" action="compte.php?ajax=1">
+          <input type="hidden" name="action" value="infos">
+          <div class="compte-field">
+            <label>Prénom</label>
+            <input type="text" name="prenom" value="<?= htmlspecialchars($client['prenom']) ?>">
+          </div>
+          <div class="compte-field">
+            <label>Nom</label>
+            <input type="text" name="nom" value="<?= htmlspecialchars($client['nom']) ?>">
+          </div>
+          <div class="compte-field">
+            <label>Email</label>
+            <input type="email" name="mail" value="<?= htmlspecialchars($client['mail']) ?>">
+          </div>
+          <div class="compte-field">
+            <label>Téléphone</label>
+            <input type="text" name="tel" value="<?= htmlspecialchars($client['numero']) ?>">
+          </div>
+          <button class="compte-btn">Sauvegarder</button>
+        </form>
+      </div>
 
-      <form method="POST" action="compte.php?ajax=1">
-        <input type="hidden" name="action" value="infos">
+      <!-- Sécurité -->
+      <div class="compte-card">
+        <div class="compte-card-title">Sécurité</div>
+        <form method="POST" action="compte.php?ajax=1">
+          <input type="hidden" name="action" value="mdp">
+          <div class="compte-field">
+            <label>Mot de passe actuel</label>
+            <input type="password" name="ancien_mdp">
+          </div>
+          <div class="compte-field">
+            <label>Nouveau mot de passe</label>
+            <input type="password" name="nouveau_mdp">
+          </div>
+          <div class="compte-field">
+            <label>Confirmation</label>
+            <input type="password" name="confirm_mdp">
+          </div>
+          <button class="compte-btn">Modifier</button>
+        </form>
+      </div>
 
-        <div class="compte-field">
-          <label>Prénom</label>
-          <input type="text" name="prenom" value="<?= htmlspecialchars($client['prenom']) ?>">
-        </div>
+      <!-- Adresse -->
+      <div class="compte-card">
+        <div class="compte-card-title">📍 Adresse de livraison</div>
+        <form method="POST" action="compte.php?ajax=1">
+          <input type="hidden" name="action" value="adresse">
+          <div class="compte-field">
+            <label>Adresse</label>
+            <textarea name="adresse" rows="3"><?= htmlspecialchars($client['adresse'] ?? '') ?></textarea>
+          </div>
+          <button class="compte-btn">Mettre à jour</button>
+        </form>
+      </div>
 
-        <div class="compte-field">
-          <label>Nom</label>
-          <input type="text" name="nom" value="<?= htmlspecialchars($client['nom']) ?>">
-        </div>
-
-        <div class="compte-field">
-          <label>Email</label>
-          <input type="email" name="mail" value="<?= htmlspecialchars($client['mail']) ?>">
-        </div>
-
-        <div class="compte-field">
-          <label>Téléphone</label>
-          <input type="text" name="tel" value="<?= htmlspecialchars($client['numero']) ?>">
-        </div>
-
-        <button class="compte-btn">Sauvegarder</button>
-      </form>
     </div>
+  </div>
 
-    <!-- MOT DE PASSE -->
-    <div class="compte-card">
-      <div class="compte-card-title">Sécurité</div>
+  <!-- COMMANDES -->
+  <div>
 
-      <form method="POST" action="compte.php?ajax=1">
-        <input type="hidden" name="action" value="mdp">
+    <?php if (empty($commandes)): ?>
+      <div class="compte-empty">
+        <div class="compte-empty-icon">📦</div>
+        <div class="compte-empty-title">Aucune commande pour le moment</div>
+        <p>Vos achats apparaîtront ici après votre première commande.</p>
+        <a href="index.php" class="compte-btn" style="display:inline-block;text-decoration:none">
+          🛍 Découvrir le catalogue
+        </a>
+      </div>
 
-        <div class="compte-field">
-          <label>Mot de passe actuel</label>
-          <input type="password" name="ancien_mdp">
-        </div>
+    <?php else: ?>
 
-        <div class="compte-field">
-          <label>Nouveau mot de passe</label>
-          <input type="password" name="nouveau_mdp">
-        </div>
+      <div class="commandes-list">
+        <?php foreach ($commandes as $cmd):
+          $s = statutLabel($cmd['statut']);
+        ?>
+          <div class="commande-card" id="cmd-<?= $cmd['id_commande'] ?>">
 
-        <div class="compte-field">
-          <label>Confirmation</label>
-          <input type="password" name="confirm_mdp">
-        </div>
+            <div class="commande-header">
+              <div class="commande-header-left">
+                <div class="commande-num">Commande n°<?= $cmd['id_commande'] ?></div>
+                <div class="commande-date">
+                  <?= date('d/m/Y à H:i', strtotime($cmd['date_commande'])) ?>
+                  · <?= $cmd['nb_articles'] ?> article<?= $cmd['nb_articles'] > 1 ? 's' : '' ?>
+                </div>
+              </div>
+              <div class="commande-header-right">
+                <span class="commande-statut"
+                  style="color:<?= $s['color'] ?>;background:<?= $s['bg'] ?>">
+                  <?= $s['label'] ?>
+                </span>
+                <div class="commande-total">
+                  <?= number_format($cmd['total'], 2, ',', ' ') ?> €
+                </div>
+              </div>
+            </div>
 
-        <button class="compte-btn">Modifier</button>
-      </form>
-    </div>
+            <div class="commande-detail" id="detail-<?= $cmd['id_commande'] ?>" style="display:none">
+              <?php
+                $stmtL = $pdo->prepare("SELECT * FROM lignes_commande WHERE id_commande = ?");
+                $stmtL->execute([$cmd['id_commande']]);
+                $lignes = $stmtL->fetchAll();
+              ?>
+              <?php foreach ($lignes as $l): ?>
+                <div class="commande-ligne">
+                  <div class="commande-ligne-info">
+                    <div class="commande-ligne-nom"><?= htmlspecialchars($l['nom_article']) ?></div>
+                    <div class="commande-ligne-meta">
+                      Pointure <?= htmlspecialchars($l['taille']) ?>
+                      · <?= htmlspecialchars($l['couleur']) ?>
+                      · Qté <?= (int)$l['quantite'] ?>
+                    </div>
+                  </div>
+                  <div class="commande-ligne-prix">
+                    <?= number_format($l['sous_total'], 2, ',', ' ') ?> €
+                  </div>
+                </div>
+              <?php endforeach; ?>
 
-    <!-- ADRESSE -->
-    <div class="compte-card">
-      <div class="compte-card-title">📍 Adresse de livraison</div>
+              <?php if (!empty($cmd['adresse_livraison'])): ?>
+                <div class="commande-adresse">
+                  📍 <?= nl2br(htmlspecialchars($cmd['adresse_livraison'])) ?>
+                </div>
+              <?php endif; ?>
+            </div>
 
-      <form method="POST" action="compte.php?ajax=1">
-        <input type="hidden" name="action" value="adresse">
+            <button class="commande-toggle-btn"
+              onclick="toggleCommande(<?= $cmd['id_commande'] ?>, this)">
+              Voir le détail ▾
+            </button>
 
-        <div class="compte-field">
-          <label>Adresse</label>
-          <textarea name="adresse" rows="3"><?= htmlspecialchars($client['adresse'] ?? '') ?></textarea>
-        </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
 
-        <button class="compte-btn">Mettre à jour</button>
-      </form>
-    </div>
+    <?php endif; ?>
+  </div>
 
-
-  <!-- ACTIONS -->
-  <div class="compte-actions">
+  <!-- DECONNEXION -->
+  <div class="compte-actions" style="margin-top:40px;text-align:center;">
     <a href="deconnexion.php" class="compte-logout">Se déconnecter</a>
   </div>
 
@@ -225,84 +293,33 @@ if (!$is_ajax) {
 </div>
 
 <script>
+function toggleCommande(id, btn) {
+  const detail = document.getElementById('detail-' + id);
+  if (!detail) return;
+  const isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Voir le détail ▾' : 'Masquer le détail ▴';
+}
+
 document.querySelectorAll('.compte-card form').forEach(form => {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-
         const formData = new FormData(this);
-        const action = formData.get('action');
-
         document.querySelectorAll('.compte-alert').forEach(el => el.remove());
-
         try {
-            // ← URL propre sans ajax=1 dans la barre d'adresse
-            const res = await fetch('compte.php?ajax=1', {
-                method: 'POST',
-                body: formData
-            });
-
+            const res  = await fetch('compte.php?ajax=1', { method: 'POST', body: formData });
             const html = await res.text();
             const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-
+            const doc  = parser.parseFromString(html, 'text/html');
             const alert = doc.querySelector('.compte-alert');
             if (alert) {
                 const area = document.querySelector('.compte-area');
-                const grid = document.querySelector('.compte-grid');
-                if (area && grid) area.insertBefore(alert, grid);
+                if (area) area.prepend(alert);
             }
-
-            // Met à jour les champs infos si succès
-            if (action === 'infos') {
-                const newPrenom = formData.get('prenom');
-                const heroH1 = document.querySelector('.compte-hero-info h1');
-                if (heroH1 && newPrenom) heroH1.textContent = 'Bonjour ' + newPrenom;
-            }
-
-            if (action === 'mdp') {
-                this.querySelectorAll('input[type="password"]').forEach(i => i.value = '');
-            }
-
-            // ← IMPORTANT : remet l'URL propre sans ?ajax=1
-            history.replaceState({ url: 'compte.php' }, '', 'compte.php');
-
         } catch(err) {
             console.error('Erreur AJAX compte:', err);
         }
     });
 });
-
-// Pour retirer un article en favoris
-async function retirerFavori(productId, btn) {
-  try {
-    const res = await fetch('favorites/toggle.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_id: productId })
-    });
-    const data = await res.json();
-
-    if (data.success && data.action === 'removed') {
-      // Supprime la carte avec animation
-      const item = document.getElementById('fav-' + productId);
-      if (item) {
-        item.style.transition = 'opacity .3s, transform .3s';
-        item.style.opacity = '0';
-        item.style.transform = 'scale(0.9)';
-        setTimeout(() => {
-          item.remove();
-          // Si plus aucun favori, affiche le message vide
-          const grid = document.querySelector('.favoris-grid');
-          if (grid && grid.children.length === 0) {
-            grid.parentElement.innerHTML +=
-              '<p style="color:var(--gray);font-size:0.875rem">Aucun favori pour le moment.</p>';
-            grid.remove();
-          }
-        }, 300);
-      }
-    }
-  } catch(e) {
-    console.error(e);
-  }
-}
 </script>
+```

@@ -725,7 +725,9 @@ nav {
   background: var(--white);
   cursor: pointer;
   font-size: 16px;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
   flex-shrink: 0;
 }
 .chat-fav-btn:hover {
@@ -736,7 +738,6 @@ nav {
   background: #fff0f3;
   border-color: #e53e3e;
 }
-
 
 /* ── Bouton reset conversation ── */
 .chat-reset-btn {
@@ -1645,4 +1646,134 @@ nav {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+}
+
+/* ══════════════════════════════════════
+   COMPTE — État vide (commandes / favoris)
+══════════════════════════════════════ */
+.compte-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--gray);
+}
+.compte-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+.compte-empty-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+}
+.compte-empty p {
+  font-size: 0.875rem;
+  margin-bottom: 20px;
+}
+
+/* ══════════════════════════════════════
+   COMPTE — Historique commandes
+══════════════════════════════════════ */
+.commandes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.commande-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.commande-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 20px;
+  gap: 10px;
+}
+.commande-num {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--dark);
+}
+.commande-date {
+  font-size: 0.78rem;
+  color: var(--gray);
+  margin-top: 3px;
+}
+.commande-header-right {
+  text-align: right;
+}
+
+.commande-statut {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 3px 10px;
+  margin-bottom: 4px;
+}
+.commande-total {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.commande-detail {
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--border);
+}
+.commande-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.commande-ligne:last-of-type {
+  border-bottom: none;
+}
+.commande-ligne-nom {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--dark);
+}
+.commande-ligne-meta {
+  font-size: 0.78rem;
+  color: var(--gray);
+}
+.commande-ligne-prix {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.commande-adresse {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--gray);
+  background: var(--cream);
+  border-radius: 8px;
+  padding: 8px 12px;
+  line-height: 1.5;
+}
+.commande-toggle-btn {
+  display: block;
+  width: 100%;
+  background: var(--cream);
+  border: none;
+  border-top: 1px solid var(--border);
+  padding: 9px 20px;
+  font-size: 0.82rem;
+  color: var(--gray);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+}
+.commande-toggle-btn:hover {
+  background: #f0ece7;
+  color: var(--accent);
 }
