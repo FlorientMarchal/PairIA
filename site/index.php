@@ -21,6 +21,14 @@ $tailles    = $pdo->query("SELECT DISTINCT taille FROM size_color ORDER BY taill
 $couleurs   = $pdo->query("SELECT DISTINCT couleur FROM size_color ORDER BY couleur")->fetchAll(PDO::FETCH_COLUMN);
 $prix_max   = (int) ceil($pdo->query("SELECT MAX(Prix) FROM articles")->fetchColumn());
 
+// IDs des favoris du client connecté
+$fav_ids = [];
+if (isset($_SESSION['client_id'])) {
+    $stmt_fav = $pdo->prepare("SELECT id_shoes FROM favoris WHERE id_client = ?");
+    $stmt_fav->execute([$_SESSION['client_id']]);
+    $fav_ids = array_column($stmt_fav->fetchAll(), 'id_shoes');
+}
+
 $is_ajax = isset($_GET['ajax']);
 if (!$is_ajax) {
     // Accès direct → redirige vers shell qui chargera cette page en AJAX
@@ -151,13 +159,11 @@ if (!$is_ajax) {
               <div class="card-foot">
                 <span class="card-price"><?= number_format($a['Prix'], 2, ',', ' ') ?> €</span>
                 <div style="display:flex;gap:6px">
-                  <button class="card-fav"
+                  <button class="card-fav <?= in_array($a['id_shoes'], $fav_ids) ? 'active' : '' ?>"
                     type="button"
                     data-id="<?= $a['id_shoes'] ?>"
-                    onclick="toggleFavCatalogue(<?= $a['id_shoes'] ?>, this)"
-                    title="Ajouter aux favoris">♡</button>
-                  <button class="card-add" type="button"
-                    onclick="ajouterPanier(<?= $a['id_shoes'] ?>, event)">+</button>
+                    onclick="event.preventDefault(); event.stopPropagation(); toggleFavCatalogue(<?= $a['id_shoes'] ?>, this)"
+                    title="Ajouter aux favoris"><?= in_array($a['id_shoes'], $fav_ids) ? '❤️' : '♡' ?></button>
              </div>
            </div>
             </div>
