@@ -16,6 +16,8 @@ require_once 'includes/bd.php';
   <link rel="stylesheet" href="styles/index.css">
   <link rel="stylesheet" href="styles/article.css">
   <link rel="stylesheet" href="styles/panier.css">
+   <link rel="stylesheet" href="styles/acheter.css">
+  <link rel="stylesheet" href="styles/confirmation.css">
 </head>
 <body>
 
