@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost:3306
--- Généré le : jeu. 21 mai 2026 à 12:27
+-- Généré le : jeu. 28 mai 2026 à 08:32
 -- Version du serveur : 5.7.24
 -- Version de PHP : 8.3.1
 
@@ -126,7 +126,17 @@ CREATE TABLE `chat_sessions` (
 --
 
 INSERT INTO `chat_sessions` (`id`, `id_client`, `titre`, `created_at`, `updated_at`) VALUES
-(2, 3, 'Chaussures imperméables', '2026-05-21 14:24:22', '2026-05-21 14:24:47');
+(6, 3, 'Chaussures imperméables', '2026-05-21 16:52:15', '2026-05-26 11:11:06'),
+(7, 3, 'Des chaussures élégantes qu\'on peut porter au bureau et au quotidien', '2026-05-22 11:32:17', '2026-05-22 11:41:10'),
+(9, 4, 'Vous avez des chaussures pour femme élégante adaptées à une soirée?', '2026-05-22 12:04:04', '2026-05-22 12:04:04'),
+(10, 4, 'Avez des chaussures adaptées à une soirée à me proposer?', '2026-05-22 12:20:19', '2026-05-22 12:25:01'),
+(13, 4, 'Je veux que vous on propose des chaussures adaptées à la marche et qui sont très', '2026-05-22 15:26:07', '2026-05-22 16:11:39'),
+(16, 4, 'Avez vous des chaussures élégantes adaptées pour une soirée à me proposer?', '2026-05-25 17:25:17', '2026-05-25 17:34:09'),
+(17, 4, 'Avez- vous des chaussures de danse?', '2026-05-26 09:51:19', '2026-05-26 09:51:19'),
+(18, 3, 'Des chaussures adaptées à une soirée à me proposer?', '2026-05-26 11:56:01', '2026-05-26 15:09:16'),
+(19, 3, '[Recherche par image avec message : \"Avez vous des chaussures comme cette paire', '2026-05-26 16:04:06', '2026-05-26 16:20:13'),
+(20, 3, 'Can you have shoes for party?', '2026-05-26 16:56:51', '2026-05-26 16:56:51'),
+(21, 4, 'Chaussures imperméables', '2026-05-28 09:26:01', '2026-05-28 09:30:05');
 
 -- --------------------------------------------------------
 
@@ -149,7 +159,27 @@ CREATE TABLE `clients` (
 --
 
 INSERT INTO `clients` (`id_client`, `nom`, `prenom`, `adresse`, `numero`, `mail`, `mdp`) VALUES
-(3, 'Martin', 'Smith', '46 rue des renoncules', 712345678, 'martin.smith@gmail.com', '$2y$10$IdWK09lJw6foUhBPRArbruV6h9lvsYerQ5I0RJ.NxmhhsokgjMp9G');
+(3, 'Martin', 'Smith', '46 rue des renoncules', 712345678, 'martin.smith@gmail.com', '$2y$10$IdWK09lJw6foUhBPRArbruV6h9lvsYerQ5I0RJ.NxmhhsokgjMp9G'),
+(4, 'Lerre', 'Dija', '45 allée pont de sas', 756122222, 'dija.lerre@gmail.com', '$2y$10$P61f07RQFwjGen6CXIfPrOqJZKk.9oBX78Vtkkh80/RBCjTUjCvtO');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `commandes`
+--
+
+CREATE TABLE `commandes` (
+  `id_commande` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `date_commande` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `statut` varchar(30) NOT NULL DEFAULT 'en_attente',
+  `sous_total` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `frais_livraison` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `total` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `adresse_livraison` text,
+  `stripe_payment_intent` varchar(255) DEFAULT NULL,
+  `stripe_statut` varchar(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -175,10 +205,98 @@ CREATE TABLE `conversations` (
 --
 
 INSERT INTO `conversations` (`id`, `id_session`, `id_client`, `role`, `message`, `products`, `layout`, `silent`, `internal`, `created_at`) VALUES
-(3, 2, 3, 'user', 'Chaussures imperméables', '[]', NULL, 0, 0, '2026-05-21 14:24:22'),
-(4, 2, 3, 'assistant', ' Voici trois chaussures imperméables que vous pouvez trouver dans notre catalogue :\n\n1. Le StormGuard Boot, avec sa technologie DryWalk, offre une protection efficace contre les pluies et la neige. Disponible en couleurs Bordeaux, Noir ou Vert hunter.\n2. RainStep WP vous garantit une confortable marche dans tous les temps grâce à sa technologie DryWalk. Les couleurs Bleu marine, Kaki ou Noir vont bien avec tout ce qu\'il y a de stylish.\n3. Le SteelPro Light S1P est notre choix pour une chaussure légère et efficace en matière d\'imperméabilité. Elle est disponible en couleur Gris ou Noir, idéale pour les conditions pluvieuses ou neigeuses.', '[{\"id\": 49, \"name\": \"StormGuard Boot\", \"emoji\": \"👟\", \"price\": 129.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bordeaux\", \"Noir\", \"Vert hunter\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image49.png\", \"description\": \"Les StormGuard Boot sont les bottes tout-terrain pour ceux qui n\'ont pas peur des éléments. La tige en caoutchouc naturel de 20cm de hauteur offre une étanchéité absolue même dans les flaques profondes. La doublure en néoprène maintient les pieds chauds dans l\'eau froide jusqu\'à environ 5°C. Les crampons profonds de la semelle mordent efficacement dans la boue épaisse et les terrains détrempés. Idéales pour la chasse, la pêche, le jardinage ou les festivals pluvieux.\"}, {\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\"}]', NULL, 0, 0, '2026-05-21 14:24:22'),
-(5, 2, 3, 'user', 'En une seule phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire.', '[]', NULL, 1, 1, '2026-05-21 14:24:47'),
-(6, 2, 3, 'assistant', ' \"Bienvenue sur notre boutique PairIA, tu y trouveras la paire de chaussures idéale pour toi ! Découvre notre large choix de styles et de marques en un click !\"', '[]', NULL, 0, 1, '2026-05-21 14:24:47');
+(19, 6, 3, 'user', 'Chaussures imperméables', '[]', NULL, 0, 0, '2026-05-21 16:52:15'),
+(20, 6, 3, 'assistant', ' Voici trois chaussures imperméables que nous avons pour vous :\n\n1. RainStep WP, une paire de bottes imperméables confortables avec DryWalk, disponibles en tailles 37 à 46 et en couleurs bleu marine, kaki et noir.\n2. UrbanRidge Winter, des bottes chaudes et durables avec NordCraft, disponibles en tailles de 37 à 45 et en couleurs camel, gris et noir.\n3. SteelPro Light S1P, une paire de chaussures légères avec WorkGuard, imperméable à l\'eau et disponible en tailles 38 à 46 ainsi qu\'en deux couleurs, gris et noir.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}, {\"id\": 26, \"name\": \"UrbanRidge Winter\", \"emoji\": \"👟\", \"price\": 129, \"marque\": \"NordCraft\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Camel\", \"Gris\", \"Noir\"], \"categorie\": \"Bottines\", \"url_image\": \"images/image26.png\", \"description\": \"Les UrbanRidge Winter sont pensées pour affronter les hivers rigoureux sans sacrifier le style. La doublure en laine mélangée maintient une chaleur optimale même par températures négatives. La semelle en caoutchouc épais offre une excellente résistance au froid et une bonne antidérapance sur les trottoirs glissants. L\'association lacets et zip latéral permet un enfilage rapide. Le cuir traité offre une résistance basique à l\'humidité pour les temps maussades.\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\"}]', NULL, 0, 0, '2026-05-21 16:52:15'),
+(21, 7, 3, 'user', 'Des chaussures élégantes qu\'on peut porter au bureau et au quotidien', '[]', NULL, 0, 0, '2026-05-22 11:32:17'),
+(22, 7, 3, 'assistant', 'Pour le bureau, les Oxfords **Chelsea Classic** sont un classique élégant. Si tu cherches un modèle un peu plus casual, les **Loafers Penny** sont parfaites. Pour un look plus chic, les **Espadrille Flatform** combinent élégance et confort.', '[]', NULL, 0, 0, '2026-05-22 11:32:17'),
+(23, 7, 3, 'user', 'En une à deux phrases (max 20 mots), mets en avant le point fort de \"SnowShield Arctic\" (149.9€) et propose ton aide pour choisir. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-22 11:33:23'),
+(24, 7, 3, 'assistant', 'Tu cherches une protection élégante et fiable pour les températures basses ? SnowShield Arctic, avec ses technologies de pointe, t\'offre une chaleur exceptionnelle. N\'hésite pas à demander mon conseil pour trouver la taille idéale.', '[]', NULL, 0, 1, '2026-05-22 11:33:23'),
+(25, 7, 3, 'user', 'Oui, j\'aime bien. Et vous avez pour cette chaussure quelle taille et quelles sont les couleurs disponibles?', '[]', NULL, 0, 0, '2026-05-22 11:41:10'),
+(26, 7, 3, 'assistant', 'Les Chelsea Classic sont disponibles de la taille 37 à 46. Pour les Loafers Penny, les tailles disponibles sont de 38 à 44. Les Espadrille Flatform se trouvent de la taille 35 à 43.', '[]', NULL, 0, 0, '2026-05-22 11:41:10'),
+(33, 9, 4, 'user', 'Vous avez des chaussures pour femme élégante adaptées à une soirée?', '[]', NULL, 0, 0, '2026-05-22 12:04:04'),
+(34, 9, 4, 'assistant', 'Absolument ! Nous avons des options impeccables pour ta soirée. As-tu vu les **Espadrilles Platforme Espadrille Luna** ? Des espadrilles au design classique et confortables, disponibles de la **37 à la 46**. Pour un look plus chic, les **Baskets Lifestyle Chelsea Boot** sont une excellente choix. Ces baskets ont un style raffiné et seront parfaites avec une robe ou une jupe longue.', '[]', NULL, 0, 0, '2026-05-22 12:04:04'),
+(35, 10, 4, 'user', 'Avez des chaussures adaptées à une soirée à me proposer?', '[]', NULL, 0, 0, '2026-05-22 12:20:19'),
+(36, 10, 4, 'assistant', 'Absolument ! Les NightElegance Stiletto sont parfait pour une soirée. Ils sont sophistiqués et élégants, et la couleur argent est un classique.', '[{\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\"}]', NULL, 0, 0, '2026-05-22 12:20:19'),
+(37, 10, 4, 'user', 'Et avec vous en taille 37 et la couleur argent pour cette pèque de chaussures.', '[]', NULL, 0, 0, '2026-05-22 12:25:01'),
+(38, 10, 4, 'assistant', 'Malheureusement, il n\'y a aucun produit correspondant à votre description. Cependant, les NightGlamour Pump en argent taille 37 ou les LunaStiletto en argent taille 38 pourraient vous convenir.', '[]', NULL, 0, 0, '2026-05-22 12:25:01'),
+(53, 13, 4, 'user', 'Je veux que vous on propose des chaussures adaptées à la marche et qui sont très confortables.', '[]', NULL, 0, 0, '2026-05-22 15:26:07'),
+(54, 13, 4, 'assistant', 'D\'accord ! Les modèles les plus adaptés pour la marche et la confort sont la **NatureFlex Wide** avec ses largeurs de pieds confortables ou le **WalkPro Comfort** avec son design flexible et doux. Pour un look plus minimaliste, la **TrailWalk Nature** est une excellente alternative.', '[{\"id\": 43, \"name\": \"TrailWalk Nature\", \"emoji\": \"👟\", \"price\": 74.9, \"marque\": \"MountainEdge\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Beige\", \"Gris taupe\", \"Vert olive\"], \"categorie\": \"Marche\", \"url_image\": \"images/image43.png\", \"description\": \"Les TrailWalk Nature sont la chaussure de marche polyvalente par excellence pour ceux qui aiment alterner chemins de campagne et rues pavées. La semelle en caoutchouc trail offre une bonne accroche sur les sols variés : herbe humide, chemins de terre, pierres et asphalte. Légères et confortables dès le premier port, elles conviennent aussi bien aux promenades du dimanche qu\'aux marches de plusieurs heures. Un excellent rapport qualité-prix pour débuter la marche nature.\"}, {\"id\": 42, \"name\": \"WalkPro Comfort\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"GentleStep\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Blanc\", \"Bleu ciel\", \"Gris\"], \"categorie\": \"Marche\", \"url_image\": \"images/image42.png\", \"description\": \"Les WalkPro Comfort sont conçues pour les marcheurs qui privilégient le confort avant tout. Le support plantaire en gel anatomique répartit uniformément les pressions sous le pied, réduisant douleurs et fatigue même lors de très longues marches. L\'embout large offre la place nécessaire aux orteils sans pincement. La semelle EVA renforcée amorti efficacement sur tous les revêtements urbains. L\'ouverture large et le système de lacets à enroulement facilitent l\'enfilage pour les personnes à mobilité réduite.\"}, {\"id\": 45, \"name\": \"NatureFlex Wide\", \"emoji\": \"👟\", \"price\": 119.9, \"marque\": \"FreeMotion\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu indigo\", \"Charbon\", \"Terracotta\"], \"categorie\": \"Minimalistes\", \"url_image\": \"images/image45.png\", \"description\": \"Les NatureFlex Wide combinent les bénéfices du minimalisme avec un embout extra-large qui laisse les orteils libres de s\'étaler naturellement. L\'embout wide est particulièrement recommandé pour les personnes ayant des orteils en éventail, des oignons ou simplement préférant un espace généreux. La tige en mesh 3D offre une ventilation optimale pour les longues journées. La semelle de 6mm offre une protection légèrement supérieure au BareStep, idéale pour commencer la transition minimaliste en douceur.\"}]', NULL, 0, 0, '2026-05-22 15:26:07'),
+(55, 13, 4, 'user', 'En une seule phrase courte (max 20 mots), parle directement au client de son panier (ComfortStep Pro ×1 à 69.9€) et encourage-le à finaliser sa commande. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-22 16:11:39'),
+(56, 13, 4, 'assistant', 'Tu cherches des chaussures confortables pour ton quotidien ? Le **ComfortStep Pro** est parfait pour toi ! Disponible de la taille 37 à 46, il s\'avère très polyvalent. N\'attends plus et finalise ta commande !', '[{\"id\": 43, \"name\": \"TrailWalk Nature\", \"emoji\": \"👟\", \"price\": 74.9, \"marque\": \"MountainEdge\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Beige\", \"Gris taupe\", \"Vert olive\"], \"categorie\": \"Marche\", \"url_image\": \"images/image43.png\", \"description\": \"Les TrailWalk Nature sont la chaussure de marche polyvalente par excellence pour ceux qui aiment alterner chemins de campagne et rues pavées. La semelle en caoutchouc trail offre une bonne accroche sur les sols variés : herbe humide, chemins de terre, pierres et asphalte. Légères et confortables dès le premier port, elles conviennent aussi bien aux promenades du dimanche qu\'aux marches de plusieurs heures. Un excellent rapport qualité-prix pour débuter la marche nature.\"}, {\"id\": 42, \"name\": \"WalkPro Comfort\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"GentleStep\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Blanc\", \"Bleu ciel\", \"Gris\"], \"categorie\": \"Marche\", \"url_image\": \"images/image42.png\", \"description\": \"Les WalkPro Comfort sont conçues pour les marcheurs qui privilégient le confort avant tout. Le support plantaire en gel anatomique répartit uniformément les pressions sous le pied, réduisant douleurs et fatigue même lors de très longues marches. L\'embout large offre la place nécessaire aux orteils sans pincement. La semelle EVA renforcée amorti efficacement sur tous les revêtements urbains. L\'ouverture large et le système de lacets à enroulement facilitent l\'enfilage pour les personnes à mobilité réduite.\"}, {\"id\": 45, \"name\": \"NatureFlex Wide\", \"emoji\": \"👟\", \"price\": 119.9, \"marque\": \"FreeMotion\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu indigo\", \"Charbon\", \"Terracotta\"], \"categorie\": \"Minimalistes\", \"url_image\": \"images/image45.png\", \"description\": \"Les NatureFlex Wide combinent les bénéfices du minimalisme avec un embout extra-large qui laisse les orteils libres de s\'étaler naturellement. L\'embout wide est particulièrement recommandé pour les personnes ayant des orteils en éventail, des oignons ou simplement préférant un espace généreux. La tige en mesh 3D offre une ventilation optimale pour les longues journées. La semelle de 6mm offre une protection légèrement supérieure au BareStep, idéale pour commencer la transition minimaliste en douceur.\"}]', NULL, 0, 1, '2026-05-22 16:11:39'),
+(65, 16, 4, 'user', 'Avez vous des chaussures élégantes adaptées pour une soirée à me proposer?', '[]', NULL, 0, 0, '2026-05-25 17:25:17'),
+(66, 16, 4, 'assistant', 'Absolument ! Les modèles Élégance Haute Nuit et SoftHeel Block sont des excellentes alternatives pour une soirée élégante. La première offre un style plus classique et sophistiqué, tandis que la seconde est plus moderne et élégante. Le choix dépend de l\'style que tu cherches à obtenir.', '[{\"id\": 33, \"name\": \"SoftHeel Block\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Bleu marine\", \"Camel\", \"Noir\"], \"categorie\": \"Talons\", \"url_image\": \"images/image33.png\", \"description\": \"Les SoftHeel Block combinent l\'élégance d\'un talon et le confort d\'une chaussure plate. Le talon bloc de 5cm offre une belle hauteur tout en garantissant une stabilité que les talons aiguilles ne peuvent égaler. L\'embout carré apporte une modernité dans la ligne de la chaussure très tendance. La semelle en caoutchouc assure un bon amorti sur les sols durs des bureaux et trottoirs. Idéales pour les femmes qui veulent rester à l\'aise sans renoncer à la féminité.\"}]', NULL, 0, 0, '2026-05-25 17:25:17'),
+(67, 16, 4, 'user', 'je veux en savoir plus sur la deuxième paire de chaussure', '[]', NULL, 0, 0, '2026-05-25 17:34:09'),
+(68, 16, 4, 'assistant', 'En effet, il n\'y a aucune autre paire de chaussures élégantes dans le catalogue qui répond exactement à ta description. Mais voici 3 alternatives adaptées : SoftHeel Block, NightElegance Stiletto et Élégance Haute Nuit.', '[{\"id\": 33, \"name\": \"SoftHeel Block\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Bleu marine\", \"Camel\", \"Noir\"], \"categorie\": \"Talons\", \"url_image\": \"images/image33.png\", \"description\": \"Les SoftHeel Block combinent l\'élégance d\'un talon et le confort d\'une chaussure plate. Le talon bloc de 5cm offre une belle hauteur tout en garantissant une stabilité que les talons aiguilles ne peuvent égaler. L\'embout carré apporte une modernité dans la ligne de la chaussure très tendance. La semelle en caoutchouc assure un bon amorti sur les sols durs des bureaux et trottoirs. Idéales pour les femmes qui veulent rester à l\'aise sans renoncer à la féminité.\"}, {\"id\": 32, \"name\": \"Élégance Haute Nuit\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge carmin\"], \"categorie\": \"Talons\", \"url_image\": \"images/image32.png\", \"description\": \"Les Élégance Haute Nuit sont la chaussure de soirée par excellence pour les occasions qui méritent d\'être à la hauteur. Le talon aiguille de 9cm et le bout pointu créent une silhouette élancée et sophistiquée. La bride de cheville fine et ajustable assure le maintien du pied tout au long de la nuit. La semelle antidérapante apportée en embout métal offre une sécurité accrue sur les parquets lisses. Disponibles en noir sobre, rouge passion ou or festif pour toutes les tenues.\"}, {\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\"}]', NULL, 0, 0, '2026-05-25 17:34:09'),
+(69, 17, 4, 'user', 'Avez- vous des chaussures de danse?', '[]', NULL, 0, 0, '2026-05-26 09:51:19'),
+(70, 17, 4, 'assistant', 'Je vois que tu cherches des chaussures pour la danse ! Nous avons deux modèles qui devraient te convenir.\n\nPour commencer, j\'ai trouvé les StudioPro Latin de MoveArt qui sont idéaux pour la danse latine. Avec une large gamme de couleurs disponibles, dont l\'Argent et le Noir, et des tailles allant de 35 à 42, ils devraient s\'adapter parfaitement à tes besoins.\n\nSi tu cherches quelque chose de plus classique, je te recommande les FlexDance Studio également de MoveArt. Ils ont une touche éлеганante avec leurs couleurs Noir et Blanc, et des tailles disponibles qui vont du 35 au 42.', '[{\"id\": 52, \"name\": \"StudioPro Latin\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"MoveArt\", \"tailles\": [\"35\", \"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Argent\", \"Noir\", \"Rouge\"], \"categorie\": \"Danse\", \"url_image\": \"images/image52.png\", \"description\": \"Les StudioPro Latin sont spécialement développées pour les danseuses de salsa, bachata, merengue et danses latines. Le talon cubain de 5cm offre la hauteur et la stabilité caractéristiques de ces danses, permettant d\'exécuter virages et déplacements avec précision. La semelle en daim offre le niveau de glisse idéal sur les parquets sans risque de dérapage. La bride de cheville réglable maintient le pied fermement dans la chaussure pendant les tours. Conçues pour des heures de pratique sans douleur.\"}, {\"id\": 51, \"name\": \"FlexDance Studio\", \"emoji\": \"👟\", \"price\": 69.90000000000002, \"marque\": \"MoveArt\", \"tailles\": [\"35\", \"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Blanc\", \"Noir\", \"Nude\"], \"categorie\": \"Danse\", \"url_image\": \"images/image51.png\", \"description\": \"Les FlexDance Studio sont conçues pour les danseuses pratiquant le ballet jazz et le modern jazz. La semelle split en daim naturel (avant-pied et talon séparés) offre une flexibilité maximale du pied tout en assurant l\'adhérence nécessaire sur les parquets de danse. La toile de danse légère épouse parfaitement le pied pour une proprioception optimale. L\'avant-pied en caoutchouc offre une durabilité supplémentaire aux zones de forte usure. Une chaussure technique pour danseuses exigeantes.\"}]', NULL, 0, 0, '2026-05-26 09:51:19'),
+(71, 6, 3, 'user', 'La dernière proposée est disponible en couleur rouge?', '[]', NULL, 0, 0, '2026-05-26 11:00:51'),
+(72, 6, 3, 'assistant', 'Désolé, mais aucune couleur rouge n\'est proposée pour la taille 46 de RainStep WP. Les couleurs disponibles sont bleu marine, kaki et noir.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}]', NULL, 0, 0, '2026-05-26 11:00:51'),
+(73, 6, 3, 'user', 'je parlais de la dernière paire propsée pas de la première', '[]', NULL, 0, 0, '2026-05-26 11:11:06'),
+(74, 6, 3, 'assistant', 'Une bonne alternative à la SteelPro Light S1P pourrait être la StormGuard Boot, une paire de bottes imperméables robuste et fiable avec DryWalk, disponible en tailles 37-46 et en couleurs Bordeaux, Noir ou Vert hunter. Elle offre un excellent niveau d\'isolation et de protection contre les éléments.', '[{\"id\": 49, \"name\": \"StormGuard Boot\", \"emoji\": \"👟\", \"price\": 129.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bordeaux\", \"Noir\", \"Vert hunter\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image49.png\", \"description\": \"Les StormGuard Boot sont les bottes tout-terrain pour ceux qui n\'ont pas peur des éléments. La tige en caoutchouc naturel de 20cm de hauteur offre une étanchéité absolue même dans les flaques profondes. La doublure en néoprène maintient les pieds chauds dans l\'eau froide jusqu\'à environ 5°C. Les crampons profonds de la semelle mordent efficacement dans la boue épaisse et les terrains détrempés. Idéales pour la chasse, la pêche, le jardinage ou les festivals pluvieux.\"}]', NULL, 0, 0, '2026-05-26 11:11:06'),
+(75, 18, 3, 'user', 'Des chaussures adaptées à une soirée à me proposer?', '[]', NULL, 0, 0, '2026-05-26 11:56:01'),
+(76, 18, 3, 'assistant', 'Je pense que tu pourrais apprécier les NightElegance Stiletto, des talons élégants avec un design sophistiqué qui conviendra parfaitement à une soirée. Disponibles en argent, champagne et rose gold.\n\nSi tu préfères quelque chose de plus confortable, les SoftHeel Block sont une excellente alternative, car ils offrent un blocage du pied pour un port facile tout en gardant l\'apparence d\'une chaussure haute. Ils sont disponibles en bleu marine, camel et noir.\n\nL\'Élégance Haute Nuit est également une option à considérer, car elle offre un style haut de gamme avec des couleurs sophistiquées comme le noir, l\'or et le rouge carmin qui ajoutera une touche élégante à ton look.', '[{\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\"}, {\"id\": 33, \"name\": \"SoftHeel Block\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Bleu marine\", \"Camel\", \"Noir\"], \"categorie\": \"Talons\", \"url_image\": \"images/image33.png\", \"description\": \"Les SoftHeel Block combinent l\'élégance d\'un talon et le confort d\'une chaussure plate. Le talon bloc de 5cm offre une belle hauteur tout en garantissant une stabilité que les talons aiguilles ne peuvent égaler. L\'embout carré apporte une modernité dans la ligne de la chaussure très tendance. La semelle en caoutchouc assure un bon amorti sur les sols durs des bureaux et trottoirs. Idéales pour les femmes qui veulent rester à l\'aise sans renoncer à la féminité.\"}, {\"id\": 32, \"name\": \"Élégance Haute Nuit\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge carmin\"], \"categorie\": \"Talons\", \"url_image\": \"images/image32.png\", \"description\": \"Les Élégance Haute Nuit sont la chaussure de soirée par excellence pour les occasions qui méritent d\'être à la hauteur. Le talon aiguille de 9cm et le bout pointu créent une silhouette élancée et sophistiquée. La bride de cheville fine et ajustable assure le maintien du pied tout au long de la nuit. La semelle antidérapante apportée en embout métal offre une sécurité accrue sur les parquets lisses. Disponibles en noir sobre, rouge passion ou or festif pour toutes les tenues.\"}]', NULL, 0, 0, '2026-05-26 11:56:01'),
+(77, 18, 3, 'user', 'peux tu me faire une comparaison entre la première et la dernière paire proposée?', '[]', NULL, 0, 0, '2026-05-26 12:00:52'),
+(78, 18, 3, 'assistant', 'Bien sûr, voici le comparatif NightElegance Stiletto vs Élégance Haute Nuit :', '[{\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"resume\": \"La chaussure NightElegance Stiletto est élégante et luxueuse avec un talon haut de 10cm.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\"}, {\"id\": 32, \"name\": \"Élégance Haute Nuit\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"BelleMode\", \"resume\": \"Conçue pour les soirées élégantes, avec un talon aiguille et une bride ajustable pour un maintien sûr.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge carmin\"], \"categorie\": \"Talons\", \"url_image\": \"images/image32.png\", \"description\": \"Les Élégance Haute Nuit sont la chaussure de soirée par excellence pour les occasions qui méritent d\'être à la hauteur. Le talon aiguille de 9cm et le bout pointu créent une silhouette élancée et sophistiquée. La bride de cheville fine et ajustable assure le maintien du pied tout au long de la nuit. La semelle antidérapante apportée en embout métal offre une sécurité accrue sur les parquets lisses. Disponibles en noir sobre, rouge passion ou or festif pour toutes les tenues.\"}]', 'comparison', 0, 0, '2026-05-26 12:00:52'),
+(79, 18, 3, 'user', 'Ajouter au panier le NightElegance Stiletto', '[]', NULL, 0, 0, '2026-05-26 12:34:04'),
+(80, 18, 3, 'assistant', 'Je vais ajouter les NightElegance Stiletto à ton panier ! C\'est un excellent choix pour une soirée élégante, je suis sûr que tu vas les adorer ! (109.00€)', '[]', NULL, 0, 0, '2026-05-26 12:34:04'),
+(81, 18, 3, 'user', 'En une phrase (max 20 mots), fais un commentaire positif sur le choix du client (FlexRun Training ×1 à 99.99€, ClassicFit Premium ×1 à 119€) et invite-le à commander. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-26 15:08:49'),
+(82, 18, 3, 'assistant', 'Le choix du FlexRun Training est une excellente décision, car c\'est un produit haut de gamme qui répondra à tes besoins ! Je vais te les ajouter au panier. \n\nTu as désormais dans ton panier : NightElegance Stiletto et FlexRun Training.', '[{\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"resume\": \"La chaussure NightElegance Stiletto est élégante et luxueuse avec un talon haut de 10cm.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\"}, {\"id\": 32, \"name\": \"Élégance Haute Nuit\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"BelleMode\", \"resume\": \"Conçue pour les soirées élégantes, avec un talon aiguille et une bride ajustable pour un maintien sûr.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge carmin\"], \"categorie\": \"Talons\", \"url_image\": \"images/image32.png\", \"description\": \"Les Élégance Haute Nuit sont la chaussure de soirée par excellence pour les occasions qui méritent d\'être à la hauteur. Le talon aiguille de 9cm et le bout pointu créent une silhouette élancée et sophistiquée. La bride de cheville fine et ajustable assure le maintien du pied tout au long de la nuit. La semelle antidérapante apportée en embout métal offre une sécurité accrue sur les parquets lisses. Disponibles en noir sobre, rouge passion ou or festif pour toutes les tenues.\"}]', NULL, 0, 1, '2026-05-26 15:08:49'),
+(83, 18, 3, 'user', 'En une phrase (max 20 mots), félicite le client pour son choix (FlexRun Training ×1 à 99.99€, ClassicFit Premium ×1 à 119€) et encourage-le à passer commande. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-26 15:09:16'),
+(84, 18, 3, 'assistant', ' Félicitations pour ton choix du FlexRun Training ! C\'est un excellent choix pour tes entraînements ! Je vais valider ta commande.', '[{\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"resume\": \"La chaussure NightElegance Stiletto est élégante et luxueuse avec un talon haut de 10cm.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\"}, {\"id\": 32, \"name\": \"Élégance Haute Nuit\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"BelleMode\", \"resume\": \"Conçue pour les soirées élégantes, avec un talon aiguille et une bride ajustable pour un maintien sûr.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge carmin\"], \"categorie\": \"Talons\", \"url_image\": \"images/image32.png\", \"description\": \"Les Élégance Haute Nuit sont la chaussure de soirée par excellence pour les occasions qui méritent d\'être à la hauteur. Le talon aiguille de 9cm et le bout pointu créent une silhouette élancée et sophistiquée. La bride de cheville fine et ajustable assure le maintien du pied tout au long de la nuit. La semelle antidérapante apportée en embout métal offre une sécurité accrue sur les parquets lisses. Disponibles en noir sobre, rouge passion ou or festif pour toutes les tenues.\"}]', NULL, 0, 1, '2026-05-26 15:09:16'),
+(85, 19, 3, 'user', '[Recherche par image avec message : \"Avez vous des chaussures comme cette paire à me proposer?\"] Produits suggérés : NeoUrban Street (109.90€)', '[]', NULL, 0, 0, '2026-05-26 16:04:06'),
+(86, 19, 3, 'assistant', 'Je vois que tu cherches des chaussures similaires à la paire envoyée ! Je te propose les NeoUrban Street d\'UrbanStep, qui ont une forme et un design très proche de ce que je vois sur l\'image.\n\nLes NeoUrban Street sont disponibles en taille 40-46 et en trois couleurs : Gris anthracite, Kaki et Noir. Elles sont également très confortables et parfaites pour les activités quotidiennes.\n\nJe te recommande d\'essayer les NeoUrban Street, elles sont vraiment des alternatives excellentes à la paire que tu as envoyée !', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\"}]', NULL, 0, 0, '2026-05-26 16:04:06'),
+(87, 19, 3, 'user', 'En une phrase (max 20 mots), félicite le client pour son choix (ClassicFit Premium ×1 à 119€, ClassicFit Premium ×1 à 119€) et encourage-le à passer commande.', '[]', NULL, 1, 1, '2026-05-26 16:05:59'),
+(88, 19, 3, 'assistant', 'Tu as fait un excellent choix avec deux paires de ClassicFit Premium ! Je confirme que tu veux les deux modèles à la même prix de 119€ chacune, c\'est parfait !', '[]', NULL, 0, 1, '2026-05-26 16:05:59'),
+(89, 19, 3, 'user', 'En une phrase (max 20 mots), fais un commentaire positif sur le choix du client (ClassicFit Premium ×1 à 119€) et invite-le à commander. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-26 16:08:02'),
+(90, 19, 3, 'assistant', 'C\'est un excellent choix avec les ClassicFit Premium ! Tu as choisi l\'un des meilleurs modèles de notre collection pour seulement 119€ ! Je vais procéder à la préparation de ton commande pour les ClassicFit Premium.', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\"}]', NULL, 0, 1, '2026-05-26 16:08:02'),
+(91, 19, 3, 'user', 'Est-elle disponible pour la couleur noir en taille 42?', '[]', NULL, 0, 0, '2026-05-26 16:20:13'),
+(92, 19, 3, 'assistant', 'Oui, la NeoUrban Street est disponible en noir, mais je n\'ai pas trouvé d\'information spécifique à la taille 42. La taille 42 ne figure pas dans la liste des tailles disponibles.', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\"}]', NULL, 0, 0, '2026-05-26 16:20:13'),
+(93, 21, 4, 'user', 'Chaussures imperméables', '[]', NULL, 0, 0, '2026-05-28 09:26:01'),
+(94, 21, 4, 'assistant', 'Si tu es à la recherche de chaussures imperméables, je te recommande les modèles suivants.\n\nLe RainStep WP de DryWalk serait parfait pour toi. Il est conçu pour résister aux intempéries et dispose d\'un design moderne qui ira bien avec n\'importe quel look. Disponible en 37-46 et en trois couleurs : Bleu marine, Kaki et Noir.\n\nSi tu cherches quelque chose de plus robuste, je te suggère le StormGuard Boot également de la marque DryWalk. Il est conçu pour les conditions météorologiques les plus difficiles et dispose d\'une protection exceptionnelle contre l\'eau. Les tailles disponibles sont 37-46 et il est disponible en trois couleurs : Bordeaux, Noir et Vert hunter.\n\nEnfin, si tu cherches quelque chose de légèrement différent, je te recommande le SnowShield Arctic de NordCraft. Il est conçu pour les conditions extrêmes et dispose d\'une isolation exceptionnelle contre le froid. Les tailles disponibles sont 37-46 et il est disponible en trois couleurs : Bleu nuit, Gris anthracite et Noir.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}, {\"id\": 49, \"name\": \"StormGuard Boot\", \"emoji\": \"👟\", \"price\": 129.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bordeaux\", \"Noir\", \"Vert hunter\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image49.png\", \"description\": \"Les StormGuard Boot sont les bottes tout-terrain pour ceux qui n\'ont pas peur des éléments. La tige en caoutchouc naturel de 20cm de hauteur offre une étanchéité absolue même dans les flaques profondes. La doublure en néoprène maintient les pieds chauds dans l\'eau froide jusqu\'à environ 5°C. Les crampons profonds de la semelle mordent efficacement dans la boue épaisse et les terrains détrempés. Idéales pour la chasse, la pêche, le jardinage ou les festivals pluvieux.\"}, {\"id\": 28, \"name\": \"SnowShield Arctic\", \"emoji\": \"👟\", \"price\": 149.9, \"marque\": \"NordCraft\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu nuit\", \"Gris anthracite\", \"Noir\"], \"categorie\": \"Bottines\", \"url_image\": \"images/image28.png\", \"description\": \"Les SnowShield Arctic sont conçues pour les conditions hivernales les plus sévères. L\'isolation Thinsulate 200g garantit une chaleur optimale jusqu\'à -25°C sans alourdir excessivement la chaussure. La tige en nylon imperméable et la semelle résistante au froid empêchent tout durcissement par basses températures. Le crampon neige amovible fourni avec les chaussures offre une traction supplémentaire sur verglas. La fermeture velcro facilite l\'enfilage avec des gants.\"}]', NULL, 0, 0, '2026-05-28 09:26:01'),
+(95, 21, 4, 'user', 'Pour la premier paire est-elle disponible en taille 40?', '[]', NULL, 0, 0, '2026-05-28 09:29:28'),
+(96, 21, 4, 'assistant', 'Oui, la paire RainStep WP est disponible en taille 40. C\'est une des tailles proposées dans la liste de disponibilité.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}]', NULL, 0, 0, '2026-05-28 09:29:29'),
+(97, 21, 4, 'user', 'et en couleur bleu marine?', '[]', NULL, 0, 0, '2026-05-28 09:30:05'),
+(98, 21, 4, 'assistant', 'La RainStep WP est disponible en couleur bleu marine. Vous pouvez la trouver dans différentes tailles, notamment la taille 37 à 46.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}]', NULL, 0, 0, '2026-05-28 09:30:05');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `favoris`
+--
+
+CREATE TABLE `favoris` (
+  `id` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `id_shoes` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Déchargement des données de la table `favoris`
+--
+
+INSERT INTO `favoris` (`id`, `id_client`, `id_shoes`, `created_at`) VALUES
+(21, 3, 31, '2026-05-26 13:53:42'),
+(22, 4, 5, '2026-05-28 08:31:58');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `lignes_commande`
+--
+
+CREATE TABLE `lignes_commande` (
+  `id_ligne` int(11) NOT NULL,
+  `id_commande` int(11) NOT NULL,
+  `id_shoes` int(11) NOT NULL,
+  `id_variant` int(11) NOT NULL,
+  `nom_article` varchar(255) NOT NULL,
+  `taille` int(4) NOT NULL,
+  `couleur` varchar(50) NOT NULL,
+  `prix_unitaire` decimal(10,2) NOT NULL,
+  `quantite` int(11) NOT NULL DEFAULT '1',
+  `sous_total` decimal(10,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -200,9 +318,10 @@ CREATE TABLE `panier` (
 --
 
 INSERT INTO `panier` (`id_panier`, `id_client`, `quantite`, `date_ajout`, `statut`, `id_variant`) VALUES
-(11, 3, 1, '2026-05-21 09:20:52', 'en_cours', 161),
 (12, 3, 1, '2026-05-21 12:05:21', 'en_cours', 730),
-(13, 3, 1, '2026-05-21 12:25:55', 'en_cours', 1140);
+(14, 4, 1, '2026-05-25 14:44:11', 'en_cours', 1),
+(15, 3, 1, '2026-05-26 13:53:46', 'en_cours', 730),
+(17, 3, 1, '2026-05-26 14:37:59', 'en_cours', 70);
 
 -- --------------------------------------------------------
 
@@ -1717,12 +1836,35 @@ ALTER TABLE `clients`
   ADD UNIQUE KEY `mail` (`mail`);
 
 --
+-- Index pour la table `commandes`
+--
+ALTER TABLE `commandes`
+  ADD PRIMARY KEY (`id_commande`),
+  ADD KEY `fk_commande_client` (`id_client`);
+
+--
 -- Index pour la table `conversations`
 --
 ALTER TABLE `conversations`
   ADD PRIMARY KEY (`id`),
   ADD KEY `id_session` (`id_session`),
   ADD KEY `id_client` (`id_client`);
+
+--
+-- Index pour la table `favoris`
+--
+ALTER TABLE `favoris`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `id_client` (`id_client`,`id_shoes`),
+  ADD KEY `id_shoes` (`id_shoes`);
+
+--
+-- Index pour la table `lignes_commande`
+--
+ALTER TABLE `lignes_commande`
+  ADD PRIMARY KEY (`id_ligne`),
+  ADD KEY `fk_ligne_commande` (`id_commande`),
+  ADD KEY `fk_ligne_shoes` (`id_shoes`);
 
 --
 -- Index pour la table `panier`
@@ -1747,25 +1889,43 @@ ALTER TABLE `size_color`
 -- AUTO_INCREMENT pour la table `chat_sessions`
 --
 ALTER TABLE `chat_sessions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT pour la table `clients`
 --
 ALTER TABLE `clients`
-  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT pour la table `commandes`
+--
+ALTER TABLE `commandes`
+  MODIFY `id_commande` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT pour la table `conversations`
 --
 ALTER TABLE `conversations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=99;
+
+--
+-- AUTO_INCREMENT pour la table `favoris`
+--
+ALTER TABLE `favoris`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+
+--
+-- AUTO_INCREMENT pour la table `lignes_commande`
+--
+ALTER TABLE `lignes_commande`
+  MODIFY `id_ligne` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT pour la table `panier`
 --
 ALTER TABLE `panier`
-  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- Contraintes pour les tables déchargées
@@ -1778,11 +1938,31 @@ ALTER TABLE `chat_sessions`
   ADD CONSTRAINT `chat_sessions_ibfk_1` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
 
 --
+-- Contraintes pour la table `commandes`
+--
+ALTER TABLE `commandes`
+  ADD CONSTRAINT `fk_commande_client` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Contraintes pour la table `conversations`
 --
 ALTER TABLE `conversations`
   ADD CONSTRAINT `conversations_ibfk_1` FOREIGN KEY (`id_session`) REFERENCES `chat_sessions` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `conversations_ibfk_2` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `favoris`
+--
+ALTER TABLE `favoris`
+  ADD CONSTRAINT `favoris_ibfk_1` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE,
+  ADD CONSTRAINT `favoris_ibfk_2` FOREIGN KEY (`id_shoes`) REFERENCES `articles` (`id_shoes`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `lignes_commande`
+--
+ALTER TABLE `lignes_commande`
+  ADD CONSTRAINT `fk_ligne_commande` FOREIGN KEY (`id_commande`) REFERENCES `commandes` (`id_commande`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_ligne_shoes` FOREIGN KEY (`id_shoes`) REFERENCES `articles` (`id_shoes`) ON UPDATE CASCADE;
 
 --
 -- Contraintes pour la table `panier`
