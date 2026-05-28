@@ -12,6 +12,78 @@ let dbSessionId = sessionStorage.getItem("dbSessionId")
   ? parseInt(sessionStorage.getItem("dbSessionId"))
   : null;
 
+// ══════════════════════════════════════════════
+// SYSTÈME DE TRADUCTION UI
+// ══════════════════════════════════════════════
+
+// Labels FR — source de vérité. Les valeurs fonctionnelles (couleurs, tailles)
+// restent en français en interne pour que Qdrant et les filtres fonctionnent.
+const UI_LABELS_FR = {
+  suggestions:    "Voici quelques suggestions",
+  addToCart:      "🛒 Ajouter au panier",
+  chooseModel:    "🛒 Choisir ce modèle",
+  confirm:        "Confirmer l'ajout",
+  added:          "✓ Ajouté au panier !",
+  cancel:         "✗ Annuler",
+  fav:            "Ajouter aux favoris",
+  comparison:     "Comparaison",
+  size:           "Pointure",
+  color:          "Couleur",
+  brand:          "Marque",
+  category:       "Catégorie",
+  sizes:          "Tailles",
+  colors:         "Couleurs",
+  errorCart:      "Erreur lors de l'ajout.",
+  errorNetwork:   "Erreur réseau",
+  analyzing:      "Analyse en cours...",
+  unavailable:    "Désolé, je suis temporairement indisponible. Réessayez dans un instant.",
+  unavailableImg: "Désolé, la recherche par image est temporairement indisponible.",
+  welcome:        "Bonjour ! Je suis votre conseiller PairIA, posez-moi vos questions 👟",
+  sizeLabel:      "taille",
+};
+
+// Cache par langue — évite les appels LLM répétés
+const _uiTranslationsCache = { fr: UI_LABELS_FR };
+
+// Langue courante de l'interface
+let currentLangue = sessionStorage.getItem("chatLangue") || "fr";
+
+// Charge les traductions pour une langue (un seul appel LLM, puis cache)
+async function loadUITranslations(langue) {
+  if (!langue || langue === "fr") return UI_LABELS_FR;
+  if (_uiTranslationsCache[langue]) return _uiTranslationsCache[langue];
+  try {
+    const res = await fetch(`${API_URL}/translate-ui`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texts: UI_LABELS_FR, langue }),
+    });
+    const data = await res.json();
+    _uiTranslationsCache[langue] = data.translations;
+    console.log(`[UI] traductions chargées pour ${langue}`);
+    return data.translations;
+  } catch (e) {
+    console.warn(`[UI] échec traduction ${langue}, fallback FR`);
+    return UI_LABELS_FR;
+  }
+}
+
+// Accès synchrone au cache (utilise toujours ce qui est déjà chargé)
+function t(key, langue) {
+  const lang = langue || currentLangue;
+  const dict = _uiTranslationsCache[lang] || UI_LABELS_FR;
+  return dict[key] ?? UI_LABELS_FR[key] ?? key;
+}
+
+// Met à jour la langue courante et charge les traductions si besoin
+async function _mettreAjourLangue(langue) {
+  if (!langue || langue === currentLangue) return;
+  currentLangue = langue;
+  sessionStorage.setItem("chatLangue", langue);
+  if (langue !== "fr") await loadUITranslations(langue);
+}
+
+
 // ── Crée une session BDD au premier message ──
 async function ensureDbSession(firstMessage) {
   if (dbSessionId) return dbSessionId;
@@ -154,7 +226,7 @@ async function sendMessage(text) {
         const btns = document.querySelectorAll(".chat-cart-btn");
         btns.forEach(btn => {
           if (btn.textContent.includes("Confirmer")) {
-            btn.textContent = "✓ Ajouté au panier !";
+            btn.textContent = t('added');
             btn.style.background = "#2f855a";
             btn.disabled = true;
             btn.closest(".chat-product-card")?.querySelector("button[style*='e53e3e']")?.remove();
@@ -218,6 +290,7 @@ async function sendMessage(text) {
     let couleur = null;
     let show_products = true;
     let confirm_required = true;
+    let langueRecue = null; // ← stocké pendant le parsing, appliqué AVANT l'affichage
 
     while (true) {
       const { done, value } = await reader.read();
@@ -243,6 +316,7 @@ async function sendMessage(text) {
             couleur = data.couleur || null;
             show_products = data.show_products !== false;  // true par défaut sauf si explicitement false
             confirm_required = data.confirm_required !== false;  // true par défaut
+            if (data.langue) langueRecue = data.langue; // ← juste stocker, pas encore appliquer
             if (data.tutoiement) {
               sessionStorage.setItem("chatTutoiement", data.tutoiement);
             }
@@ -279,6 +353,9 @@ async function sendMessage(text) {
       }
     }
 
+    // ✅ Appliquer la langue AVANT d'afficher les cartes — les traductions sont prêtes
+    if (langueRecue) await _mettreAjourLangue(langueRecue);
+
     // Si une couleur a été normalisée (ex: Rouge→Bordeaux), l'intégrer dans le message user
     const normalizedCouleur = sessionStorage.getItem("lastNormalizedCouleur");
     const textToStore = (normalizedCouleur && couleur && normalizedCouleur !== couleur)
@@ -308,11 +385,11 @@ async function sendMessage(text) {
 
     if (show_products) {
       if (layout === "comparison" && products.length >= 2) {
-        showComparisonView(products[0], products[1], container);
+        await showComparisonView(products[0], products[1], container);
       } else if (products.length === 1 && !action) {
-        showCartSelector(products[0], container);
+        await showCartSelector(products[0], container);
       } else if (products.length > 1 && !action) {
-        showProductPicker(products, container);
+        await showProductPicker(products, container);
       }
     }
 
@@ -427,6 +504,7 @@ async function sendImageWithText(file, text) {
     let products = [];
     let action = null;
     let product_id = null;
+    let langueRecue = null; // ← stocké pendant le parsing
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -455,6 +533,7 @@ async function sendImageWithText(file, text) {
             couleur = data.couleur || null;
             show_products = data.show_products !== false;  // true par défaut sauf si explicitement false
             confirm_required = data.confirm_required !== false;  // true par défaut
+            if (data.langue) langueRecue = data.langue; // ← juste stocker
             if (data.tutoiement) {
               sessionStorage.setItem("chatTutoiement", data.tutoiement);
             }
@@ -491,6 +570,9 @@ async function sendImageWithText(file, text) {
       }
     }
 
+    // ✅ Appliquer la langue AVANT d'afficher les cartes
+    if (langueRecue) await _mettreAjourLangue(langueRecue);
+
     // Historique : description textuelle de l'image + produits trouvés
     const productContext =
       products.length > 0
@@ -522,11 +604,11 @@ async function sendImageWithText(file, text) {
     );
 
     if (layout === "comparison" && products.length >= 2) {
-      showComparisonView(products[0], products[1], container);
+      await showComparisonView(products[0], products[1], container);
     } else if (products.length === 1) {
-      showCartSelector(products[0], container);
+      await showCartSelector(products[0], container);
     } else if (products.length > 1) {
-      showProductPicker(products, container);
+      await showProductPicker(products, container);
     }
 
     if (action === "add_to_cart" && product_id) {
@@ -664,8 +746,20 @@ async function toggleFavChat(productId, btn) {
   } catch (e) {}
 }
 
-function showProductPicker(produits, container) {
+async function showProductPicker(produits, container) {
   if (!container) container = document.getElementById("messages");
+  if (currentLangue !== "fr") {
+    const toutesValeurs = produits.flatMap(p => [
+      ...(p.tailles || []).map(String),
+      ...(p.couleurs || []),
+    ]);
+    const cache = await traduireValeursDynamiques(toutesValeurs, currentLangue);
+    produits = produits.map(p => ({
+      ...p,
+      tailles:  (p.tailles  || []).map(v => cache[String(v)] || v),
+      couleurs: (p.couleurs || []).map(v => cache[v] || v),
+    }));
+  }
 
   const div = document.createElement("div");
   div.className = "chat-msg bot";
@@ -706,7 +800,7 @@ function showProductPicker(produits, container) {
         </a>
         <div style="display:flex;gap:6px;padding:0 10px 6px">
           <button class="chat-pick-toggle-btn" style="flex:1" onclick="chatToggleSelector(this)">
-            🛒 Ajouter au panier
+            ${t('addToCart')}
           </button>
           <button class="chat-fav-btn" title="Ajouter aux favoris"
             onclick="toggleFavChat(${p.id}, this)">
@@ -717,7 +811,7 @@ function showProductPicker(produits, container) {
           ${
             hasTailles
               ? `
-            <div class="chat-option-title">Pointure</div>
+            <div class="chat-option-title">${t('size')}</div>
             <div class="chat-option-group" data-type="taille">${taillesHtml}</div>
           `
               : ""
@@ -725,7 +819,7 @@ function showProductPicker(produits, container) {
           ${
             hasCouleurs
               ? `
-            <div class="chat-option-title">Couleur</div>
+            <div class="chat-option-title">${t('color')}</div>
             <div class="chat-option-group" data-type="couleur">${couleursHtml}</div>
           `
               : ""
@@ -734,7 +828,7 @@ function showProductPicker(produits, container) {
           <button class="chat-cart-btn"
             onclick="confirmChatCartFromPicker(${p.id}, this)"
             ${hasTailles || hasCouleurs ? "disabled" : ""}>
-            Confirmer l'ajout
+            ${t('confirm')}
           </button>
         </div>
       </div>`;
@@ -743,7 +837,7 @@ function showProductPicker(produits, container) {
 
   div.innerHTML = `
     <div class="chat-product-card">
-      <div class="chat-pick-title">Voici quelques suggestions</div>
+      <div class="chat-pick-title">${t('suggestions')}</div>
       <div class="chat-product-pick-list">${itemsHtml}</div>
     </div>`;
 
@@ -804,12 +898,12 @@ async function confirmChatCartFromPicker(productId, btn) {
   const result = await addToCart(productId, 1, taille, couleur);
 
   if (result?.success) {
-    btn.textContent = "✓ Ajouté au panier !";
+    btn.textContent = t('added');
     btn.style.background = "#2f855a";
   } else {
     btn.disabled = false;
-    btn.textContent = "Confirmer l'ajout";
-    if (errEl) errEl.textContent = result?.error || "Erreur lors de l'ajout.";
+    btn.textContent = t('confirm');
+    if (errEl) errEl.textContent = result?.error || t('errorCart');
   }
 }
 
@@ -852,11 +946,11 @@ function showCartConfirm(produit, taille, couleur, container) {
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="chat-cart-btn" style="flex:1"
           onclick="confirmCartDirect(${produit.id}, '${escapeAttr(taille || "")}', '${escapeAttr(couleur || "")}', this)">
-          ✓ Confirmer l'ajout
+          ✓ ${t('confirm')}
         </button>
         <button class="chat-cart-btn" style="flex:1;background:#e53e3e"
           onclick="sessionStorage.removeItem('pendingCartConfirm'); this.closest('.chat-msg').remove()">
-          ✗ Annuler
+          ${t('cancel')}
         </button>
       </div>
       <div class="chat-selector-error" style="font-size:12px;color:#e53e3e;margin-top:6px;min-height:16px;"></div>
@@ -876,18 +970,30 @@ async function confirmCartDirect(productId, taille, couleur, btn) {
 
   if (result?.success) {
     sessionStorage.removeItem("pendingCartConfirm");
-    btn.textContent = "✓ Ajouté au panier !";
+    btn.textContent = t('added');
     btn.style.background = "#2f855a";
     card.querySelector("button[style*='e53e3e']")?.remove();
   } else {
     btn.disabled = false;
-    btn.textContent = "✓ Confirmer l'ajout";
-    if (errEl) errEl.textContent = result?.error || "Erreur lors de l'ajout.";
+    btn.textContent = '✓ ' + t('confirm');
+    if (errEl) errEl.textContent = result?.error || t('errorCart');
   }
 }
 
-function showCartSelector(produit, container) {
+async function showCartSelector(produit, container) {
   if (!container) container = document.getElementById("messages");
+  if (currentLangue !== "fr") {
+    const vals = [
+      ...(produit.tailles  || []).map(String),
+      ...(produit.couleurs || []),
+    ];
+    const cache = await traduireValeursDynamiques(vals, currentLangue);
+    produit = {
+      ...produit,
+      tailles:  (produit.tailles  || []).map(v => cache[String(v)] || v),
+      couleurs: (produit.couleurs || []).map(v => cache[v] || v),
+    };
+  }
 
   const div = document.createElement("div");
   div.className = "chat-msg bot";
@@ -928,7 +1034,7 @@ function showCartSelector(produit, container) {
       ${
         hasTailles
           ? `
-        <div class="chat-option-title">Pointure</div>
+        <div class="chat-option-title">${t('size')}</div>
         <div class="chat-option-group" data-type="taille">${taillesHtml}</div>
       `
           : ""
@@ -937,7 +1043,7 @@ function showCartSelector(produit, container) {
       ${
         hasCouleurs
           ? `
-        <div class="chat-option-title">Couleur</div>
+        <div class="chat-option-title">${t('color')}</div>
         <div class="chat-option-group" data-type="couleur">${couleursHtml}</div>
       `
           : ""
@@ -949,7 +1055,7 @@ function showCartSelector(produit, container) {
         <button class="chat-cart-btn" style="flex:1"
           onclick="confirmChatCart(${produit.id}, this)"
           ${hasTailles || hasCouleurs ? "disabled" : ""}>
-          Ajouter au panier
+          ${t('addToCart')}
         </button>
         <button class="chat-fav-btn" title="Ajouter aux favoris"
           onclick="toggleFavChat(${produit.id}, this)">
@@ -1001,12 +1107,12 @@ async function confirmChatCart(productId, btn) {
   const result = await addToCart(productId, 1, taille, couleur);
 
   if (result?.success) {
-    btn.textContent = "✓ Ajouté au panier !";
+    btn.textContent = t('added');
     btn.style.background = "#2f855a";
   } else {
     btn.disabled = false;
-    btn.textContent = "Ajouter au panier";
-    if (errEl) errEl.textContent = result?.error || "Erreur lors de l'ajout.";
+    btn.textContent = t('addToCart');
+    if (errEl) errEl.textContent = result?.error || t('errorCart');
   }
 }
 
@@ -1083,6 +1189,13 @@ function escapeAttr(text) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   updateCartCount();
+
+  // Restaurer la langue de la session précédente
+  const savedLangue = sessionStorage.getItem("chatLangue");
+  if (savedLangue && savedLangue !== "fr") {
+    currentLangue = savedLangue;
+    await loadUITranslations(savedLangue);
+  }
   const container = document.getElementById("messages");
 
   // NOUVEAU : recharge depuis MySQL si session active
@@ -1120,11 +1233,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         appendBotMessageText(msg.content);
         if (msg.products && msg.products.length > 0) {
           if (msg.products.length === 1) {
-            showCartSelector(msg.products[0], container);
+            await showCartSelector(msg.products[0], container);
           } else if (msg.layout === "comparison" && msg.products.length >= 2) {
-            showComparisonView(msg.products[0], msg.products[1], container);
+            await showComparisonView(msg.products[0], msg.products[1], container);
           } else if (msg.products.length > 1) {
-            showProductPicker(msg.products, container);
+            await showProductPicker(msg.products, container);
           }
         }
       }
@@ -1148,8 +1261,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 /* ══════════════════════════════════════
    COMPARAISON CÔTE À CÔTE
 ══════════════════════════════════════ */
-function showComparisonView(p1, p2, container) {
+async function showComparisonView(p1, p2, container) {
   if (!container) container = document.getElementById("messages");
+  if (currentLangue !== "fr") {
+    const toutesValeurs = [
+      ...(p1.tailles || []).map(String),
+      ...(p2.tailles || []).map(String),
+      ...(p1.couleurs || []),
+      ...(p2.couleurs || []),
+    ];
+    const cache = await traduireValeursDynamiques(toutesValeurs, currentLangue);
+    const traduire = (arr) => arr.map(v => cache[v] || v);
+    p1 = { ...p1, tailles: traduire(p1.tailles || []), couleurs: traduire(p1.couleurs || []) };
+    p2 = { ...p2, tailles: traduire(p2.tailles || []), couleurs: traduire(p2.couleurs || []) };
+  }
 
   const div = document.createElement("div");
   div.className = "chat-msg bot";
@@ -1174,19 +1299,19 @@ function showComparisonView(p1, p2, container) {
             ${resume ? `<div class="chat-compare-resume">${escapeHtml(resume)}</div>` : ""}
             <table class="chat-compare-table">
                 <tr>
-                    <td class="chat-compare-label">Marque</td>
+                    <td class="chat-compare-label">${t('brand')}</td>
                     <td>${escapeHtml(p.marque || "—")}</td>
                 </tr>
                 <tr>
-                    <td class="chat-compare-label">Catégorie</td>
+                    <td class="chat-compare-label">${t('category')}</td>
                     <td>${escapeHtml(p.categorie || "—")}</td>
                 </tr>
                 <tr>
-                    <td class="chat-compare-label">Tailles</td>
+                    <td class="chat-compare-label">${t('sizes')}</td>
                     <td>${escapeHtml(tailles)}</td>
                 </tr>
                 <tr>
-                    <td class="chat-compare-label">Couleurs</td>
+                    <td class="chat-compare-label">${t('colors')}</td>
                     <td>${escapeHtml(couleurs)}</td>
                 </tr>
             </table>
@@ -1194,14 +1319,14 @@ function showComparisonView(p1, p2, container) {
             <button class="chat-cart-btn"
                 style="margin-top:10px;width:100%"
                 onclick="showCartSelector(${JSON.stringify(p).replace(/"/g, "&quot;")}, document.getElementById('messages'))">
-                🛒 Choisir ce modèle
+                ${t('chooseModel')}
             </button>
         </div>`;
   }
 
   div.innerHTML = `
         <div class="chat-compare-card">
-            <div class="chat-compare-title">Comparaison</div>
+            <div class="chat-compare-title">${t('comparison')}</div>
             <div class="chat-compare-grid">
                 ${colHtml(p1, 0)}
                 <div class="chat-compare-vs">VS</div>
@@ -1552,9 +1677,9 @@ async function _genererMessageAccueil(
     // Afficher les cartes seulement si les produits ne sont pas déjà au panier
     if (!produitsDejaAuPanier) {
       if (produitsFinaux.length === 1) {
-        showCartSelector(produitsFinaux[0], container);
+        await showCartSelector(produitsFinaux[0], container);
       } else if (produitsFinaux.length > 1) {
-        showProductPicker(produitsFinaux, container);
+        await showProductPicker(produitsFinaux, container);
       }
     }
 
@@ -1648,10 +1773,10 @@ async function loadSession(sessionDbId) {
       appendBotMessageText(msg.content);
       if (msg.products?.length > 0) {
         if (msg.products.length === 1)
-          showCartSelector(msg.products[0], container);
+          await showCartSelector(msg.products[0], container);
         else if (msg.layout === "comparison" && msg.products.length >= 2)
-          showComparisonView(msg.products[0], msg.products[1], container);
-        else showProductPicker(msg.products, container);
+          await showComparisonView(msg.products[0], msg.products[1], container);
+        else await showProductPicker(msg.products, container);
       }
     }
   }
@@ -1678,6 +1803,8 @@ async function deleteSession(e, sessionDbId) {
 
 function newConversation() {
   dbSessionId = null;
+  currentLangue = "fr";
+  sessionStorage.removeItem("chatLangue");
   sessionStorage.removeItem("dbSessionId");
   conversationHistory = [];
   sessionId = crypto.randomUUID();
@@ -1685,4 +1812,35 @@ function newConversation() {
   sessionStorage.setItem("chatSessionId", sessionId);
   document.getElementById("messages").innerHTML = "";
   closeHistoryPanel();
+}
+
+// Traduit des valeurs dynamiques (couleurs, catégories) via le même endpoint /translate-ui
+// Réutilise le cache existant _uiTranslationsCache[langue]
+async function traduireValeursDynamiques(valeurs, langue) {
+  if (!langue || langue === "fr" || !valeurs.length) return {};
+
+  const cache = _uiTranslationsCache[langue] || {};
+  const aTraduire = [...new Set(valeurs)].filter(v => v && !(v in cache));
+
+  if (aTraduire.length > 0) {
+    const texts = Object.fromEntries(aTraduire.map(v => [v, v]));
+    try {
+      const res = await fetch(`${API_URL}/translate-ui`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts, langue }),
+      });
+      const data = await res.json();
+      // Fusionne dans le cache existant de la langue
+      _uiTranslationsCache[langue] = { ...cache, ...data.translations };
+    } catch (e) {
+      // Fallback : valeur originale
+      aTraduire.forEach(v => {
+        if (!_uiTranslationsCache[langue]) _uiTranslationsCache[langue] = {};
+        _uiTranslationsCache[langue][v] = v;
+      });
+    }
+  }
+
+  return _uiTranslationsCache[langue] || {};
 }

@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ollama
 from database import qdrant
 from llm_prompt import build_prompt, get_system_prompt
+from language_utils import normaliser_question, traduire_reponse
 from image_search import model
 from intention_classifier import classifier_intention
 from filters import extraire_filtres, user_wants_cart, DB
@@ -256,28 +257,24 @@ def _produits_depuis_historique(history: list) -> list:
 
 
 
-def _resumer_description(produit: dict) -> str:
-    """
-    Génère un résumé court en français en 1 phrase de la description du produit via Mistral.
-    """
+def _resumer_description(produit: dict, langue: str = "fr") -> str:
     description = produit.get("description", "").strip()
     if not description:
         return ""
-
+    from language_utils import nom_langue
+    langue_label = nom_langue(langue) if langue != "fr" else "français"
     try:
         resp = ollama.chat(
             model=LLM_MODEL,
-             messages=[{"role": "user", "content": (
-                f"Tu es un assistant francophone. Réponds UNIQUEMENT en français.\n"
+            messages=[{"role": "user", "content": (
+                f"Tu es un assistant. Réponds UNIQUEMENT en {langue_label}.\n"
                 f"Résume en une phrase de 10 à 15 mots MAXIMUM le point fort principal de cette chaussure.\n"
-                f"Exemple : 'Légère et propulsive, idéale pour la compétition et les coureurs entraînés.'\n"
                 f"Description : {description}"
             )}],
             options={"num_predict": 60, "temperature": 0.5},
         )
         return resp["message"]["content"].strip().strip('"').strip("'")
     except Exception as e:
-        print(f"[RESUME] Erreur : {e}")
         return description[:120] + "..." if len(description) > 120 else description
 
 
@@ -285,13 +282,18 @@ def _identifier_produits_a_comparer(question: str, produits: list) -> tuple[dict
     if len(produits) < 2:
         return None
 
+    n = len(produits)
     liste = "\n".join([f"{i+1}. {p['name']}" for i, p in enumerate(produits)])
     prompt = (
         f"Produits disponibles :\n{liste}\n\n"
         f"L'utilisateur dit : \"{question}\"\n"
-        f"Quels sont les numéros des 2 produits à comparer ? "
+        f"Quels sont les numéros des 2 produits à comparer ?\n"
+        f"IMPORTANT : si l'utilisateur fait référence aux derniers produits de la liste "
+        f"('les deux derniers', 'the last two', 'die letzten beiden', 'los dos últimos', etc.), "
+        f"choisis les numéros {n-1} et {n}.\n"
+        f"Si référence aux premiers ('les deux premiers', 'the first two', etc.), choisis 1 et 2.\n"
         f"Réponds UNIQUEMENT en JSON : {{\"p1\": 1, \"p2\": 3}}\n"
-        f"Si non précisé, réponds : {{\"p1\": 1, \"p2\": 2}}"
+        f"Si vraiment non précisé, réponds : {{\"p1\": 1, \"p2\": 2}}"
     )
     try:
         resp = ollama.chat(
@@ -476,8 +478,13 @@ def _analyser_question(
         else:
             filtres_explicites.pop("categorie", None)
 
-            # Persistance catégorie gérée dans extraire_filtres (filters.py)
-            if not categories_candidates:
+            # ✅ Si l'utilisateur demande une couleur ou une marque SANS catégorie explicite,
+            # on ignore les catégories suggérées par le LLM — elles restreignent trop la recherche
+            # et peuvent mener à 0 résultat alors que des produits de la bonne couleur existent ailleurs.
+            if filtres_explicites.get("couleur") or filtres_explicites.get("marque"):
+                categories_candidates = []
+                print("[VECTORISE] couleur/marque sans catégorie explicite → recherche libre (catégories LLM ignorées)")
+            elif not categories_candidates:
                 print("[VECTORISE] aucune catégorie détectée → recherche libre")
 
         vec = model.encode(question_enrichie).tolist()
@@ -692,6 +699,24 @@ def _couleurs_famille(couleur: str) -> list:
             return couleurs
     return [couleur]
 
+def _stream_and_translate(ollama_stream, langue_client: str):
+    """
+    Accumule le texte du stream Ollama, le traduit si nécessaire,
+    puis le yield en un seul bloc.
+    Retourne aussi le texte complet pour usage ultérieur.
+    """
+    texte = ""
+    for chunk in ollama_stream:
+        texte += chunk["message"]["content"]
+    # Nettoyer le markdown
+    texte = texte.replace("**", "").replace("*", "").strip()
+    # Traduction post-génération : une seule fois, texte complet
+    if langue_client != "fr" and texte:
+        texte = traduire_reponse(texte, langue_client)
+        print(f"[RAG] réponse traduite → {langue_client}")
+    return texte
+
+
 def get_response_stream(
     question: str = "",
     product_id: int = None,
@@ -707,12 +732,28 @@ def get_response_stream(
         context_messages = []
 
     # Détecter dès le début pour cohérence dans tous les CAS
+     # Détecter dès le début pour cohérence dans tous les CAS
     tutoiement = _detecter_tutoiement(history, question)
-
+ 
+    # ── Détection de langue + traduction en français pour la recherche ──
+    # Les prompts internes (générés par le JS) sont toujours en français → on
+    # ne les traduit pas pour éviter une double traduction inutile.
+    # La langue originale est conservée pour que le LLM réponde dans celle-ci.
+    est_prompt_interne_rapide = any(
+        m in question for m in ["Génère un message", "accueille le client", "En une seule phrase"]
+    )
+    if est_prompt_interne_rapide:
+        langue_client = "fr"
+        question_fr   = question
+    else:
+        question_fr, langue_client = normaliser_question(question)
+ 
     print(f"\n{'='*50}")
-    print(f"[RAG] question : {question!r} | history : {len(history)} messages")
+    print(f"[RAG] question : {question!r} | langue : {langue_client} | history : {len(history)} messages")
     print(f"{'='*50}\n")
-
+ 
+    # On travaille avec la version française pour toute la recherche/filtres
+    question = question_fr
     # ══════════════════════════════════════════════
     # DÉTECTION PROMPTS INTERNES (pages produit/panier)
     # Ces prompts sont générés automatiquement par le JS,
@@ -853,11 +894,10 @@ def get_response_stream(
                     "temperature": 0.7,
                 },
             )
-            for chunk in stream:
-                yield chunk["message"]["content"]
+            yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
         return
 
     # ════════════════════════════════════════════
@@ -925,12 +965,11 @@ def get_response_stream(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options=gen_options,
             )
-            for chunk in stream:
-                yield chunk["message"]["content"]
+            yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield "Je suis votre conseiller PairIA, posez-moi vos questions 👟"
 
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
         return
         
     # ════════════════════════════════════════════
@@ -958,11 +997,10 @@ def get_response_stream(
                     "temperature": 0.5,
                 },
             )
-            for chunk in stream:
-                yield chunk["message"]["content"]
+            yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
         return
 
     # ════════════════════════════════════════════
@@ -1031,12 +1069,22 @@ def get_response_stream(
                     "temperature": 0.5,
                 },
             )
+            # Accumuler en français pour détecter les produits mentionnés
             for chunk in stream:
-                token = chunk["message"]["content"]
-                texte_complet += token
-                yield token
+                texte_complet += chunk["message"]["content"]
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
+
+        produit_cible = None
+        if produits_historique:
+            mentionnes    = _produits_mentionnes(texte_complet, produits_historique)
+            produit_cible = mentionnes[0] if mentionnes else produits_historique[0]
+
+        # Traduire après détection des produits (la détection se fait sur le texte FR)
+        texte_traduit = texte_complet
+        if langue_client != "fr" and texte_complet.strip():
+            texte_traduit = traduire_reponse(texte_complet, langue_client)
+        yield texte_traduit
 
         produit_cible = None
         if produits_historique:
@@ -1069,6 +1117,7 @@ def get_response_stream(
             "couleur":         couleur_panier,
             # Confirmation nécessaire seulement si une info manque encore
             "confirm_required": not (taille_panier and couleur_panier),
+            "langue":           langue_client,
         }
         return
 
@@ -1203,11 +1252,13 @@ def get_response_stream(
                         produits_fallback = (p_cat + p_autres)[:nb_a]
                     else:
                         produits_fallback = produits_fallback[:nb_a]
+                    # ✅ CORRIGÉ — langue_client ajouté
                     prompt_fb = build_prompt(
                         question=question,
                         produits=produits_fallback,
                         genre=_extraire_genre(history, question),
                         contexte_filtres=contexte_fallback,
+                        langue=langue_client,
                     )
                     msgs_fb = [
                         {"role": "system", "content": get_system_prompt(tutoiement)},
@@ -1219,12 +1270,14 @@ def get_response_stream(
                         stream_fb = ollama.chat(model=LLM_MODEL, messages=msgs_fb, stream=True,
                             options={"num_ctx": _calculer_ctx(history), "num_predict": 350, "temperature": 0.7})
                         for chunk in stream_fb:
-                            token = chunk["message"]["content"]
-                            texte_fb += token
-                            yield token
+                            texte_fb += chunk["message"]["content"]
                     except Exception as e:
                         yield f"Erreur : {e}"
                     produits_mentionnes_fb = _produits_mentionnes(texte_fb, produits_fallback)
+                    # Traduire après détection des produits
+                    if langue_client != "fr" and texte_fb.strip():
+                        texte_fb = traduire_reponse(texte_fb, langue_client)
+                    yield texte_fb
                     produits_finaux_fb = produits_mentionnes_fb or produits_fallback
                     yield {
                         "type":          "products_final",
@@ -1234,6 +1287,7 @@ def get_response_stream(
                         "quantity":      1,
                         "tutoiement":    tutoiement,
                         "show_products": True,
+                        "langue":        langue_client,
                     }
                     return
                 else:
@@ -1278,15 +1332,17 @@ def get_response_stream(
                         options={"num_ctx": 1024, "num_predict": 80, "temperature": 0.4},
                     )
                     for chunk in stream:
-                        token = chunk["message"]["content"]
-                        texte_manque += token
-                        yield token
+                        texte_manque += chunk["message"]["content"]
+                    if langue_client != "fr" and texte_manque.strip():
+                        texte_manque = traduire_reponse(texte_manque, langue_client)
+                    yield texte_manque
                 except Exception as e:
                     info = " et ".join(m.split(" (")[0] for m in manque)
                     yield f"Quelle {info} souhaites-tu pour les {produit_cible_panier['name']} ?"
                 yield {
                     "type": "products_final", "products": [], "action": None,
                     "product_id": None, "quantity": 1, "show_products": False,
+                    "langue": langue_client,
                 }
                 return
 
@@ -1342,8 +1398,7 @@ def get_response_stream(
                         "temperature": 0.5,
                     },
                 )
-                for chunk in stream:
-                    yield chunk["message"]["content"]
+                yield _stream_and_translate(stream, langue_client)
             except Exception as e:
                 yield f"Erreur Mistral : {str(e)}"
             # Si bot posait une question taille/couleur → déclencher ajout panier
@@ -1409,13 +1464,16 @@ def get_response_stream(
 
                 # Résumés courts en parallèle (max 15 mots)
                 with ThreadPoolExecutor(max_workers=2) as executor:
-                    fut_r1 = executor.submit(_resumer_description, p1)
-                    fut_r2 = executor.submit(_resumer_description, p2)
+                    fut_r1 = executor.submit(_resumer_description, p1, langue_client)
+                    fut_r2 = executor.submit(_resumer_description, p2, langue_client)
                     p1["resume"] = fut_r1.result()
                     p2["resume"] = fut_r2.result()
 
                 yield {"products": [], "action": None, "product_id": None, "quantity": 1}
-                yield f"Bien sûr, voici le comparatif {p1['name']} vs {p2['name']} :"
+                intro = f"Bien sûr, voici le comparatif {p1['name']} vs {p2['name']} :"
+                if langue_client != "fr":
+                    intro = traduire_reponse(intro, langue_client)
+                yield intro
                 yield {
                     "type":       "products_final",
                     "products":   [p1, p2],
@@ -1423,6 +1481,7 @@ def get_response_stream(
                     "product_id": None,
                     "quantity":   1,
                     "layout":     "comparison",
+                    "langue":     langue_client,
                 }
                 return
 
@@ -1446,6 +1505,11 @@ def get_response_stream(
     if not produits_trouves:
         print("[CAS] 6 — aucun produit → réponse Mistral directe")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
+
+        # ✅ Traduire le contexte_filtres pour éviter les noms de catégories en français dans la réponse
+        if langue_client != "fr" and contexte_filtres:
+            contexte_filtres = traduire_reponse(contexte_filtres, langue_client)
+
         messages = [
             {"role": "system", "content": get_system_prompt(tutoiement)},
             *[{"role": m["role"], "content": m["content"]} for m in history[-10:]],
@@ -1467,11 +1531,10 @@ def get_response_stream(
                     "temperature": 0.7,
                 },
             )
-            for chunk in stream:
-                yield chunk["message"]["content"]
+            yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
         return
 
     # 3. Prompt Mistral
@@ -1479,6 +1542,10 @@ def get_response_stream(
     tutoiement  = _detecter_tutoiement(history, question)
     nb_produits = _nb_produits_from_history(history,intention)
     limite      = _LIMITES.get(intention, _LIMITES["recherche"])
+
+    # ✅ Traduire le contexte_filtres pour éviter les noms de catégories en français dans la réponse
+    if langue_client != "fr" and contexte_filtres:
+        contexte_filtres = traduire_reponse(contexte_filtres, langue_client)
     print(f"[CAS] 6 — {len(produits_trouves)} produits | genre={genre} | nb_à_afficher={nb_produits}")
     if is_image_search:
         produits_trouves = produits_trouves[:3]
@@ -1528,6 +1595,7 @@ def get_response_stream(
         f"{suffixe_recommandation}\n{limite['consigne']} {consigne_nb}"
     )
 
+    # ✅ langue_client déjà bien passé ici (inchangé)
     prompt = build_prompt(
         question=question_complete,
         produits=produits_trouves,
@@ -1535,6 +1603,7 @@ def get_response_stream(
         genre=genre,
         is_image_search=is_image_search,
         contexte_filtres=contexte_filtres,
+        langue=langue_client,
     )
 
     messages = [{"role": "system", "content": get_system_prompt(tutoiement)}]
@@ -1558,7 +1627,7 @@ def get_response_stream(
         for chunk in stream:
             token = chunk["message"]["content"]
             buffer += token
-            # Flush le buffer dès qu'on est sûr qu'il ne commence pas un marqueur markdown
+            # Supprimer le markdown au fil du stream
             while len(buffer) >= 2:
                 if buffer[:2] == "**":
                     buffer = buffer[2:]
@@ -1566,16 +1635,22 @@ def get_response_stream(
                     buffer = buffer[1:]
                 else:
                     texte_complet += buffer[0]
-                    yield buffer[0]
                     buffer = buffer[1:]
         # Vider le buffer restant
         clean = buffer.replace("**", "").replace("*", "")
         texte_complet += clean
-        if clean:
-            yield clean
+
     except Exception as e:
         yield f"Erreur Mistral : {str(e)}"
         return
+
+    # ✅ Traduction post-génération : une seule fois, texte complet, zéro fuite
+    if langue_client != "fr" and texte_complet.strip():
+        texte_complet = traduire_reponse(texte_complet, langue_client)
+        print(f"[RAG] réponse traduite → {langue_client}")
+
+    # Yield du texte final (en un seul bloc — le frontend streame déjà le typing indicator)
+    yield texte_complet
 
     produits_affiches = _produits_mentionnes(texte_complet, produits_trouves)
     action = "add_to_cart" if user_wants_cart(question, history) and produits_affiches else None

@@ -22,7 +22,6 @@ from pydantic import BaseModel
 from rag import get_response_stream
 from image_search import model as clip_model, rechercher_produits_similaires
 from PIL import Image
-#from rag import get_response
 
 app = FastAPI(title="API Chatbot")
 
@@ -38,11 +37,9 @@ whisper_model = whisper.load_model("small")
 print("Whisper prêt ✓")
 
 # ── Stockage temporaire des vecteurs image par session ──
-# { session_id: {"vector": [...], "ts": timestamp} }
 _image_vectors: dict = {}
 
 def _clean_old_vectors(max_age_seconds: int = 3600):
-    """Supprime les vecteurs de plus d'1h"""
     now = time.time()
     expired = [sid for sid, v in _image_vectors.items()
                if now - v["ts"] > max_age_seconds]
@@ -82,6 +79,10 @@ class ChatResponse(BaseModel):
     product_id: int | None = None
     quantity: int | None = None
 
+class TranslateUIRequest(BaseModel):
+    texts: dict[str, str]
+    langue: str
+
 
 # ── Endpoints ──
 
@@ -93,26 +94,62 @@ def root():
 def health():
     return {"status": "ok"}
 
-"""
-@app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
-    result = get_response(
-        question=request.question,
-        product_id=request.product_id,
-        history=[{"role": m.role, "content": m.content} for m in request.history]
+@app.post("/translate-ui")
+def translate_ui(request: TranslateUIRequest):
+    """
+    Traduit un dictionnaire de labels UI vers la langue demandée via le LLM.
+    Un seul appel LLM : toutes les valeurs sont envoyées séparées par |SEP|.
+    Les clés (noms fonctionnels) sont conservées telles quelles côté backend.
+    """
+    from language_utils import nom_langue
+    import ollama
+
+    if request.langue == "fr":
+        return {"translations": request.texts}
+
+    keys   = list(request.texts.keys())
+    values = list(request.texts.values())
+    combined = " |SEP| ".join(values)
+    nom_lang = nom_langue(request.langue)
+
+    prompt = (
+        f"Translate the following French UI labels to {nom_lang}.\n"
+        "Each label is separated by |SEP|.\n"
+        "Reply ONLY with the translated labels separated by |SEP|, same order, nothing else.\n\n"
+        + combined
     )
-    return result
-"""
+
+    try:
+        response = ollama.chat(
+            model="llama3.1",
+            messages=[{"role": "user", "content": prompt}],
+            options={"num_predict": 400, "temperature": 0.1},
+        )
+        raw   = response["message"]["content"].strip()
+        parts = [p.strip() for p in raw.split("|SEP|")]
+
+        if len(parts) == len(keys):
+            translations = dict(zip(keys, parts))
+            print(f"[TRANSLATE-UI] {nom_lang} : {len(translations)} labels traduits")
+        else:
+            print(f"[TRANSLATE-UI] segments inattendus ({len(parts)} vs {len(keys)}) → fallback FR")
+            translations = request.texts
+
+    except Exception as e:
+        print(f"[TRANSLATE-UI] erreur : {e} → fallback FR")
+        translations = request.texts
+
+    return {"translations": translations}
+
 
 @app.post("/chat/stream")
 def chat_stream(request: ChatRequest):
     history = [
         {"role": m.role, "content": m.content, "products": m.products}
         for m in request.history
-        if not m.internal         
+        if not m.internal
     ]
 
-    # Récupère le vecteur image de la session si disponible
     entry = _image_vectors.get(request.session_id)
     image_vector = entry["vector"] if entry else None
     if image_vector:
@@ -147,13 +184,11 @@ async def chat_stream_image(
     print(f"[ENDPOINT] session_id : {session_id!r}")
     print(f"[ENDPOINT] history    : {len(history_parsed)} messages")
 
-    # Sauvegarde temporaire de l'image
     suffix = os.path.splitext(file.filename)[-1] or ".jpg"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
 
-    # Vectorisation + stockage en session
     try:
         image_vec = clip_model.encode(Image.open(tmp_path)).tolist()
         if session_id:
@@ -175,7 +210,6 @@ async def chat_stream_image(
             )
             for chunk in generator:
                 if isinstance(chunk, dict):
-                    # Injecte session_id dans le products_final
                     if chunk.get("type") == "products_final":
                         chunk["session_id"] = session_id
                     yield f"data: {json.dumps(chunk)}\n\n"
@@ -198,12 +232,10 @@ async def search_image(file: UploadFile = File(...)):
 
 @app.post("/transcribe")
 async def transcribe(file: UploadFile = File(...)):
-    # Sauvegarde du fichier webm original
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_webm:
         shutil.copyfileobj(file.file, tmp_webm)
         webm_path = tmp_webm.name
 
-    # Conversion webm → wav via ffmpeg
     wav_path = webm_path.replace(".webm", ".wav")
 
     try:
@@ -234,8 +266,8 @@ async def transcribe(file: UploadFile = File(...)):
             temperature=0,
             condition_on_previous_text=False,
             no_speech_threshold=0.6,
-            compression_ratio_threshold=1.4,  # 🔥 Empêche les hallucinations
-            logprob_threshold=-1.0,           # 🔥 Coupe les mots inventés
+            compression_ratio_threshold=1.4,
+            logprob_threshold=-1.0,
         )
 
         text = result["text"].strip()
