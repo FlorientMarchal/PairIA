@@ -17,6 +17,12 @@ $current = basename($_SERVER['PHP_SELF'], '.php');
         Mon compte
       </a>
     </li>
+    <li>
+    <a href="favoris.php"
+       class="<?= $current === 'favoris' ? 'active' : '' ?>">
+      ❤️ Favoris
+    </a>
+    </li>
     <?php endif; ?>
   </ul>
 

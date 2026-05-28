@@ -150,8 +150,16 @@ if (!$is_ajax) {
               <div class="card-name"><?= htmlspecialchars($a['nom']) ?></div>
               <div class="card-foot">
                 <span class="card-price"><?= number_format($a['Prix'], 2, ',', ' ') ?> €</span>
-                <button class="card-add" type="button" onclick="ajouterPanier(<?= $a['id_shoes'] ?>, event)">+</button>
-              </div>
+                <div style="display:flex;gap:6px">
+                  <button class="card-fav"
+                    type="button"
+                    data-id="<?= $a['id_shoes'] ?>"
+                    onclick="toggleFavCatalogue(<?= $a['id_shoes'] ?>, this)"
+                    title="Ajouter aux favoris">♡</button>
+                  <button class="card-add" type="button"
+                    onclick="ajouterPanier(<?= $a['id_shoes'] ?>, event)">+</button>
+             </div>
+           </div>
             </div>
           </a>
         </div>
@@ -272,5 +280,36 @@ async function ajouterPanier(id, event) {
   const btn = event.target;
   btn.textContent = '✓'; btn.style.background = '#4CAF50';
   setTimeout(() => { btn.textContent = '+'; btn.style.background = ''; }, 1000);
+}
+
+async function toggleFavCatalogue(productId, btn) {
+  try {
+    const res = await fetch('favorites/toggle.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: productId })
+    });
+    const data = await res.json();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+
+    if (!data.success) {
+      toast.textContent = 'Connecte-toi pour ajouter aux favoris';
+    } else if (data.action === 'added') {
+      btn.textContent = '❤️';
+      btn.classList.add('active');
+      toast.textContent = 'Ajouté aux favoris ❤️';
+    } else if (data.action === 'removed') {
+      btn.textContent = '♡';
+      btn.classList.remove('active');
+      toast.textContent = 'Retiré des favoris';
+    }
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  } catch(e) {
+    console.error(e);
+  }
 }
 </script>

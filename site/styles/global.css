@@ -1419,6 +1419,7 @@ nav {
   background: var(--cream);
   transition: border-color 0.2s;
   resize: vertical;
+  min-height: 50px;
 }
 
 .compte-field input:focus,
@@ -1492,4 +1493,135 @@ nav {
   align-items: center;
   justify-content: center;
   font-weight: bold;
+}
+
+/* ===== Favoris ===== */
+/* ── Bouton favori sur les cartes catalogue ── */
+.card-fav {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 1rem;
+  color: var(--gray);
+  cursor: pointer;
+  transition: all 0.15s;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+.card-fav:hover {
+  border-color: #e53935;
+  color: #e53935;
+}
+.card-fav.active {
+  color: #e53935;
+  border-color: #e53935;
+}
+
+/* ── Grille favoris dans compte ── */
+.compte-card-full {
+  grid-column: 1 / -1; /* prend toute la largeur */
+}
+
+.favoris-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.fav-item {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--cream);
+  transition: box-shadow 0.15s;
+}
+.fav-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.fav-item-link {
+  display: block;
+  padding: 0.75rem;
+  text-decoration: none;
+  color: var(--dark);
+}
+
+.fav-item-link img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.fav-item-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fav-item-price {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.fav-remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--gray);
+  transition: all 0.15s;
+  opacity: 0;
+}
+.fav-item:hover .fav-remove-btn {
+  opacity: 1;
+}
+.fav-remove-btn:hover {
+  background: #ffebee;
+  color: #e53935;
+  border-color: #e53935;
+}
+
+/* ── Toast notification ── */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--dark);
+  color: white;
+  padding: 0.6rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  z-index: 9999;
+  animation: toastIn 0.3s ease;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }

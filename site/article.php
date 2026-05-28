@@ -7,6 +7,15 @@ if (!$id) { header('Location: shell.php'); exit; }
 $stmt = $pdo->prepare("SELECT * FROM articles WHERE id_shoes = ?");
 $stmt->execute([$id]);
 $article = $stmt->fetch();
+
+$isFav = false;
+
+if (isset($_SESSION['client_id'])) {
+    $stmt = $pdo->prepare("SELECT 1 FROM favoris WHERE id_client = ? AND id_shoes = ?");
+    $stmt->execute([$_SESSION['client_id'], $id]);
+    $isFav = $stmt->fetch() ? true : false;
+}
+
 if (!$article) { header('Location: shell.php'); exit; }
 
 $stmt = $pdo->prepare("SELECT id_variant, taille, couleur FROM size_color WHERE id_shoes = ? ORDER BY taille, couleur");
@@ -57,6 +66,9 @@ function getCouleurCSS($couleur) {
     <div class="product-info">
       <div class="product-cat"><?= htmlspecialchars($article['categorie']) ?></div>
       <h1 class="product-name"><?= htmlspecialchars($article['nom']) ?></h1>
+      <button id="fav-btn" class="fav-btn <?= $isFav ? 'active' : '' ?>" onclick="toggleFavorite()">
+          <?= $isFav ? '❤️ En favoris' : '♡ Ajouter aux favoris' ?>
+      </button>
       <div class="product-price"><?= number_format($article['Prix'], 2, ',', ' ') ?> €</div>
       <div class="product-divider"></div>
 
@@ -243,6 +255,50 @@ async function addToCart(product_id, quantity, taille, couleur) {
     console.error(e);
     showSelectionError("Erreur serveur");
     return null;
+  }
+}
+
+// REMPLACE l'ancienne toggleFavorite par :
+async function toggleFavorite(productId = null, btn = null) {
+  try {
+    if (!btn) btn = document.getElementById('fav-btn');
+    if (!productId && typeof PRODUCT_ID !== "undefined") productId = PRODUCT_ID;
+    if (!productId) return;
+
+    const res = await fetch('favorites/toggle.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: productId })
+    });
+
+    const data = await res.json();
+
+    if (!data.success) {
+      // Pas connecté
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = 'Connecte-toi pour ajouter aux favoris';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+      return;
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+
+    if (data.action === 'added') {
+      if (btn) { btn.classList.add('active'); btn.textContent = '❤️ En favoris'; }
+      toast.textContent = 'Ajouté aux favoris ❤️';
+    } else if (data.action === 'removed') {
+      if (btn) { btn.classList.remove('active'); btn.textContent = '♡ Ajouter aux favoris'; }
+      toast.textContent = 'Retiré des favoris';
+    }
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+
+  } catch (e) {
+    console.error(e);
   }
 }
 
