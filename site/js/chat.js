@@ -84,6 +84,13 @@ async function loadSessionMessages(sessionId) {
    CHAT TEXTE
 */
 // Mots de confirmation pour valider une carte panier par message
+// Filtre l'historique pour n'envoyer que les vrais échanges au backend
+function _histoirePropre() {
+  return conversationHistory.filter(m =>
+    !m.internal && !(m.role === "user" && m.silent) && m.role !== "system"
+  );
+}
+
 const _CONFIRMATIONS_MSG = [
   "oui", "yes", "ok", "ouais", "c'est bon", "c bon", "parfait",
   "confirme", "go", "vas y", "vas-y", "d'accord", "exact", "correct",
@@ -167,9 +174,11 @@ async function sendMessage(text) {
   console.groupEnd();
 
   try {
+    // N'envoyer que les vrais échanges — pas les prompts internes ni messages silencieux
+    const historyToSend = _histoirePropre();
     const body = {
       question: text,
-      history: conversationHistory,
+      history: historyToSend,
       session_id: sessionId,
     };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
@@ -389,7 +398,8 @@ async function sendImageWithText(file, text) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("question", text || "");
-    formData.append("history", JSON.stringify(conversationHistory));
+    const historyToSendImg = _histoirePropre();
+    formData.append("history", JSON.stringify(historyToSendImg));
     formData.append("session_id", sessionId);
 
     const response = await fetch(`${API_URL}/chat/stream-image`, {
@@ -1355,7 +1365,7 @@ async function _genererMessageAccueil(
   try {
     const body = {
       question: question,
-      history: conversationHistory,
+      history: _histoirePropre(),
       session_id: sessionId,
     };
     if (productId) body.product_id = productId;
