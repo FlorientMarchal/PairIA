@@ -16,7 +16,7 @@ from filters import extraire_filtres, user_wants_cart, DB
 from PIL import Image
 from qdrant_client.models import Filter, FieldCondition, Range, MatchValue, MatchAny, MinShould
 
-LLM_MODEL = "gemma"
+LLM_MODEL = "llama3.1"
 
 # ══════════════════════════════════════════════
 # LIMITES DE GÉNÉRATION PAR INTENTION

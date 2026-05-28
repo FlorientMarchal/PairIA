@@ -68,18 +68,10 @@ if (!$is_ajax) {
                 </span>
 
                 <div style="display:flex;gap:6px">
-
-                  <!-- ❤️ ACTIF -->
                   <button class="card-fav active"
-                          onclick="toggleFavCatalogue(<?= $a['id_shoes'] ?>, this)">
+                          onclick="event.preventDefault(); event.stopPropagation(); toggleFavCatalogue(<?= $a['id_shoes'] ?>, this)">
                     ❤️
                   </button>
-
-                  <button class="card-add"
-                          onclick="ajouterPanier(<?= $a['id_shoes'] ?>, event)">
-                    +
-                  </button>
-
                 </div>
               </div>
 
@@ -93,3 +85,61 @@ if (!$is_ajax) {
 
 </div>
 </div>
+
+<script>
+async function toggleFavCatalogue(productId, btn) {
+  try {
+    const res = await fetch('favorites/toggle.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_id: productId })
+    });
+    const data = await res.json();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+
+    if (!data.success) {
+      toast.textContent = 'Connecte-toi pour ajouter aux favoris';
+    } else if (data.action === 'removed') {
+      // On est sur la page favoris : retire la carte du DOM
+      const card = btn.closest('.card');
+      if (card) card.remove();
+
+      // Met à jour le compteur
+      const counter = document.querySelector('.catalog-count');
+      if (counter) {
+        const next = (parseInt(counter.textContent) || 0) - 1;
+        counter.textContent = next + ' produit(s)';
+        if (next === 0) {
+          const grid = document.querySelector('.catalog-grid');
+          if (grid) grid.innerHTML = `
+            <div class="no-results" style="display:block">
+              Aucun favori pour le moment 😢<br><br>
+              <a href="index.php">Voir le catalogue</a>
+            </div>`;
+        }
+      }
+
+      toast.textContent = 'Retiré des favoris';
+    }
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+requestAnimationFrame(() =>
+  initFavorisContext(<?php
+    $favoris_js = array_map(fn($f) => [
+      'id'   => (int)$f['id_shoes'],
+      'nom'  => $f['nom'],
+      'prix' => (float)$f['Prix'],
+    ], $favoris);
+    echo json_encode($favoris_js, JSON_HEX_APOS | JSON_HEX_TAG);
+  ?>)
+);
+</script>
