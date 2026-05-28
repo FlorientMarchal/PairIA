@@ -717,6 +717,27 @@ nav {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.chat-fav-btn {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--white);
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+.chat-fav-btn:hover {
+  background: #fff0f3;
+  transform: scale(1.1);
+}
+.chat-fav-btn.active {
+  background: #fff0f3;
+  border-color: #e53e3e;
+}
+
+
 /* ── Bouton reset conversation ── */
 .chat-reset-btn {
   margin-left: auto;

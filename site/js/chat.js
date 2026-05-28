@@ -642,6 +642,28 @@ function appendTyping() {
 /* ══════════════════════════════════════
    CARTE MULTI-PRODUITS (picker)
 ══════════════════════════════════════ */
+
+// ── Favoris depuis le chat ──
+async function toggleFavChat(productId, btn) {
+  try {
+    const currentDir = window.location.pathname.substring(
+      0, window.location.pathname.lastIndexOf("/") + 1
+    );
+    const res = await fetch(currentDir + "favorites/toggle.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: productId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      btn.classList.toggle("active", data.action === "added");
+      btn.textContent = data.action === "added" ? "❤️" : "🤍";
+    } else if (data.error === "not_logged") {
+      btn.title = "Connectez-vous pour ajouter aux favoris";
+    }
+  } catch (e) {}
+}
+
 function showProductPicker(produits, container) {
   if (!container) container = document.getElementById("messages");
 
@@ -682,9 +704,15 @@ function showProductPicker(produits, container) {
             <div class="chat-product-price">${p.price} €</div>
           </div>
         </a>
-        <button class="chat-pick-toggle-btn" onclick="chatToggleSelector(this)">
-          🛒 Ajouter au panier
-        </button>
+        <div style="display:flex;gap:6px;padding:0 10px 6px">
+          <button class="chat-pick-toggle-btn" style="flex:1" onclick="chatToggleSelector(this)">
+            🛒 Ajouter au panier
+          </button>
+          <button class="chat-fav-btn" title="Ajouter aux favoris"
+            onclick="toggleFavChat(${p.id}, this)">
+            🤍
+          </button>
+        </div>
         <div class="chat-pick-selector" style="display:none">
           ${
             hasTailles
@@ -739,7 +767,7 @@ function selectProductFromPicker(btn) {
 }
 
 function chatToggleSelector(btn) {
-  const selector = btn.nextElementSibling;
+  const selector = btn.closest(".chat-pick-item").querySelector(".chat-pick-selector");
   const isOpen = selector.style.display !== "none";
   selector.style.display = isOpen ? "none" : "block";
   btn.style.opacity = isOpen ? "1" : "0.6";
@@ -917,11 +945,17 @@ function showCartSelector(produit, container) {
 
       <div class="chat-selector-error" style="font-size:12px;color:#e53e3e;margin-top:6px;min-height:16px;"></div>
 
-      <button class="chat-cart-btn"
-        onclick="confirmChatCart(${produit.id}, this)"
-        ${hasTailles || hasCouleurs ? "disabled" : ""}>
-        Ajouter au panier
-      </button>
+      <div style="display:flex;gap:6px">
+        <button class="chat-cart-btn" style="flex:1"
+          onclick="confirmChatCart(${produit.id}, this)"
+          ${hasTailles || hasCouleurs ? "disabled" : ""}>
+          Ajouter au panier
+        </button>
+        <button class="chat-fav-btn" title="Ajouter aux favoris"
+          onclick="toggleFavChat(${produit.id}, this)">
+          🤍
+        </button>
+      </div>
     </div>`;
 
   container.appendChild(div);
@@ -1285,7 +1319,48 @@ function initProductContext(produit) {
   _genererMessageAccueil(question, produit.id);
 }
 
-function initPanierContext(panierItems) {
+
+async function initFavorisContext(favorisItems) {
+  const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
+  const pronom = tutoiement === "vous" ? "Vouvoyez" : "Tutoie";
+  const pronLe = tutoiement === "vous" ? "Vouvoyez-le" : "Tutoie-le";
+
+  const estPremiereVisite =
+    conversationHistory.filter((m) => m.role === "assistant").length === 0;
+  const sansBonjour = estPremiereVisite ? "" : " Ne commence pas par Bonjour.";
+
+  let contexte, question;
+
+  if (favorisItems && favorisItems.length > 0) {
+    const resumeFav = favorisItems.map((f) => f.nom).join(", ");
+    const nbFav = favorisItems.length;
+    contexte = `L'utilisateur consulte ses favoris (${nbFav} article(s)) : ${resumeFav}.`;
+
+    const variantes = [
+      `Le client a ${nbFav} favori(s) : ${resumeFav}. En 2 phrases : félicite-le pour ses choix, puis propose de l'aider à décider lequel prendre. Ne cite AUCUN autre produit. ${pronLe}.`,
+      `Le client regarde ses favoris (${resumeFav}). En 2 phrases : commente positivement ces choix, puis demande s'il veut qu'on l'aide à choisir ou à trouver autre chose. Ne cite AUCUN autre produit. ${pronLe}.`,
+      `Le client a sauvegardé ${resumeFav} dans ses favoris. En 2 phrases : valorise ces sélections, puis propose ton aide pour finaliser un achat. Ne cite AUCUN autre produit. ${pronLe}.`,
+    ];
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+  } else {
+    contexte = `L'utilisateur est sur sa page favoris mais elle est vide.`;
+    const variantes = [
+      `En une phrase, dis au client que sa liste de favoris est vide et propose de l'aider à trouver des chaussures qui lui plairont. ${pronLe}.`,
+      `En une phrase, invite le client à explorer le catalogue pour ajouter ses coups de cœur en favoris. ${pronLe}.`,
+    ];
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+  }
+
+  conversationHistory = conversationHistory.filter(
+    (msg) => !(msg.role === "system" && msg.content.startsWith("L'utilisateur"))
+  );
+  conversationHistory.push({ role: "system", internal: true, content: contexte });
+  sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
+
+  _genererMessageAccueil(question, null, []);
+}
+
+async function initPanierContext(panierItems) {
   const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
   const pronom = tutoiement === "vous" ? "Vouvoyez" : "Tutoie";
   const pronLe = tutoiement === "vous" ? "Vouvoyez-le" : "Tutoie-le";
@@ -1345,13 +1420,35 @@ function initPanierContext(panierItems) {
     ];
     question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else {
+    // Panier vide, aucun historique → vérifier les favoris
     contexte = `L'utilisateur arrive sur sa page panier vide.`;
-    const variantes = [
-      `En une phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire.`,
-      `En une phrase (max 20 mots), propose au client de l'aider à trouver la chaussure parfaite dans le catalogue.`,
-      `En une phrase (max 20 mots), encourage le client à explorer le catalogue et à se faire plaisir.`,
-    ];
-    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    let favorisNoms = "";
+    try {
+      const currentDir = window.location.pathname.substring(
+        0, window.location.pathname.lastIndexOf("/") + 1
+      );
+      const resFav = await fetch(currentDir + "favorites/list.php");
+      const dataFav = await resFav.json();
+      if (dataFav.success && dataFav.favoris.length > 0) {
+        favorisNoms = dataFav.favoris.map(f => f.nom).join(", ");
+        contexte = `L'utilisateur a un panier vide. Ses favoris : ${favorisNoms}.`;
+      }
+    } catch (e) {}
+
+    if (favorisNoms) {
+      const variantes = [
+        `Le client a ${favorisNoms} dans ses favoris. En une phrase, rappelle-lui et propose de l'aider à choisir. ${pronLe}.`,
+        `Le client a des favoris (${favorisNoms}). En une phrase, invite-le à les ajouter au panier ou à explorer d'autres modèles. ${pronLe}.`,
+      ];
+      question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    } else {
+      const variantes = [
+        `En une phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire. ${pronLe}.`,
+        `En une phrase (max 20 mots), propose au client de l'aider à trouver la chaussure parfaite dans le catalogue. ${pronLe}.`,
+        `En une phrase (max 20 mots), encourage le client à explorer le catalogue et à se faire plaisir. ${pronLe}.`,
+      ];
+      question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    }
   }
 
   conversationHistory = conversationHistory.filter(

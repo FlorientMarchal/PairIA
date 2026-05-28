@@ -173,8 +173,8 @@ if (!$is_ajax) {
 </div>
 
 <script>
-const prixMaxAbsolu = <?= $prix_max ?>;
-let prixMax = prixMaxAbsolu;
+var prixMaxAbsolu = <?= $prix_max ?>;
+var prixMax = prixMaxAbsolu;
 
 function toggleDropdown(id) {
   const dd = document.getElementById(id);
@@ -251,10 +251,10 @@ function resetFilters() {
   document.getElementById('no-results').style.display = 'none';
 }
 // Init filtres URL
-const resetBtn = document.getElementById('filter-reset-btn');
+var resetBtn = document.getElementById('filter-reset-btn');
 if (resetBtn) { resetBtn.style.opacity = '0.3'; resetBtn.style.pointerEvents = 'none'; }
-const params = new URLSearchParams(window.location.search);
-const categorieParam = params.get('categorie');
+var params = new URLSearchParams(window.location.search);
+var categorieParam = params.get('categorie');
 if (categorieParam) {
   const checkbox = document.querySelector(`input[data-filter="categorie"][value="${categorieParam}"]`);
   if (checkbox) { checkbox.checked = true; applyFilters(); }

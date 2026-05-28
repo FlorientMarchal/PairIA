@@ -91,5 +91,19 @@ if (!$is_ajax) {
 
   <?php endif; ?>
 
+
+<script>
+requestAnimationFrame(() =>
+  initFavorisContext(<?php
+    $favoris_js = array_map(fn($f) => [
+      'id'   => (int)$f['id_shoes'],
+      'nom'  => $f['nom'],
+      'prix' => (float)$f['Prix'],
+    ], $favoris);
+    echo json_encode($favoris_js, JSON_HEX_APOS | JSON_HEX_TAG);
+  ?>)
+);
+</script>
+
 </div>
 </div>

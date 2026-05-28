@@ -100,5 +100,5 @@ def build_prompt(question: str, produits: list, product_id: int = None, genre: s
             prompt_parts.append(ligne)
         prompt_parts.append("")
 
-    prompt_parts.append(f"Question : {question}")
+    prompt_parts.append(f"Le client cherche : {question}\nRéponds directement sans répéter cette phrase :")
     return "\n".join(prompt_parts)
