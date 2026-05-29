@@ -86,7 +86,6 @@ if (!$is_ajax) {
 
   <div class="acheter-layout">
 
-    <!-- Récap commande -->
     <div class="acheter-recap">
       <div class="acheter-section-title">📦 Récapitulatif</div>
 
@@ -137,7 +136,6 @@ if (!$is_ajax) {
       </div>
     </div>
 
-    <!-- Formulaire paiement Stripe -->
     <div class="acheter-paiement">
       <div class="acheter-section-title">💳 Paiement sécurisé</div>
 
@@ -184,17 +182,15 @@ if (!$is_ajax) {
       <?php endif; ?>
     </div>
 
-  </div><!-- /acheter-layout -->
+  </div>
 </div>
 </div>
 
 <?php if (empty($stock_errors)): ?>
 <script>
-// ── Garde SPA : évite la redéclaration si la page est rechargée en AJAX ──
 if (typeof window._stripeInitialized === 'undefined') {
   window._stripeInitialized = true;
 
-  // Charger le script Stripe de façon dynamique (évite les doublons)
   if (!document.querySelector('script[src*="js.stripe.com"]')) {
     var stripeScript = document.createElement('script');
     stripeScript.src = 'https://js.stripe.com/v3/';
@@ -206,10 +202,10 @@ if (typeof window._stripeInitialized === 'undefined') {
 }
 
 function initStripe() {
-  window._STRIPE_KEY   = '<?= STRIPE_PUBLIC_KEY ?>';
-  window._TOTAL_CENTS  = <?= (int)round($total * 100) ?>;
+  window._STRIPE_KEY  = '<?= STRIPE_PUBLIC_KEY ?>';
+  window._TOTAL_CENTS = <?= (int)round($total * 100) ?>;
 
-  window._stripe   = Stripe(window._STRIPE_KEY);
+  window._stripe = Stripe(window._STRIPE_KEY);
   var elements = window._stripe.elements({
     fonts: [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap' }],
     locale: 'fr'
@@ -262,8 +258,10 @@ async function payerCommande() {
     var piData = await piRes.json();
 
     if (!piData.client_secret) {
-      errEl.textContent = piData.error || 'Erreur lors de la création du paiement.';
-      resetPayBtn(); return;
+      // Affiche l'erreur détaillée pour le debug
+      errEl.textContent = 'Erreur : ' + JSON.stringify(piData);
+      resetPayBtn();
+      return;
     }
 
     // 2. Confirmer le paiement avec Stripe
@@ -273,12 +271,13 @@ async function payerCommande() {
 
     if (result.error) {
       errEl.textContent = result.error.message;
-      resetPayBtn(); return;
+      resetPayBtn();
+      return;
     }
 
     if (result.paymentIntent.status === 'succeeded') {
       // 3. Valider côté serveur
-      var cmdRes = await fetch('stripe/valider_commande.php', {
+      var cmdRes = await fetch('valider_commande.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payment_intent_id: result.paymentIntent.id })
@@ -286,7 +285,6 @@ async function payerCommande() {
       var cmdData = await cmdRes.json();
 
       if (cmdData.success) {
-        // Navigation SPA vers confirmation
         if (typeof navigateTo === 'function') {
           navigateTo('confirmation.php?commande=' + cmdData.id_commande);
         } else {
