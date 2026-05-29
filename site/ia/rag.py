@@ -327,8 +327,10 @@ def _llm_enrichir_question(question: str, history: list) -> str:
     prompt = (
         f"{contexte}"
         f"Reformule cette demande en 5 à 8 mots-clés pour rechercher des chaussures.\n"
-        f" Utilise UNIQUEMENT des mots présents ou directement liés à la demande. \n "
-        f"Inclus : style, usage, matière, type de chaussure, occasion si pertinent.\n"
+        f"IMPORTANT : si la demande contient un nom propre entre crochets comme [FlexRun Training], "
+        f"conserve-le EXACTEMENT tel quel dans les mots-clés.\n"
+        f"Utilise UNIQUEMENT des mots présents ou directement liés à la demande.\n"
+        f"Donne des indications sur le style de chaussures, éventuellement une matière\n"
         f"Demande : \"{question}\"\n"
         f"Réponds UNIQUEMENT en français, avec les mots-clés séparés par des espaces, sans ponctuation."
     )
@@ -716,6 +718,42 @@ def _stream_and_translate(ollama_stream, langue_client: str):
         print(f"[RAG] réponse traduite → {langue_client}")
     return texte
 
+def _detecter_nom_produit_original(question: str) -> dict | None:
+    """
+    Tente de trouver un produit dont le nom correspond à la question originale
+    (avant traduction). Utile pour les langues où la traduction déforme les noms
+    propres de produits (ex: "FlexRun Training" → "programme d'entraînement FlexRun").
+    """
+    from db_mysql import fetch_all
+    from rapidfuzz import fuzz
+
+    question_lower = question.lower().strip()
+    if len(question_lower.split()) < 2:
+        return None
+
+    try:
+        rows = fetch_all(
+            "SELECT id_shoes, nom FROM articles"
+        )
+    except Exception as e:
+        print(f"[DETECT-ORIG] Erreur DB : {e}")
+        return None
+
+    meilleur_score = 0
+    meilleur = None
+    for row in rows:
+        nom = (row.get("nom") or "").lower()
+        if not nom:
+            continue
+        score = fuzz.partial_ratio(nom, question_lower)
+        if score > meilleur_score and score >= 80:
+            meilleur_score = score
+            meilleur = row
+
+    if meilleur:
+        print(f"[DETECT-ORIG] produit détecté sur question originale : '{meilleur['nom']}' (score={meilleur_score})")
+        return {"name": meilleur["nom"]}
+    return None
 
 def get_response_stream(
     question: str = "",
@@ -724,6 +762,7 @@ def get_response_stream(
     context_messages: list = None,
     image_path: str = None,
     image_vector: list = None,
+    langue_session: str = "fr",
 ):
     question = question or ""
     if history is None:
@@ -743,10 +782,19 @@ def get_response_stream(
         m in question for m in ["Génère un message", "accueille le client", "En une seule phrase"]
     )
     if est_prompt_interne_rapide:
-        langue_client = "fr"
+        langue_client = langue_session
         question_fr   = question
     else:
+        # Détecter un nom de produit sur la question ORIGINALE (avant traduction)
+        # pour éviter que la traduction déforme le nom ("FlexRun Training" → "programme d'entraînement")
+        produit_detecte_avant_trad = _detecter_nom_produit_original(question)
         question_fr, langue_client = normaliser_question(question)
+        # Si un produit a été détecté sur l'original, réinjecter son nom exact en FR
+        if produit_detecte_avant_trad:
+            nom_exact = produit_detecte_avant_trad["name"]
+            if nom_exact.lower() not in question_fr.lower():
+                question_fr = question_fr + f" [{nom_exact}]"
+                print(f"[LANG] nom produit réinjecté après traduction : {nom_exact}")
  
     print(f"\n{'='*50}")
     print(f"[RAG] question : {question!r} | langue : {langue_client} | history : {len(history)} messages")
@@ -1663,4 +1711,5 @@ def get_response_stream(
         "product_id":  produits_affiches[0]["id"] if produits_affiches and action else None,
         "quantity":    1,
         "tutoiement":  tutoiement,
+        "langue":      langue_client,  # ✅ ajouter cette ligne
     }

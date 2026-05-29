@@ -164,9 +164,10 @@ def traduire_reponse(texte: str, langue_cible: str, llm_model: str = _LLM_MODEL)
         return texte
 
 
-# ── Fonction principale (détection + traduction en un appel) ─────────────────
+# Dans normaliser_question, ajouter un seuil de confiance minimal
+# Un texte de moins de 3 mots ne change pas la langue de session
 
-def normaliser_question(question: str, llm_model: str = _LLM_MODEL) -> tuple[str, str]:
+def normaliser_question(question: str, langue_session: str = "fr", llm_model: str = _LLM_MODEL) -> tuple[str, str]:
     """
     Détecte la langue de la question et la traduit en français si nécessaire.
 
@@ -179,10 +180,31 @@ def normaliser_question(question: str, llm_model: str = _LLM_MODEL) -> tuple[str
 
         normaliser_question("Je cherche des baskets")
         → ("Je cherche des baskets", "fr")
+
+    Si langue_session est déjà définie (≠ fr) et que la question est courte/ambiguë,
+    on conserve la langue de session plutôt que de re-détecter.
     """
-    langue = detecter_langue(question)
-    question_fr = traduire_en_francais(question, langue, llm_model)
-    return question_fr, langue
+    mots = question.strip().split()
+    
+    # Règle 1 : texte trop court → garder la langue de session
+    if len(mots) <= 2 and langue_session != "fr":
+        print(f"[LANG] texte court ({len(mots)} mot(s)) → langue session conservée : {langue_session}")
+        question_fr = traduire_en_francais(question, langue_session, llm_model)
+        return question_fr, langue_session
+    
+    # Règle 2 : détecter normalement
+    langue_detectee = detecter_langue(question)
+    
+    # Règle 3 : si la détection donne une langue très différente sur un texte court
+    # (ex: "black" → "sv"), et qu'on a une langue de session établie, on garde la session
+    if langue_session != "fr" and len(mots) <= 4:
+        if langue_detectee != langue_session and langue_detectee != "fr":
+            print(f"[LANG] détection ambiguë ({langue_detectee!r} vs session {langue_session!r}) → session conservée")
+            question_fr = traduire_en_francais(question, langue_session, llm_model)
+            return question_fr, langue_session
+    
+    question_fr = traduire_en_francais(question, langue_detectee, llm_model)
+    return question_fr, langue_detectee
 
 
 # ── Nom complet de la langue pour le prompt LLM ──────────────────────────────

@@ -62,6 +62,7 @@ class ChatRequest(BaseModel):
     product_id: int | None = None
     history: list[HistoryMessage] = []
     session_id: str | None = None
+    langue_session: str = "fr"
 
 class Product(BaseModel):
     id: int
@@ -115,7 +116,10 @@ def translate_ui(request: TranslateUIRequest):
     prompt = (
         f"Translate the following French UI labels to {nom_lang}.\n"
         "Each label is separated by |SEP|.\n"
-        "Reply ONLY with the translated labels separated by |SEP|, same order, nothing else.\n\n"
+        "Rules: NO introduction, NO explanation, NO 'Here are', NO preamble.\n"
+        "Output ONLY the translated labels separated by |SEP|, same order.\n"
+        "Example input: Bonjour |SEP| Merci\n"
+        "Example output: Hello |SEP| Thank you\n\n"
         + combined
     )
 
@@ -156,18 +160,24 @@ def chat_stream(request: ChatRequest):
         print(f"[SESSION] vecteur image récupéré pour {request.session_id}")
 
     def generate():
-        generator = get_response_stream(
-            question=request.question,
-            product_id=request.product_id,
-            history=history,
-            image_vector=image_vector,
-        )
-        for chunk in generator:
-            if isinstance(chunk, dict):
-                yield f"data: {json.dumps(chunk, default=lambda o: float(o) if isinstance(o, Decimal) else str(o))}\n\n"
-            else:
-                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
-        yield "data: [DONE]\n\n"
+        try:
+            generator = get_response_stream(
+                question=request.question,
+                product_id=request.product_id,
+                history=history,
+                image_vector=image_vector,
+                langue_session=request.langue_session, 
+            )
+            for chunk in generator:
+                if isinstance(chunk, dict):
+                    yield f"data: {json.dumps(chunk, default=lambda o: float(o) if isinstance(o, Decimal) else str(o))}\n\n"
+                else:
+                    yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            print(f"[STREAM] erreur : {e}")
+            yield f"data: {json.dumps({'chunk': 'Erreur temporaire.'})}\n\n"
+            yield "data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 

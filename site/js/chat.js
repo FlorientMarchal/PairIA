@@ -75,12 +75,17 @@ function t(key, langue) {
   return dict[key] ?? UI_LABELS_FR[key] ?? key;
 }
 
-// Met à jour la langue courante et charge les traductions si besoin
 async function _mettreAjourLangue(langue) {
-  if (!langue || langue === currentLangue) return;
-  currentLangue = langue;
-  sessionStorage.setItem("chatLangue", langue);
-  if (langue !== "fr") await loadUITranslations(langue);
+  if (!langue) return;
+  // Ne changer la langue que si c'est une détection fiable
+  // (le backend a déjà filtré les textes courts, mais double sécurité)
+  if (langue !== currentLangue) {
+    currentLangue = langue;
+    sessionStorage.setItem("chatLangue", langue);
+    if (!_uiTranslationsCache[langue]) {
+      await loadUITranslations(langue);
+    }
+  }
 }
 
 
@@ -266,6 +271,7 @@ async function sendMessage(text) {
       question: text,
       history: historyToSend,
       session_id: sessionId,
+      langue_session: currentLangue,
     };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
 
@@ -307,24 +313,19 @@ async function sendMessage(text) {
           const data = JSON.parse(raw);
 
           if (data.type === "products_final") {
-            // Produits filtrés reçus après le texte complet
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
             layout = data.layout || null;
             taille = data.taille || null;
             couleur = data.couleur || null;
-            show_products = data.show_products !== false;  // true par défaut sauf si explicitement false
-            confirm_required = data.confirm_required !== false;  // true par défaut
-            if (data.langue) langueRecue = data.langue; // ← juste stocker, pas encore appliquer
-            if (data.tutoiement) {
-              sessionStorage.setItem("chatTutoiement", data.tutoiement);
-            }
-            // Stocker la couleur normalisée pour les messages suivants
-            if (data.couleur) {
-              sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
-            }
-          } else if (
+            show_products = data.show_products !== false;
+            confirm_required = data.confirm_required !== false;
+            if (data.langue) langueRecue = data.langue;
+            if (data.tutoiement) sessionStorage.setItem("chatTutoiement", data.tutoiement);
+            if (data.couleur) sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+        }                    // ← accolade fermante du if products_final
+          else if (
             data.products !== undefined &&
             data.products.length === 0
           ) {
@@ -450,6 +451,10 @@ function sendFromInput() {
    CHAT IMAGE + TEXTE
 */
 async function sendImageWithText(file, text) {
+  let taille = null;
+  let couleur = null;
+  let show_products = true;
+  let confirm_required = true;
   let layout = null;
   const container = document.getElementById("messages");
   if (!container) return;
@@ -524,23 +529,18 @@ async function sendImageWithText(file, text) {
           const data = JSON.parse(raw);
 
           if (data.type === "products_final") {
-            // Produits filtrés reçus après le texte complet
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
             layout = data.layout || null;
             taille = data.taille || null;
             couleur = data.couleur || null;
-            show_products = data.show_products !== false;  // true par défaut sauf si explicitement false
-            confirm_required = data.confirm_required !== false;  // true par défaut
-            if (data.langue) langueRecue = data.langue; // ← juste stocker
-            if (data.tutoiement) {
-              sessionStorage.setItem("chatTutoiement", data.tutoiement);
-            }
-            // Stocker la couleur normalisée pour les messages suivants
-            if (data.couleur) {
-              sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
-            }
+            show_products = data.show_products !== false;
+            confirm_required = data.confirm_required !== false;
+            if (data.langue) langueRecue = data.langue;  // ← AJOUTER cette ligne
+            if (data.tutoiement) sessionStorage.setItem("chatTutoiement", data.tutoiement);
+            if (data.couleur) sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+        
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -1362,6 +1362,7 @@ function initProductContext(produit) {
   const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
   const pronom = tutoiement === "vous" ? "Vouvoyez" : "Tutoie";
   const pronLe = tutoiement === "vous" ? "Vouvoyez-le" : "Tutoie-le";
+  const langue = sessionStorage.getItem("chatLangue") || "fr";
   // Tracker les produits visités
   let visited = JSON.parse(
     sessionStorage.getItem("visitedProducts_" + sessionId) || "[]",
@@ -1441,6 +1442,10 @@ function initProductContext(produit) {
     question = variantesRetour[Math.floor(Math.random() * variantesRetour.length)] + sansBonjour;
   }
 
+  if (langue !== "fr") {
+    question = question + ` Answer in ${langue} language.`;
+  }
+
   _genererMessageAccueil(question, produit.id);
 }
 
@@ -1449,7 +1454,7 @@ async function initFavorisContext(favorisItems) {
   const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
   const pronom = tutoiement === "vous" ? "Vouvoyez" : "Tutoie";
   const pronLe = tutoiement === "vous" ? "Vouvoyez-le" : "Tutoie-le";
-
+  const langue = sessionStorage.getItem("chatLangue") || "fr";
   const estPremiereVisite =
     conversationHistory.filter((m) => m.role === "assistant").length === 0;
   const sansBonjour = estPremiereVisite ? "" : " Ne commence pas par Bonjour.";
@@ -1482,6 +1487,10 @@ async function initFavorisContext(favorisItems) {
   conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
+  if (langue !== "fr") {
+    question = question + ` Answer in ${langue} language.`;
+  }
+
   _genererMessageAccueil(question, null, []);
 }
 
@@ -1489,6 +1498,7 @@ async function initPanierContext(panierItems) {
   const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
   const pronom = tutoiement === "vous" ? "Vouvoyez" : "Tutoie";
   const pronLe = tutoiement === "vous" ? "Vouvoyez-le" : "Tutoie-le";
+  const langue = sessionStorage.getItem("chatLangue") || "fr";
   const visited = JSON.parse(
     sessionStorage.getItem("visitedProducts_" + sessionId) || "[]",
   );
@@ -1582,6 +1592,10 @@ async function initPanierContext(panierItems) {
   );
   conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
+
+  if (langue !== "fr") {
+    question = question + ` Answer in ${langue} language.`;
+  }
 
   _genererMessageAccueil(question, null, derniersProduitsChat, panierItems && panierItems.length > 0);
 }
