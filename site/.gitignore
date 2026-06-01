@@ -28,3 +28,8 @@ ia/__pycache__/
 ia/modele_intention/
 
 venv
+#congig.php
+includes/config.php
+
+# Logs de Stripes
+stripe/debug.log
