@@ -50,18 +50,24 @@ window.submitReview = async function () {
   const res = await fetch("./commentaires/add.php", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id: PRODUCT_ID,
-      note: currentRating,
-      contenu: contenu,
-    }),
+    body: JSON.stringify({ id: PRODUCT_ID, note: currentRating, contenu }),
   });
 
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    console.error("Réponse invalide du serveur :", text);
+    alert("Erreur serveur — vérifiez les logs PHP.");
+    return;
+  }
 
   if (data.success) {
     closeReviewModal();
     loadCommentsPremium();
+  } else {
+    alert("Erreur : " + (data.error || "inconnue"));
   }
 };
 
