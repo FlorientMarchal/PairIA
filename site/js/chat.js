@@ -48,6 +48,39 @@ const _uiTranslationsCache = { fr: UI_LABELS_FR };
 // Langue courante de l'interface
 let currentLangue = sessionStorage.getItem("chatLangue") || "fr";
 
+// ── Timestamps localisés ──────────────────────────────────────────────────
+// Chaque message reçoit un data-ts (epoch ms). Un ticker toutes les 30s
+// met à jour l'affichage : "maintenant" / "il y a 2 min" / "14:32" etc.
+// Entièrement géré par l'API Intl — aucune traduction LLM nécessaire.
+
+function _formatTime(tsMs, locale) {
+  const lang = locale || currentLangue || "fr";
+  const diffSec = Math.round((Date.now() - tsMs) / 1000);
+  if (diffSec < 60) {
+    // "maintenant" / "just now" / "ahora" … via RelativeTimeFormat
+    try {
+      return new Intl.RelativeTimeFormat(lang, { numeric: "auto" }).format(0, "second");
+    } catch (_) { return "now"; }
+  }
+  // Au-delà d'une minute : afficher l'heure HH:MM
+  try {
+    return new Intl.DateTimeFormat(lang, { hour: "2-digit", minute: "2-digit" }).format(new Date(tsMs));
+  } catch (_) {
+    const d = new Date(tsMs);
+    return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+  }
+}
+
+function _refreshTimestamps() {
+  document.querySelectorAll(".chat-time[data-ts]").forEach(el => {
+    el.textContent = _formatTime(parseInt(el.dataset.ts), currentLangue);
+  });
+}
+// Rafraîchir toutes les 30 secondes
+setInterval(_refreshTimestamps, 30_000);
+
+let questionFr = null;
+
 // Charge les traductions pour une langue (un seul appel LLM, puis cache)
 async function loadUITranslations(langue) {
   if (!langue || langue === "fr") return UI_LABELS_FR;
@@ -85,6 +118,16 @@ async function _mettreAjourLangue(langue) {
     if (!_uiTranslationsCache[langue]) {
       await loadUITranslations(langue);
     }
+    // Mettre à jour les timestamps déjà affichés dans la nouvelle langue
+    _refreshTimestamps();
+    // Mettre à jour le texte du message de bienvenue via son id
+    const welcomeBubble = document.getElementById("welcome-bubble");
+    if (welcomeBubble) {
+      welcomeBubble.textContent = t("welcome");
+    }
+    // Mettre à jour "Analyse en cours..." si le typing indicator est visible
+    const typingMsg = document.getElementById("typing-msg");
+    if (typingMsg) typingMsg.textContent = t("analyzing");
   }
 }
 
@@ -157,6 +200,23 @@ async function loadSessionMessages(sessionId) {
   }
 }
 
+// APRÈS — utiliser t() pour les labels traduits, et traduire taille/couleur dynamiquement
+async function _messageConfirmationPanier(name, taille, couleur) {
+  const langue = sessionStorage.getItem("chatLangue") || "fr";
+  let tailleLabel = taille ? `${t('sizeLabel')} ${taille}` : "";
+
+  // Traduire la couleur si elle est en français et qu'on est dans une autre langue
+  let couleurLabel = couleur || "";
+  if (couleur && langue !== "fr") {
+    const cache = await traduireValeursDynamiques([couleur], langue);
+    couleurLabel = cache[couleur] || couleur;
+  }
+
+  const details = [tailleLabel, couleurLabel].filter(Boolean).join(", ");
+  // "added" est déjà traduit via t()
+  return `${t('added')} ${name}${details ? ` (${details})` : ""}`;
+}
+
 /*
    CHAT TEXTE
 */
@@ -190,7 +250,20 @@ function _detecterEtStockerTutoiement(text) {
   }
 }
 
+let _sendingLock = false;
+
 async function sendMessage(text) {
+  if (_sendingLock) return;          // bloquer les doubles envois
+  _sendingLock = true;
+  try {
+    await _sendMessageImpl(text);
+  } finally {
+    _sendingLock = false;
+  }
+}
+
+async function _sendMessageImpl(text) {
+  let questionFr = null;
   let layout = null;
   const container = document.getElementById("messages");
   if (!container || !text.trim()) return;
@@ -237,7 +310,9 @@ async function sendMessage(text) {
             btn.closest(".chat-product-card")?.querySelector("button[style*='e53e3e']")?.remove();
           }
         });
-        appendBotMessageText(`✓ ${pending.name} (${[pending.taille ? "taille " + pending.taille : "", pending.couleur].filter(Boolean).join(", ")}) ajouté au panier !`);
+// APRÈS
+      const msgConfirm = await _messageConfirmationPanier(pending.name, pending.taille, pending.couleur);
+      appendBotMessageText(msgConfirm);      
       } else {
         appendBotMessageText(result?.error || "Erreur lors de l'ajout au panier.");
       }
@@ -271,7 +346,7 @@ async function sendMessage(text) {
       question: text,
       history: historyToSend,
       session_id: sessionId,
-      langue_session: currentLangue,
+      langue_session: sessionStorage.getItem("chatLangue") || currentLangue || "fr",
     };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
 
@@ -312,7 +387,24 @@ async function sendMessage(text) {
           // Remplace le bloc de parsing data dans les deux fonctions
           const data = JSON.parse(raw);
 
-          if (data.type === "products_final") {
+          // Langue en debut de stream -> non bloquant
+          if (data.type === "langue_detect") {
+            if (data.langue && data.langue !== currentLangue) {
+              currentLangue = data.langue;
+              sessionStorage.setItem("chatLangue", data.langue);
+              const _langue = data.langue;
+              (async () => {
+                if (!_uiTranslationsCache[_langue]) {
+                  await loadUITranslations(_langue);
+                }
+                _refreshTimestamps();
+                const wb = document.getElementById("welcome-bubble");
+                if (wb) wb.textContent = t("welcome");
+                const tm = document.getElementById("typing-msg");
+                if (tm) tm.textContent = t("analyzing");
+              })();
+            }
+          } else if (data.type === "products_final") {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
@@ -324,6 +416,7 @@ async function sendMessage(text) {
             if (data.langue) langueRecue = data.langue;
             if (data.tutoiement) sessionStorage.setItem("chatTutoiement", data.tutoiement);
             if (data.couleur) sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+            if (data.question_fr) questionFr = data.question_fr;
         }                    // ← accolade fermante du if products_final
           else if (
             data.products !== undefined &&
@@ -341,7 +434,8 @@ async function sendMessage(text) {
               bubble.className = "chat-bubble";
               const time = document.createElement("div");
               time.className = "chat-time";
-              time.textContent = "maintenant";
+              time.dataset.ts = Date.now();
+              time.textContent = _formatTime(Date.now());
               bubbleDiv.appendChild(bubble);
               bubbleDiv.appendChild(time);
               container.appendChild(bubbleDiv);
@@ -364,7 +458,7 @@ async function sendMessage(text) {
       : text;
     if (normalizedCouleur) sessionStorage.removeItem("lastNormalizedCouleur");
 
-    conversationHistory.push({ role: "user", content: textToStore });
+    conversationHistory.push({ role: "user", content: questionFr || textToStore });
     conversationHistory.push({
       role: "assistant",
       content: message,
@@ -474,7 +568,7 @@ async function sendImageWithText(file, text) {
            style="max-width:200px;max-height:200px;border-radius:8px;display:block;">
       ${text ? `<div style="margin-top:6px">${escapeHtml(text)}</div>` : ""}
     </div>
-    <div class="chat-time">maintenant</div>`;
+    <div class="chat-time" data-ts="${Date.now()}">${_formatTime(Date.now())}</div>`;
   container.appendChild(userDiv);
   container.scrollTop = container.scrollHeight;
 
@@ -497,6 +591,7 @@ async function sendImageWithText(file, text) {
     const historyToSendImg = _histoirePropre();
     formData.append("history", JSON.stringify(historyToSendImg));
     formData.append("session_id", sessionId);
+    formData.append("langue_session", sessionStorage.getItem("chatLangue") || currentLangue || "fr");
 
     const response = await fetch(`${API_URL}/chat/stream-image`, {
       method: "POST",
@@ -528,7 +623,24 @@ async function sendImageWithText(file, text) {
           // Remplace le bloc de parsing data dans les deux fonctions
           const data = JSON.parse(raw);
 
-          if (data.type === "products_final") {
+          // Langue en debut de stream -> non bloquant
+          if (data.type === "langue_detect") {
+            if (data.langue && data.langue !== currentLangue) {
+              currentLangue = data.langue;
+              sessionStorage.setItem("chatLangue", data.langue);
+              const _langue = data.langue;
+              (async () => {
+                if (!_uiTranslationsCache[_langue]) {
+                  await loadUITranslations(_langue);
+                }
+                _refreshTimestamps();
+                const wb = document.getElementById("welcome-bubble");
+                if (wb) wb.textContent = t("welcome");
+                const tm = document.getElementById("typing-msg");
+                if (tm) tm.textContent = t("analyzing");
+              })();
+            }
+          } else if (data.type === "products_final") {
             products = data.products || [];
             action = data.action;
             product_id = data.product_id;
@@ -540,6 +652,7 @@ async function sendImageWithText(file, text) {
             if (data.langue) langueRecue = data.langue;  // ← AJOUTER cette ligne
             if (data.tutoiement) sessionStorage.setItem("chatTutoiement", data.tutoiement);
             if (data.couleur) sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+            if (data.question_fr) questionFr = data.question_fr;
         
           } else if (
             data.products !== undefined &&
@@ -557,7 +670,8 @@ async function sendImageWithText(file, text) {
               bubble.className = "chat-bubble";
               const time = document.createElement("div");
               time.className = "chat-time";
-              time.textContent = "maintenant";
+              time.dataset.ts = Date.now();
+              time.textContent = _formatTime(Date.now());
               bubbleDiv.appendChild(bubble);
               bubbleDiv.appendChild(time);
               container.appendChild(bubbleDiv);
@@ -633,17 +747,18 @@ async function sendImageWithText(file, text) {
 }
 
 function resetConversation() {
-  // On démarre une nouvelle session SANS supprimer les anciennes en base
-  conversationHistory = [];
-  sessionId = crypto.randomUUID();
-  dbSessionId = null; // nouvelle session sera créée au prochain message
-  sessionStorage.removeItem("chatHistory");
-  sessionStorage.removeItem("dbSessionId");
-  sessionStorage.setItem("chatSessionId", sessionId);
+    conversationHistory = [];
+    sessionId = crypto.randomUUID();
+    dbSessionId = null;
+    currentLangue = "fr";
+    sessionStorage.removeItem("chatHistory");
+    sessionStorage.removeItem("dbSessionId");
+    sessionStorage.removeItem("chatLangue");
+    sessionStorage.setItem("chatSessionId", sessionId);
 
-  const container = document.getElementById("messages");
-  if (container) container.innerHTML = "";
-  closeHistoryPanel();
+    const container = document.getElementById("messages");
+    if (container) container.innerHTML = "";
+    closeHistoryPanel();
 }
 
 /* ══════════════════════════════════════
@@ -655,7 +770,7 @@ function appendUserMessage(text) {
   div.className = "chat-msg user";
   div.innerHTML = `
     <div class="chat-bubble">${escapeHtml(text)}</div>
-    <div class="chat-time">maintenant</div>`;
+    <div class="chat-time" data-ts="${Date.now()}">${_formatTime(Date.now())}</div>`;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
@@ -667,7 +782,7 @@ function appendBotMessage(data) {
   bubbleDiv.className = "chat-msg bot";
   bubbleDiv.innerHTML = `
     <div class="chat-bubble">${escapeHtml(data.message)}</div>
-    <div class="chat-time">maintenant</div>`;
+    <div class="chat-time" data-ts="${Date.now()}">${_formatTime(Date.now())}</div>`;
   container.appendChild(bubbleDiv);
 
   const products = data.products || [];
@@ -687,7 +802,7 @@ function appendBotMessageText(text) {
   div.className = "chat-msg bot";
   div.innerHTML = `
     <div class="chat-bubble">${escapeHtml(text)}</div>
-    <div class="chat-time">maintenant</div>`;
+    <div class="chat-time" data-ts="${Date.now()}">${_formatTime(Date.now())}</div>`;
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
@@ -707,7 +822,7 @@ function appendTyping() {
     <div class="chat-typing-msg"
          id="typing-msg"
          style="font-size:11px;color:#999;margin-top:4px;display:none">
-      Analyse en cours...
+      ${t('analyzing')}
     </div>`;
 
   container.appendChild(div);
@@ -910,7 +1025,7 @@ async function confirmChatCartFromPicker(productId, btn) {
 /* ══════════════════════════════════════
    CARTE SÉLECTEUR TAILLE / COULEUR
 ══════════════════════════════════════ */
-function showCartConfirm(produit, taille, couleur, container) {
+async function showCartConfirm(produit, taille, couleur, container) {
   if (!container) container = document.getElementById("messages");
 
   // Mémoriser l'état en attente de confirmation
@@ -925,8 +1040,13 @@ function showCartConfirm(produit, taille, couleur, container) {
   const div = document.createElement("div");
   div.className = "chat-msg bot";
 
-  const tailleStr = taille ? `taille ${taille}` : "";
-  const couleurStr = couleur || "";
+  // Traduire le label "taille" et la valeur couleur via le cache UI
+  const tailleStr = taille ? `${t('sizeLabel')} ${taille}` : "";
+  let couleurStr = couleur || "";
+  if (couleur && currentLangue !== "fr") {
+    const cache = await traduireValeursDynamiques([couleur], currentLangue);
+    couleurStr = cache[couleur] || couleur;
+  }
   const details = [tailleStr, couleurStr].filter(Boolean).join(", ");
 
   div.innerHTML = `
@@ -964,7 +1084,7 @@ async function confirmCartDirect(productId, taille, couleur, btn) {
   const card = btn.closest(".chat-product-card");
   const errEl = card.querySelector(".chat-selector-error");
   btn.disabled = true;
-  btn.textContent = "…";
+  btn.textContent = t('added');
 
   const result = await addToCart(productId, 1, taille || null, couleur || null);
 
@@ -1101,7 +1221,7 @@ async function confirmChatCart(productId, btn) {
     )?.dataset.value || null;
 
   btn.disabled = true;
-  btn.textContent = "…";
+  btn.textContent = t('added');
   if (errEl) errEl.textContent = "";
 
   const result = await addToCart(productId, 1, taille, couleur);
@@ -1190,11 +1310,15 @@ function escapeAttr(text) {
 document.addEventListener("DOMContentLoaded", async () => {
   updateCartCount();
 
+  // Initialiser les timestamps dès le chargement (message de bienvenue inclus)
+  _refreshTimestamps();
+
   // Restaurer la langue de la session précédente
   const savedLangue = sessionStorage.getItem("chatLangue");
   if (savedLangue && savedLangue !== "fr") {
     currentLangue = savedLangue;
     await loadUITranslations(savedLangue);
+    _refreshTimestamps(); // re-formater dans la bonne langue
   }
   const container = document.getElementById("messages");
 
@@ -1442,9 +1566,7 @@ function initProductContext(produit) {
     question = variantesRetour[Math.floor(Math.random() * variantesRetour.length)] + sansBonjour;
   }
 
-  if (langue !== "fr") {
-    question = question + ` Answer in ${langue} language.`;
-  }
+ 
 
   _genererMessageAccueil(question, produit.id);
 }
@@ -1487,9 +1609,7 @@ async function initFavorisContext(favorisItems) {
   conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
-  if (langue !== "fr") {
-    question = question + ` Answer in ${langue} language.`;
-  }
+
 
   _genererMessageAccueil(question, null, []);
 }
@@ -1593,9 +1713,7 @@ async function initPanierContext(panierItems) {
   conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
-  if (langue !== "fr") {
-    question = question + ` Answer in ${langue} language.`;
-  }
+
 
   _genererMessageAccueil(question, null, derniersProduitsChat, panierItems && panierItems.length > 0);
 }
@@ -1607,7 +1725,14 @@ async function _genererMessageAccueil(
   produitsDejaAuPanier = false,
 ) {
   const container = document.getElementById("messages");
+  const langueEffective = sessionStorage.getItem("chatLangue") || currentLangue || "fr";
   if (!container) return;
+  if (langueEffective !== currentLangue) {
+    currentLangue = langueEffective;
+    if (!_uiTranslationsCache[langueEffective]) {
+      await loadUITranslations(langueEffective);
+    }
+  }
 
   const msgDiv = document.createElement("div");
   msgDiv.className = "chat-msg bot";
@@ -1616,7 +1741,8 @@ async function _genererMessageAccueil(
   bubble.innerHTML = `<span style="opacity:0.5;font-size:0.85em">✦ <span class="chat-dots"><span>.</span><span>.</span><span>.</span></span></span>`;
   const time = document.createElement("div");
   time.className = "chat-time";
-  time.textContent = "maintenant";
+  time.dataset.ts = Date.now();
+  time.textContent = _formatTime(Date.now());
   msgDiv.appendChild(bubble);
   msgDiv.appendChild(time);
   container.appendChild(msgDiv);
@@ -1627,6 +1753,7 @@ async function _genererMessageAccueil(
       question: question,
       history: _histoirePropre(),
       session_id: sessionId,
+      langue_session: langueEffective, 
     };
     if (productId) body.product_id = productId;
 

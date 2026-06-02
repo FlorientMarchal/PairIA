@@ -6,6 +6,13 @@
 
 import sys
 import os
+
+# ── Mode offline total : aucun appel vers HuggingFace Hub ──────────────────
+# Tous les modèles (CamemBERT, CLIP) doivent être présents localement.
+# Supprimer ces lignes uniquement pour un premier téléchargement intentionnel.
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
+
 import json
 import time
 import tempfile
@@ -97,30 +104,24 @@ def health():
 
 @app.post("/translate-ui")
 def translate_ui(request: TranslateUIRequest):
-    """
-    Traduit un dictionnaire de labels UI vers la langue demandée via le LLM.
-    Un seul appel LLM : toutes les valeurs sont envoyées séparées par |SEP|.
-    Les clés (noms fonctionnels) sont conservées telles quelles côté backend.
-    """
     from language_utils import nom_langue
     import ollama
 
     if request.langue == "fr":
         return {"translations": request.texts}
 
-    keys   = list(request.texts.keys())
-    values = list(request.texts.values())
+    keys     = list(request.texts.keys())
+    values   = list(request.texts.values())
     combined = " |SEP| ".join(values)
     nom_lang = nom_langue(request.langue)
 
     prompt = (
-        f"Translate the following French UI labels to {nom_lang}.\n"
-        "Each label is separated by |SEP|.\n"
-        "Rules: NO introduction, NO explanation, NO 'Here are', NO preamble.\n"
-        "Output ONLY the translated labels separated by |SEP|, same order.\n"
-        "Example input: Bonjour |SEP| Merci\n"
-        "Example output: Hello |SEP| Thank you\n\n"
-        + combined
+        f"Translate each French label to {nom_lang}. "
+        f"Labels are separated by |SEP|. "
+        f"Reply with ONLY the translated labels in the same order, separated by |SEP|. "
+        f"Do not write anything before or after. Do not number them. "
+        f"Input: {combined}\n"
+        f"Output:"
     )
 
     try:
@@ -129,7 +130,17 @@ def translate_ui(request: TranslateUIRequest):
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 400, "temperature": 0.1},
         )
-        raw   = response["message"]["content"].strip()
+        raw = response["message"]["content"].strip()
+
+        # Fallback structurel : ignorer tout ce qui précède le premier |SEP|
+        # Un préambule ("Here are...", "Voici...") ne contient pas |SEP|
+        if "|SEP|" in raw:
+            lines = raw.splitlines()
+            for line in lines:
+                if "|SEP|" in line:
+                    raw = line.strip()
+                    break
+
         parts = [p.strip() for p in raw.split("|SEP|")]
 
         if len(parts) == len(keys):
@@ -144,7 +155,6 @@ def translate_ui(request: TranslateUIRequest):
         translations = request.texts
 
     return {"translations": translations}
-
 
 @app.post("/chat/stream")
 def chat_stream(request: ChatRequest):
@@ -187,6 +197,7 @@ async def chat_stream_image(
     question: str    = Form(default=""),
     history: str     = Form(default="[]"),
     session_id: str  = Form(default=""),
+    langue_session: str = Form(default="fr"),   # ← ajouter
 ):
     history_parsed = json.loads(history)
 
@@ -217,6 +228,7 @@ async def chat_stream_image(
                 question=question,
                 history=history_parsed,
                 image_path=tmp_path,
+                langue_session=langue_session,
             )
             for chunk in generator:
                 if isinstance(chunk, dict):

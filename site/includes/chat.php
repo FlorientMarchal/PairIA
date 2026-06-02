@@ -106,8 +106,8 @@ if ($page === 'article' && $product_name) {
   <!-- MESSAGES -->
   <div class="chat-messages" id="messages">
     <div class="chat-msg bot">
-      <div class="chat-bubble"><?= $welcome ?></div>
-      <div class="chat-time">maintenant</div>
+      <div class="chat-bubble" id="welcome-bubble"><?= $welcome ?></div>
+      <div class="chat-time" data-ts="<?= time() * 1000 ?>"></div>
     </div>
   </div>
 

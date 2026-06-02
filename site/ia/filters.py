@@ -80,6 +80,23 @@ def _charger_valeurs_db() -> dict:
 
 DB = _charger_valeurs_db()
 
+def _normaliser_couleurs(texte: str) -> str:
+    mots = texte.split()
+    normalises = []
+    for mot in mots:
+        # Séparer le mot de sa ponctuation finale
+        ponctuation = ""
+        mot_clean = mot
+        while mot_clean and mot_clean[-1] in ".,!?;:":
+            ponctuation = mot_clean[-1] + ponctuation
+            mot_clean = mot_clean[:-1]
+        
+        if len(mot_clean) >= 5 and mot_clean.endswith('s') and not mot_clean.endswith('ss'):
+            normalises.append(mot_clean[:-1] + ponctuation)
+        else:
+            normalises.append(mot)
+    return " ".join(normalises)
+
 
 # ══════════════════════════════════════════════
 # HELPERS FUZZY — question courante uniquement
@@ -104,6 +121,8 @@ def _chercher_dans_map_fuzzy(texte: str, mapping: dict, seuil: int = 88) -> str 
     - Correspondance exacte toujours prioritaire (sans longueur minimale)
     """
     mots = texte.lower().split()
+    mots = [m.strip(".,!?;:") for m in mots]
+    mots = [m for m in mots if m]  # supprimer les mots vides
     candidats = list(mapping.keys())
     for n in (3, 2, 1):
         for i in range(len(mots) - n + 1):
@@ -263,6 +282,8 @@ def extraire_filtres(question: str, history: list) -> dict:
                                    Une nouvelle valeur dans la question courante remplace l'ancienne.
                                    Si la question n'en mentionne pas, on garde celle de l'historique.
     """
+    import re as _re
+
     texte_question = question.lower()
 
     historique_user = [
@@ -270,7 +291,10 @@ def extraire_filtres(question: str, history: list) -> dict:
         for msg in history
         if msg["role"] == "user"
     ]
-
+    # ── Couleur ──
+    texte_normalise = _normaliser_couleurs(texte_question)
+    print(f"[DEBUG] texte_question={texte_question!r}")
+    print(f"[DEBUG] texte_normalise={texte_normalise!r}")
     # Pour les filtres ponctuels : 1 seul tour en arrière maximum (le plus récent)
     dernier_msg = [historique_user[-1]] if historique_user else []
 
@@ -313,17 +337,20 @@ def extraire_filtres(question: str, history: list) -> dict:
     # ── Couleur (persistante sur l'historique récent) ──
     # Chercher d'abord un tag explicite [couleur:X] injecté par le JS lors de normalisations
     import re as _re
-    couleur = _chercher_dans_map_fuzzy(texte_question, DB["couleurs_map"])
-    # Chercher tag [couleur:X] dans la question courante
-    _tag_match = _re.search(r'\[couleur:([^\]]+)\]', texte_question)
+    couleur = _chercher_dans_map_fuzzy(texte_normalise, DB["couleurs_map"])
+    print(f"[DEBUG] couleur trouvée={couleur!r}")
+    # Chercher tag [couleur:X] dans la question courante — sur le texte ORIGINAL
+    # pour conserver la casse (ex: 'Rouge' et non 'rouge')
+    _tag_match = _re.search(r'\[couleur:([^\]]+)\]', question)
     if _tag_match:
-        couleur = _tag_match.group(1)
+        couleur = _tag_match.group(1)  # conserve 'Rouge' avec majuscule
     if not couleur:
         for msg in historique_recent:
-            # Chercher tag [couleur:X] en priorité
+            # Chercher tag [couleur:X] en priorité — capitalize() pour restaurer la casse
+            # car historique_user est stocké en lowercase
             _tag = _re.search(r'\[couleur:([^\]]+)\]', msg)
             if _tag:
-                couleur = _tag.group(1)
+                couleur = _tag.group(1).capitalize()  # 'rouge' → 'Rouge'
                 break
             couleur = _chercher_dans_map_exact(msg, DB["couleurs_map"])
             if couleur:

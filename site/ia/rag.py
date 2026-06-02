@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ollama
 from database import qdrant
 from llm_prompt import build_prompt, get_system_prompt
-from language_utils import normaliser_question, traduire_reponse
+from language_utils import normaliser_question, traduire_reponse, detecter_langue
 from image_search import model
 from intention_classifier import classifier_intention
 from filters import extraire_filtres, user_wants_cart, DB
@@ -701,17 +701,26 @@ def _couleurs_famille(couleur: str) -> list:
             return couleurs
     return [couleur]
 
+# Stocke la derniere reponse bot en francais (avant traduction)
+# Utilise dans la detection add_to_cart pour ne pas avoir a traduire les mots-cles
+_last_reponse_fr: str = ""
+
+
 def _stream_and_translate(ollama_stream, langue_client: str):
     """
     Accumule le texte du stream Ollama, le traduit si nécessaire,
     puis le yield en un seul bloc.
-    Retourne aussi le texte complet pour usage ultérieur.
+    Stocke le texte FR brut dans _last_reponse_fr avant traduction,
+    pour les détections post-génération (ex: add_to_cart) indépendantes de la langue.
     """
+    global _last_reponse_fr
     texte = ""
     for chunk in ollama_stream:
         texte += chunk["message"]["content"]
     # Nettoyer le markdown
     texte = texte.replace("**", "").replace("*", "").strip()
+    # Sauvegarder le FR avant traduction
+    _last_reponse_fr = texte
     # Traduction post-génération : une seule fois, texte complet
     if langue_client != "fr" and texte:
         texte = traduire_reponse(texte, langue_client)
@@ -770,14 +779,8 @@ def get_response_stream(
     if context_messages is None:
         context_messages = []
 
-    # Détecter dès le début pour cohérence dans tous les CAS
-     # Détecter dès le début pour cohérence dans tous les CAS
     tutoiement = _detecter_tutoiement(history, question)
- 
-    # ── Détection de langue + traduction en français pour la recherche ──
-    # Les prompts internes (générés par le JS) sont toujours en français → on
-    # ne les traduit pas pour éviter une double traduction inutile.
-    # La langue originale est conservée pour que le LLM réponde dans celle-ci.
+
     est_prompt_interne_rapide = any(
         m in question for m in ["Génère un message", "accueille le client", "En une seule phrase"]
     )
@@ -785,27 +788,137 @@ def get_response_stream(
         langue_client = langue_session
         question_fr   = question
     else:
-        # Détecter un nom de produit sur la question ORIGINALE (avant traduction)
-        # pour éviter que la traduction déforme le nom ("FlexRun Training" → "programme d'entraînement")
         produit_detecte_avant_trad = _detecter_nom_produit_original(question)
-        question_fr, langue_client = normaliser_question(question)
-        # Si un produit a été détecté sur l'original, réinjecter son nom exact en FR
+        mots_question = question.strip().split()
+        question_fr, langue_detectee = normaliser_question(question, langue_session)
+
+        # La langue est déjà verrouillée sur la session dans normaliser_question.
+        # On conserve toutefois le fallback au cas où langue_detectee serait "fr"
+        # alors que la session est établie dans une autre langue.
+        if langue_session and langue_session != "fr" and langue_detectee == "fr":
+            langue_client = langue_session
+        else:
+            langue_client = langue_detectee
+
+        # Si un nom de produit était dans la question originale mais a été
+        # déformé ou perdu à la traduction, on le réinjecte dans la phrase
         if produit_detecte_avant_trad:
             nom_exact = produit_detecte_avant_trad["name"]
             if nom_exact.lower() not in question_fr.lower():
-                question_fr = question_fr + f" [{nom_exact}]"
-                print(f"[LANG] nom produit réinjecté après traduction : {nom_exact}")
- 
+                # Chercher une approximation du nom dans la traduction et la remplacer
+                # Ex: "style de vie Nova Air" → "Nova Air Lifestyle"
+                from rapidfuzz import fuzz
+                mots_fr = question_fr.split()
+                # Trouver la fenêtre de mots qui ressemble le plus au nom original
+                nom_mots = nom_exact.split()
+                n = len(nom_mots)
+                meilleur_score = 0
+                meilleure_fenetre = None
+                for i in range(len(mots_fr) - n + 1):
+                    fenetre = " ".join(mots_fr[i:i+n])
+                    score = fuzz.ratio(fenetre.lower(), nom_exact.lower())
+                    if score > meilleur_score:
+                        meilleur_score = score
+                        meilleure_fenetre = fenetre
+                if meilleure_fenetre and meilleur_score >= 40:
+                    question_fr = question_fr.replace(meilleure_fenetre, nom_exact)
+                    print(f"[LANG] nom corrigé dans traduction : {meilleure_fenetre!r} → {nom_exact!r}")
+                else:
+                    # Aucune fenêtre proche — ajouter le nom entre crochets
+                    question_fr = question_fr + f" [{nom_exact}]"
+                    print(f"[LANG] nom réinjecté après traduction : {nom_exact!r}")
+
     print(f"\n{'='*50}")
     print(f"[RAG] question : {question!r} | langue : {langue_client} | history : {len(history)} messages")
     print(f"{'='*50}\n")
- 
-    # On travaille avec la version française pour toute la recherche/filtres
+
+    # Premier yield : envoyer la langue immédiatement au frontend
+    # pour qu'il puisse traduire le typing indicator et le message de bienvenue
+    # avant même que la réponse commence à arriver.
+    yield {"type": "langue_detect", "langue": langue_client}
+
+    question_originale_normalisee = (question or "").lower().strip().rstrip("!?.,-").strip()
     question = question_fr
+
     # ══════════════════════════════════════════════
-    # DÉTECTION PROMPTS INTERNES (pages produit/panier)
-    # Ces prompts sont générés automatiquement par le JS,
-    # ils ne doivent JAMAIS passer dans le classifier.
+    # PRIORITÉ ABSOLUE : le bot posait une question taille/couleur
+    # Doit être évalué AVANT le classifier — une réponse courte comme
+    # "40", "Rouge", "42" serait sinon classée "recherche" (confiance faible)
+    # ══════════════════════════════════════════════
+    _MOTS_QUESTION_TAILLE_COULEUR = [
+    # Français
+    "quelle taille", "quelle pointure", "quelle couleur",
+    "taille souhaitée", "couleur souhaitée",
+    "quelle est ta taille", "quelle est votre taille",
+    "tu chausses du", "vous chaussez du",
+    "ta pointure", "votre pointure",
+    "pointure (disponibles", "couleur (disponibles",
+    "quelle est ta pointure", "quelle est votre pointure",
+    "tu veux quelle couleur", "tu veux quelle taille",
+    "tu veux quelle pointure",
+    # Anglais (bot peut répondre en anglais)
+    "what size", "which size", "what colour", "what color",
+    "which colour", "which color", "your size", "your colour",
+    "available in", "choose a size", "choose a colour",
+    "pick a size", "pick a colour", "select a size",
+]
+
+    _MOTS_PROPOSITION_PANIER = [
+        "ajouter au panier", "ajoute au panier", "confirme", "valide",
+        "veux-tu que j'ajoute", "je peux ajouter", "dois-je ajouter",
+        "c'est bien cela", "c'est bien ça", "voulez-vous que j'ajoute",
+        "je vais ajouter", "souhaitez-vous", "est-ce correct",
+        "shall i add", "should i add", "want me to add",
+        "can i add", "i'll add", "ready to ship",
+        "want to add", "add it to", "put it in",
+        "i can offer you", "available in", "comes in",
+    ]
+
+    _CONFIRMATIONS_COURTES = {
+        "oui", "yes", "ok", "ouais", "c'est bon", "c bon", "parfait",
+        "confirme", "go", "vas y", "vas-y", "d'accord", "exact", "correct",
+        "yep", "yeah", "sure", "alright", "please", "do it", "add it",
+        "i want it", "i want buy it", "i want to buy it", "buy it",
+        "je le veux", "je la veux", "je veux l'acheter", "achète",
+        "commande", "order it", "get it", "take it", "ok i take it",
+        "i take it", "i'll take it", "i'll take them",
+    }
+
+    _intention_pre_override = None
+    if history and question.strip():
+        q_norm = question_originale_normalisee  # question AVANT traduction, normalisée
+        for msg in reversed(history):
+            if msg.get("role") == "assistant":
+                bot_text = msg.get("content", "").lower()
+                bot_products = msg.get("products", [])
+
+                # Cas 1 : bot posait une question taille/couleur explicite
+                if any(kw in bot_text for kw in _MOTS_QUESTION_TAILLE_COULEUR):
+                    _intention_pre_override = "suivi"
+                    print(f"[INTENTION] pre-override → suivi (bot posait une question taille/couleur)")
+
+                # Cas 2 : bot proposait un ajout + confirmation courte
+                elif any(kw in bot_text for kw in _MOTS_PROPOSITION_PANIER) and q_norm in _CONFIRMATIONS_COURTES:
+                    _intention_pre_override = "panier"
+                    print(f"[INTENTION] pre-override → panier (confirmation courte après proposition panier)")
+
+                # Cas 3 : bot a présenté UN seul produit + confirmation courte → panier
+                elif len(bot_products) == 1 and q_norm in _CONFIRMATIONS_COURTES:
+                    _intention_pre_override = "panier"
+                    print(f"[INTENTION] pre-override → panier (confirmation courte + 1 produit présenté)")
+
+                # Cas 4 : bot a présenté des produits et la question contient taille ou couleur
+                # même sans question explicite du bot ("in grey and size 41" après présentation)
+                elif bot_products and not _intention_pre_override:
+                    filtres_q = extraire_filtres(question, [])
+                    if filtres_q.get("pointure") or filtres_q.get("couleur"):
+                        _intention_pre_override = "suivi"
+                        print(f"[INTENTION] pre-override → suivi (taille/couleur après présentation produits)")
+
+                break
+
+    # ══════════════════════════════════════════════
+    # DÉTECTION PROMPTS INTERNES
     # ══════════════════════════════════════════════
     _MARQUEURS_INTERNES = [
         "accueille le client sur la fiche",
@@ -817,9 +930,9 @@ def get_response_stream(
         "invite le client à découvrir le catalogue",
         "crée un sentiment d'urgence",
         "encourage-le chaleureusement à passer à l'achat",
-        "En une à deux phrases (max",   # ← couvre tous les prompts auto
-        "En une seule phrase courte (max",  # ← panier
-        "En une phrase (max",            # ← variantes panier
+        "En une à deux phrases (max",
+        "En une seule phrase courte (max",
+        "En une phrase (max",
         "encourage le client à valider",
         "fais un commentaire positif sur le choix",
         "dis au client que son panier",
@@ -829,7 +942,7 @@ def get_response_stream(
         "invite le client à",
         "propose au client de l'aider",
         "encourage le client à explorer",
-        "Le client a",                   # ← nouvelles variantes panier
+        "Le client a",
         "dans son panier. En une phrase",
         "tutoie le client",
         "tutoie-le",
@@ -846,6 +959,12 @@ def get_response_stream(
         intention, confiance = "salutation", 1.0
     else:
         intention, confiance = classifier_intention(question) if question.strip() else ("recherche", 1.0)
+
+        # Appliquer le pre-override APRÈS le classifier pour écraser même un fallback
+        if _intention_pre_override:
+            intention = _intention_pre_override
+            confiance = 1.0
+
         if intention not in ("salutation", "hors_sujet", "livraison", "comparaison") and question.strip():
             try:
                 from db_mysql import fetch_all
@@ -855,7 +974,6 @@ def get_response_stream(
                 for row in rows:
                     nom = (row.get("nom") or "").lower()
                     if nom and fuzz.partial_ratio(nom, question_lower) >= 90:
-                        # Charger le produit complet et l'injecter dans l'historique
                         sc = fetch_all(f"SELECT taille, couleur FROM size_color WHERE id_shoes = {row['id_shoes']}")
                         produit_detecte = {
                             "id":          row["id_shoes"],
@@ -868,9 +986,7 @@ def get_response_stream(
                             "tailles":     list({x["taille"] for x in sc if x.get("taille")}),
                             "couleurs":    list({x["couleur"] for x in sc if x.get("couleur")}),
                         }
-                        # Injecter comme si l'assistant avait déjà présenté ce produit
                         history = history + [{"role": "assistant", "content": "", "products": [produit_detecte]}]
-                        # Ne pas override en suivi si l'utilisateur veut ajouter au panier
                         if not user_wants_cart(question, history):
                             intention = "suivi"
                             confiance = 1.0
@@ -880,49 +996,35 @@ def get_response_stream(
                         break
             except Exception as e:
                 print(f"[INTENTION] override nom exact échoué : {e}")
-    """
-    _MOTS_COMPARAISON = [
-    "comparatif", "comparer", "compare", "comparaison",
-    "différence", "différences", "versus", "vs", "côte à côte"
-    ]
-    if any(mot in question.lower() for mot in _MOTS_COMPARAISON):
-        intention = "comparaison"
-        confiance = 1.0
-        print(f"[INTENTION] override → comparaison (mot-clé détecté)")
-    """
-    # Si image sans texte → recherche directe
+
     if (image_path or image_vector) and not question.strip():
         intention = "recherche"
         confiance = 1.0
         print("[INTENTION] image seule → recherche")
-    # Si image avec texte → on garde l'intention détectée SAUF hors_sujet/livraison
     elif (image_path or image_vector) and intention in ("hors_sujet", "livraison", "panier"):
         intention = "recherche"
         confiance = 1.0
         print(f"[INTENTION] image + texte → intention {intention} ignorée → recherche")
 
-
-    # ── Garde-fou : si le classifier dit hors_sujet mais que la question
-    # contient des mots clairement liés aux chaussures → on force recherche
     _MOTS_CHAUSSURES = [
         "chaussure", "basket", "sandale", "botte", "bottine", "mocassin",
-        "espadrille", "talon", "running", "trail", "randonn\u00e9e", "sneaker",
+        "espadrille", "talon", "running", "trail", "randonnée", "sneaker",
         "slip-on", "indoor", "paire", "pointure", "taille", "semelle",
-        "plage", "\u00e9t\u00e9", "hiver", "sport", "confort", "marche", "travail",
-        "soir\u00e9e", "mariage", "festival", "gym", "danse", "cuir", "vegan",
-        "imperm\u00e9able", "l\u00e9g\u00e8re", "l\u00e9g\u00e8res", "respirant",
+        "plage", "été", "hiver", "sport", "confort", "marche", "travail",
+        "soirée", "mariage", "festival", "gym", "danse", "cuir", "vegan",
+        "imperméable", "légère", "légères", "respirant",
     ]
     if intention == "hors_sujet" and any(mot in question.lower() for mot in _MOTS_CHAUSSURES):
         intention = "recherche"
         confiance = 1.0
-        print(f"[INTENTION] override hors_sujet \u2192 recherche (mot-cl\u00e9 chaussures d\u00e9tect\u00e9)")
+        print(f"[INTENTION] override hors_sujet → recherche (mot-clé chaussures détecté)")
 
-    # \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
-    # CAS 1 \u2014 HORS SUJET
-    # \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+    # ════════════════════════════════════════════
+    # CAS 1 — HORS SUJET
+    # ════════════════════════════════════════════
     if intention == "hors_sujet":
         print("[CAS] 1 — hors_sujet")
-        yield {"products": [], "action": None, "product_id": None, "quantity": 1}
+        yield {"products": [], "action": None, "product_id": None, "quantity": 1,"question_fr": question}
         messages = [
             {"role": "system", "content": get_system_prompt(tutoiement)},
             *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
@@ -945,37 +1047,12 @@ def get_response_stream(
             yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client, "question_fr": question,}
         return
 
     # ════════════════════════════════════════════
-    # ── Override PRIORITAIRE : si le dernier message bot posait une question taille/couleur
-    # s'applique AVANT tous les CAS, même salutation
-    _MOTS_QUESTION_TAILLE_COULEUR = [
-        "quelle taille", "quelle pointure", "quelle couleur",
-        "taille souhaitée", "couleur souhaitée", "taille préférée",
-        "quelle est ta taille", "quelle est votre taille",
-        "tu chausses du", "vous chaussez du",
-        "tu préfères quelle couleur", "tu veux quelle couleur",
-        "tu veux quelle taille", "tu veux quelle pointure",
-        "ta pointure", "votre pointure",
-        "pointure (disponibles", "couleur (disponibles",
-        "quelle est ta pointure", "quelle est votre pointure",
-    ]
-    if history:
-        for msg in reversed(history):
-            if msg.get("role") == "assistant":
-                bot_text = msg.get("content", "").lower()
-                if any(kw in bot_text for kw in _MOTS_QUESTION_TAILLE_COULEUR):
-                    intention = "suivi"
-                    confiance = 1.0
-                    print(f"[INTENTION] override → suivi (bot posait une question taille/couleur)")
-                break
-
-    # CAS 1b — SALUTATION
-    # ════════════════════════════════════════════
-    # CAS 1b — SALUTATION
     # CAS 1b — SALUTATION / PROMPT INTERNE
+    # ════════════════════════════════════════════
     if intention == "salutation":
         print("[CAS] 1b — salutation")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
@@ -986,8 +1063,6 @@ def get_response_stream(
         else:
             question_llm = question
 
-        # Si c'est un prompt interne, on passe directement la consigne au LLM
-        # sans polluer avec l'historique de produits
         if est_prompt_interne:
             messages = [
                 {"role": "system", "content": get_system_prompt(tutoiement)},
@@ -1000,8 +1075,6 @@ def get_response_stream(
                 {"role": "user", "content": question_llm},
             ]
 
-        # Les prompts internes (accueil page produit/panier) ont un format très contraint.
-        # On réduit la température et le nombre de tokens pour éviter les hallucinations.
         gen_options = (
             {"num_ctx": 2048, "num_predict": 120, "temperature": 0.6}
             if est_prompt_interne
@@ -1017,9 +1090,9 @@ def get_response_stream(
         except Exception as e:
             yield "Je suis votre conseiller PairIA, posez-moi vos questions 👟"
 
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client,"question_fr": question,}
         return
-        
+
     # ════════════════════════════════════════════
     # CAS 2 — LIVRAISON
     # ════════════════════════════════════════════
@@ -1048,7 +1121,7 @@ def get_response_stream(
             yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client,"question_fr": question,}
         return
 
     # ════════════════════════════════════════════
@@ -1060,7 +1133,6 @@ def get_response_stream(
         produits_historique = _produits_depuis_historique(history)
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
 
-        # Extraire taille et couleur dès maintenant pour adapter la consigne
         filtres_panier = extraire_filtres(question, history)
         taille_panier  = filtres_panier.get("pointure")
         couleur_panier = filtres_panier.get("couleur")
@@ -1070,7 +1142,6 @@ def get_response_stream(
                 f"- {p['name']} ({p['price']}€) | tailles: {', '.join(str(t) for t in p.get('tailles', []))} | couleurs: {', '.join(p.get('couleurs', []))}"
                 for p in produits_historique
             ])
-            # Construire la consigne selon ce qu'on sait déjà
             manque = []
             if not taille_panier and any(p.get("tailles") for p in produits_historique):
                 manque.append("la pointure")
@@ -1117,7 +1188,6 @@ def get_response_stream(
                     "temperature": 0.5,
                 },
             )
-            # Accumuler en français pour détecter les produits mentionnés
             for chunk in stream:
                 texte_complet += chunk["message"]["content"]
         except Exception as e:
@@ -1128,7 +1198,6 @@ def get_response_stream(
             mentionnes    = _produits_mentionnes(texte_complet, produits_historique)
             produit_cible = mentionnes[0] if mentionnes else produits_historique[0]
 
-        # Traduire après détection des produits (la détection se fait sur le texte FR)
         texte_traduit = texte_complet
         if langue_client != "fr" and texte_complet.strip():
             texte_traduit = traduire_reponse(texte_complet, langue_client)
@@ -1139,13 +1208,10 @@ def get_response_stream(
             mentionnes    = _produits_mentionnes(texte_complet, produits_historique)
             produit_cible = mentionnes[0] if mentionnes else produits_historique[0]
 
-        # Normaliser la couleur contre les couleurs réelles du produit
         if couleur_panier and produit_cible:
             couleurs_produit = produit_cible.get("couleurs", [])
             famille = _couleurs_famille(couleur_panier)
-            # Chercher d'abord une correspondance exacte
             match_exact = next((c for c in couleurs_produit if couleur_panier.lower() in c.lower() or c.lower().startswith(couleur_panier.lower())), None)
-            # Sinon chercher dans la famille de couleurs
             match_famille = next((c for c in couleurs_produit if c in famille), None)
             if match_exact:
                 couleur_panier = match_exact
@@ -1156,20 +1222,21 @@ def get_response_stream(
         print(f"[CAS] 3 — taille={taille_panier} | couleur={couleur_panier}")
 
         yield {
-            "type":            "products_final",
-            "products":        [produit_cible] if produit_cible else [],
-            "action":          "add_to_cart" if produit_cible else None,
-            "product_id":      produit_cible["id"] if produit_cible else None,
-            "quantity":        1,
-            "taille":          taille_panier,
-            "couleur":         couleur_panier,
-            # Confirmation nécessaire seulement si une info manque encore
+            "type":             "products_final",
+            "products":         [produit_cible] if produit_cible else [],
+            "action":           "add_to_cart" if produit_cible else None,
+            "product_id":       produit_cible["id"] if produit_cible else None,
+            "quantity":         1,
+            "taille":           taille_panier,
+            "couleur":          couleur_panier,
             "confirm_required": not (taille_panier and couleur_panier),
             "langue":           langue_client,
         }
         return
 
+    # ════════════════════════════════════════════
     # CAS 4 — SUIVI
+    # ════════════════════════════════════════════
     if intention == "suivi":
         print("[CAS] 4 — suivi")
         produit_suivi = None
@@ -1185,13 +1252,13 @@ def get_response_stream(
                     if match:
                         nom_produit = match.group(1)
                         print(f"[CAS] 4 — produit trouvé via contexte system : {nom_produit}")
-                        try:                          # ← AJOUT
+                        try:
                             from db_mysql import fetch_all
                             rows = fetch_all(
                                 f"SELECT id_shoes, nom, prix, categorie, marque, url_image, description FROM articles "
                                 f"WHERE nom = '{nom_produit.replace(chr(39), chr(39)*2)}' LIMIT 1"
                             )
-                            print(f"[CAS] 4 — rows DB : {rows}")   # ← AJOUT
+                            print(f"[CAS] 4 — rows DB : {rows}")
                             if rows:
                                 r = rows[0]
                                 sc = fetch_all(
@@ -1208,42 +1275,61 @@ def get_response_stream(
                                     "tailles":     list({x["taille"] for x in sc if x.get("taille")}),
                                     "couleurs":    list({x["couleur"] for x in sc if x.get("couleur")}),
                                 }
-                                print(f"[CAS] 4 — produit_suivi construit : {produit_suivi['name']}")  # ← AJOUT
-                        except Exception as e:        # ← AJOUT
-                            import traceback          # ← AJOUT
-                            print(f"[CAS] 4 — ERREUR DB : {traceback.format_exc()}")  # ← AJOUT
+                                print(f"[CAS] 4 — produit_suivi construit : {produit_suivi['name']}")
+                        except Exception as e:
+                            import traceback
+                            print(f"[CAS] 4 — ERREUR DB : {traceback.format_exc()}")
                     break
 
-        # Utiliser tous les produits du dernier message assistant
-        # (pas seulement produit_suivi qui ne prend que le premier)
         produits_depuis_hist = _produits_depuis_historique(history)
         produits_a_utiliser = produits_depuis_hist if produits_depuis_hist else ([produit_suivi] if produit_suivi else [])
+        # Juste avant extraire_filtres dans CAS 4
+        print(f"[DEBUG CAS4] question reçue par extraire_filtres : {question!r}")
+        filtres_suivi     = extraire_filtres(question, history)
+        couleur_suivi     = filtres_suivi.get("couleur")
+        couleur_originale = couleur_suivi
+        taille_suivi      = filtres_suivi.get("pointure")
 
-        # Filtrer par couleur si demandée dans la question
-        filtres_suivi  = extraire_filtres(question, history)
-        couleur_suivi  = filtres_suivi.get("couleur")
-        couleur_originale = couleur_suivi  # sauvegarder avant normalisation
-        taille_suivi   = filtres_suivi.get("pointure")
-
-        # Normaliser la couleur contre les couleurs réelles des produits AVANT le filtrage
-        if couleur_suivi and produits_a_utiliser:
-            for p in produits_a_utiliser:
-                for c in p.get("couleurs", []):
-                    if couleur_suivi.lower() in c.lower() or c.lower().startswith(couleur_suivi.lower()):
-                        couleur_suivi = c
+        # Si pas de couleur dans les filtres textuels, la récupérer depuis
+        # les produits déjà présentés dans l'historique.
+        # Cas typique : "I want it in size 38" après avoir vu des produits en Rouge —
+        # la couleur Rouge est dans les produits mais plus dans les messages user (qui étaient en anglais).
+        if not couleur_suivi and produits_a_utiliser:
+            # Chercher dans les couleurs communes à tous les produits présentés
+            # Si tous partagent la même couleur, c'est celle du filtre actif
+            if len(produits_a_utiliser) == 1:
+                couleurs_produit = produits_a_utiliser[0].get("couleurs", [])
+                if len(couleurs_produit) == 1:
+                    couleur_suivi = couleurs_produit[0]
+                    couleur_originale = couleur_suivi
+                    print(f"[CAS] 4 — couleur déduite du produit unique : {couleur_suivi}")
+            else:
+                # Chercher dans l'historique des messages user la dernière couleur mentionnée
+                # en passant par extraire_filtres sur chaque message individuellement
+                for msg in reversed(history):
+                    if msg.get("role") == "user":
+                        f = extraire_filtres(msg.get("content", ""), [])
+                        if f.get("couleur"):
+                            couleur_suivi = f["couleur"]
+                            couleur_originale = couleur_suivi
+                            print(f"[CAS] 4 — couleur récupérée depuis historique user : {couleur_suivi}")
+                            break
+                    if msg.get("role") == "assistant" and msg.get("products"):
                         break
-                else:
-                    continue
-                break
-
+        if not couleur_suivi:
+                    toutes_couleurs = [set(p.get("couleurs", [])) for p in produits_a_utiliser]
+                    if toutes_couleurs:
+                        couleurs_communes = toutes_couleurs[0].intersection(*toutes_couleurs[1:])
+                        if len(couleurs_communes) == 1:
+                            couleur_suivi = list(couleurs_communes)[0]
+                            couleur_originale = couleur_suivi
+                            print(f"[CAS] 4 — couleur commune à tous les produits : {couleur_suivi}")
         if couleur_suivi:
-            # Normaliser via famille de couleurs : "Rouge" peut matcher "Bordeaux"
             famille = _couleurs_famille(couleur_suivi)
             produits_couleur = [
                 p for p in produits_a_utiliser
                 if any(c in famille for c in p.get("couleurs", []))
             ]
-            # Normaliser couleur_suivi vers la valeur exacte du produit si possible
             if produits_couleur:
                 for p in produits_couleur:
                     for c in p.get("couleurs", []):
@@ -1255,11 +1341,9 @@ def get_response_stream(
             print(f"[CAS] 4 — filtre couleur={couleur_suivi} : {len(produits_couleur)}/{len(produits_a_utiliser)} produits")
 
             if not produits_couleur:
-                # Aucun des produits présentés n'a cette couleur → nouvelle recherche Qdrant
                 print(f"[CAS] 4 — 0 résultat en {couleur_suivi} → fallback recherche Qdrant")
                 cat_hist = extraire_filtres("", history).get("categorie")
 
-                # 1er essai : avec couleur + catégorie
                 filtres_nouveaux = {"couleur": couleur_suivi}
                 if cat_hist:
                     filtres_nouveaux["categorie"] = cat_hist
@@ -1272,7 +1356,6 @@ def get_response_stream(
                     history=history,
                 )
 
-                # 2ème essai : sans filtre couleur (montrer ce qui est dispo dans la catégorie)
                 if not produits_fallback and cat_hist:
                     print(f"[CAS] 4→6 — 0 résultat en {couleur_suivi}, recherche sans couleur")
                     produits_fallback, contexte_fallback = _recherche_qdrant(
@@ -1291,7 +1374,6 @@ def get_response_stream(
 
                 if produits_fallback:
                     print(f"[CAS] 4→6 — {len(produits_fallback)} produits trouvés en {couleur_suivi}")
-                    # Rediriger vers CAS 6 directement
                     yield {"products": [], "action": None, "product_id": None, "quantity": 1}
                     nb_a = min(3, len(produits_fallback))
                     if cat_hist:
@@ -1300,7 +1382,6 @@ def get_response_stream(
                         produits_fallback = (p_cat + p_autres)[:nb_a]
                     else:
                         produits_fallback = produits_fallback[:nb_a]
-                    # ✅ CORRIGÉ — langue_client ajouté
                     prompt_fb = build_prompt(
                         question=question,
                         produits=produits_fallback,
@@ -1322,7 +1403,6 @@ def get_response_stream(
                     except Exception as e:
                         yield f"Erreur : {e}"
                     produits_mentionnes_fb = _produits_mentionnes(texte_fb, produits_fallback)
-                    # Traduire après détection des produits
                     if langue_client != "fr" and texte_fb.strip():
                         texte_fb = traduire_reponse(texte_fb, langue_client)
                     yield texte_fb
@@ -1339,7 +1419,6 @@ def get_response_stream(
                     }
                     return
                 else:
-                    # Vraiment rien → laisser le LLM expliquer
                     produits_avec = []
                     produits_sans = produits_a_utiliser
             else:
@@ -1349,7 +1428,6 @@ def get_response_stream(
             produits_avec = produits_a_utiliser
             produits_sans = []
 
-        # Si intention panier avec info manquante → demander directement
         if produits_a_utiliser and user_wants_cart(question, history):
             produit_cible_panier = (produits_avec[0] if produits_avec else produits_a_utiliser[0])
             manque = []
@@ -1391,6 +1469,7 @@ def get_response_stream(
                     "type": "products_final", "products": [], "action": None,
                     "product_id": None, "quantity": 1, "show_products": False,
                     "langue": langue_client,
+                    "question_fr": question,
                 }
                 return
 
@@ -1416,7 +1495,6 @@ def get_response_stream(
             else:
                 contexte_produits = "\n".join([_fmt_produit(p) for p in produits_a_utiliser])
 
-            # Construire une note explicative si la couleur a été normalisée
             note_couleur = ""
             if couleur_suivi and couleur_originale and couleur_suivi != couleur_originale:
                 note_couleur = (
@@ -1449,26 +1527,38 @@ def get_response_stream(
                 yield _stream_and_translate(stream, langue_client)
             except Exception as e:
                 yield f"Erreur Mistral : {str(e)}"
-            # Si bot posait une question taille/couleur → déclencher ajout panier
-            dernier_bot = next((m.get("content","") for m in reversed(history) if m.get("role")=="assistant"), "")
-            # Déclencher add_to_cart seulement si le bot posait une question explicite
-            # sur la taille/couleur DANS LE CADRE d'un ajout panier (pas juste informatif)
-            _MOTS_QUESTION_AJOUT = [
-                "quelle taille", "quelle pointure", "quelle couleur",
-                "ta pointure", "ta taille", "ta couleur",
-                "tu veux quelle", "choisis", "pointure (disponibles",
-                "couleur (disponibles", "quelle est ta pointure",
-            ]
-            action_suivi = "add_to_cart" if (taille_suivi or couleur_suivi) and any(
-                kw in dernier_bot.lower() for kw in _MOTS_QUESTION_AJOUT
-            ) else None
+
+            # Logique action_suivi :
+            # 1. Si taille + couleur connues (ou non requises) -> add_to_cart direct
+            # 2. Sinon, detecter sur _last_reponse_fr (FR brut) si le bot posait
+            #    une question taille/couleur au tour precedent.
+            _produit_tmp = (produits_avec or produits_a_utiliser or [None])[0]
+            _need_taille  = bool(_produit_tmp and _produit_tmp.get("tailles"))
+            _need_couleur = bool(_produit_tmp and _produit_tmp.get("couleurs"))
+            _taille_ok  = bool(taille_suivi)  or not _need_taille
+            _couleur_ok = bool(couleur_suivi) or not _need_couleur
+
+            if _taille_ok and _couleur_ok and _produit_tmp:
+                # Toutes les infos sont la : ajout direct au panier
+                action_suivi = "add_to_cart"
+            else:
+                # Infos incompletes : add_to_cart seulement si le bot
+                # posait une question taille/couleur au tour precedent
+                _MOTS_QUESTION_AJOUT_FR = [
+                    "quelle taille", "quelle pointure", "quelle couleur",
+                    "ta pointure", "ta taille", "ta couleur",
+                    "tu veux quelle", "choisis", "pointure (disponibles",
+                    "couleur (disponibles", "quelle est ta pointure",
+                    "quelle est votre pointure", "quelle est ta taille",
+                ]
+                action_suivi = "add_to_cart" if (taille_suivi or couleur_suivi) and any(
+                    kw in _last_reponse_fr.lower() for kw in _MOTS_QUESTION_AJOUT_FR
+                ) else None
             produits_finaux = produits_avec if (couleur_suivi and produits_avec) else produits_a_utiliser
             produit_cible_suivi = produits_finaux[0] if produits_finaux else None
-            # Afficher les cartes si on a filtré par couleur (pour que l'utilisateur voie ce qui est dispo)
             afficher_cartes = bool(couleur_suivi and produits_avec)
             print(f"[CAS] 4 — taille={taille_suivi} | couleur={couleur_suivi} | action={action_suivi}")
 
-            # Vérifier si toutes les infos nécessaires sont présentes pour l'ajout
             infos_completes = bool(action_suivi) and (
                 not produit_cible_suivi or (
                     (taille_suivi or not produit_cible_suivi.get("tailles")) and
@@ -1486,9 +1576,11 @@ def get_response_stream(
                 "couleur":          couleur_suivi,
                 "show_products":    afficher_cartes,
                 "confirm_required": True,
+                "langue":           langue_client,
             }
             return
         print("[CAS] 4 — suivi sans produits → fallback recherche")
+
     # ════════════════════════════════════════════
     # CAS 5 — COMPARAISON
     # ════════════════════════════════════════════
@@ -1496,7 +1588,6 @@ def get_response_stream(
         print("[CAS] 5 — comparaison")
         produits_historique = _produits_depuis_historique(history)
 
-        # Fallback si pas assez de produits en historique
         if len(produits_historique) < 2:
             produits_cites = _chercher_produits_cites(question)
             if len(produits_cites) >= 2:
@@ -1510,7 +1601,6 @@ def get_response_stream(
             else:
                 p1, p2 = resultat
 
-                # Résumés courts en parallèle (max 15 mots)
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     fut_r1 = executor.submit(_resumer_description, p1, langue_client)
                     fut_r2 = executor.submit(_resumer_description, p2, langue_client)
@@ -1540,21 +1630,17 @@ def get_response_stream(
     # ════════════════════════════════════════════
     print("[CAS] 6 — recherche/recommandation")
 
-    # 1. Analyse parallèle
     question_vector, is_image_search, filtres, categories_candidates = \
         _analyser_question(question, history, image_path, image_vector)
 
-    # 2. Qdrant
     produits_trouves, contexte_filtres = _recherche_qdrant(
         question_vector, question, history, filtres, categories_candidates
     )
 
-    # Aucun produit
     if not produits_trouves:
         print("[CAS] 6 — aucun produit → réponse Mistral directe")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
 
-        # ✅ Traduire le contexte_filtres pour éviter les noms de catégories en français dans la réponse
         if langue_client != "fr" and contexte_filtres:
             contexte_filtres = traduire_reponse(contexte_filtres, langue_client)
 
@@ -1582,27 +1668,24 @@ def get_response_stream(
             yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client}
+        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client,"question_fr": question,}
         return
 
-    # 3. Prompt Mistral
     genre       = _extraire_genre(history, question)
     tutoiement  = _detecter_tutoiement(history, question)
-    nb_produits = _nb_produits_from_history(history,intention)
+    nb_produits = _nb_produits_from_history(history, intention)
     limite      = _LIMITES.get(intention, _LIMITES["recherche"])
 
-    # ✅ Traduire le contexte_filtres pour éviter les noms de catégories en français dans la réponse
     if langue_client != "fr" and contexte_filtres:
         contexte_filtres = traduire_reponse(contexte_filtres, langue_client)
     print(f"[CAS] 6 — {len(produits_trouves)} produits | genre={genre} | nb_à_afficher={nb_produits}")
+
     if is_image_search:
         produits_trouves = produits_trouves[:3]
         nb_a_presenter   = 3
         print(f"[CAS] 6 — recherche image → top 3 Qdrant forcé")
     else:
         nb_a_presenter = min(nb_produits, len(produits_trouves))
-        # Si on a assez de produits dans la catégorie principale, on ne donne
-        # que ceux-là au LLM — il ne peut pas "déborder" sur les similaires.
         if categories_candidates:
             cat_principale = categories_candidates[0]
             produits_cat = [p for p in produits_trouves if p["categorie"] == cat_principale]
@@ -1610,18 +1693,17 @@ def get_response_stream(
                 produits_trouves = produits_cat
                 print(f"[CAS] 6 — LLM limité aux {len(produits_trouves)} produits '{cat_principale}'")
             else:
-                # Pas assez dans la catégorie principale : on complète avec les similaires
-                # mais on tronque à nb_a_presenter pour que le LLM n'ait pas le choix
                 produits_autres = [p for p in produits_trouves if p["categorie"] != cat_principale]
                 produits_trouves = (produits_cat + produits_autres)[:nb_a_presenter]
                 print(f"[CAS] 6 — LLM forcé : {len(produits_cat)} '{cat_principale}' + {len(produits_trouves) - len(produits_cat)} similaires")
+
     description_visuelle = ""
     if is_image_search and produits_trouves:
-       description_visuelle = (
-        "[Photo reçue] Présente ces 3 produits visuellement similaires à la photo. "
-        "Sois naturel et enthousiaste, comme un vendeur qui conseille un ami. "
-        "1 phrase par produit, pas de liste à puces, pas de 'Voici'."
-    )
+        description_visuelle = (
+            "[Photo reçue] Présente ces 3 produits visuellement similaires à la photo. "
+            "Sois naturel et enthousiaste, comme un vendeur qui conseille un ami. "
+            "1 phrase par produit, pas de liste à puces, pas de 'Voici'."
+        )
     suffixe_recommandation = ""
     if intention == "recommandation":
         suffixe_recommandation = (
@@ -1629,7 +1711,7 @@ def get_response_stream(
             "Donne ton avis clair sur le meilleur choix et explique pourquoi."
         )
 
-    nb_produits = _nb_produits_from_history(history, intention)
+    nb_produits    = _nb_produits_from_history(history, intention)
     nb_a_presenter = min(nb_produits, len(produits_trouves))
     consigne_nb = (
         f"Les produits ci-dessus sont les plus adaptés disponibles — présente-les, "
@@ -1643,7 +1725,6 @@ def get_response_stream(
         f"{suffixe_recommandation}\n{limite['consigne']} {consigne_nb}"
     )
 
-    # ✅ langue_client déjà bien passé ici (inchangé)
     prompt = build_prompt(
         question=question_complete,
         produits=produits_trouves,
@@ -1675,7 +1756,6 @@ def get_response_stream(
         for chunk in stream:
             token = chunk["message"]["content"]
             buffer += token
-            # Supprimer le markdown au fil du stream
             while len(buffer) >= 2:
                 if buffer[:2] == "**":
                     buffer = buffer[2:]
@@ -1684,7 +1764,6 @@ def get_response_stream(
                 else:
                     texte_complet += buffer[0]
                     buffer = buffer[1:]
-        # Vider le buffer restant
         clean = buffer.replace("**", "").replace("*", "")
         texte_complet += clean
 
@@ -1692,18 +1771,25 @@ def get_response_stream(
         yield f"Erreur Mistral : {str(e)}"
         return
 
-    # ✅ Traduction post-génération : une seule fois, texte complet, zéro fuite
     if langue_client != "fr" and texte_complet.strip():
         texte_complet = traduire_reponse(texte_complet, langue_client)
         print(f"[RAG] réponse traduite → {langue_client}")
 
-    # Yield du texte final (en un seul bloc — le frontend streame déjà le typing indicator)
     yield texte_complet
 
     produits_affiches = _produits_mentionnes(texte_complet, produits_trouves)
     action = "add_to_cart" if user_wants_cart(question, history) and produits_affiches else None
 
     print(f"[CAS] 6 — affichés : {[p['name'] for p in produits_affiches[:nb_produits]]}")
+
+    # Construire question_fr enrichie avec tags filtres pour persistance dans l'historique JS
+    # Permet à extraire_filtres de retrouver la couleur/marque au tour suivant
+    question_fr_enrichie = question
+    if filtres.get("couleur"):
+        question_fr_enrichie += f" [couleur:{filtres['couleur']}]"
+    if filtres.get("marque"):
+        question_fr_enrichie += f" [marque:{filtres['marque']}]"
+
     yield {
         "type":        "products_final",
         "products":    produits_affiches[:nb_a_presenter],
@@ -1711,5 +1797,6 @@ def get_response_stream(
         "product_id":  produits_affiches[0]["id"] if produits_affiches and action else None,
         "quantity":    1,
         "tutoiement":  tutoiement,
-        "langue":      langue_client,  # ✅ ajouter cette ligne
+        "langue":      langue_client,
+        "question_fr": question_fr_enrichie,
     }
