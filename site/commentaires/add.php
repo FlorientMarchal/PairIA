@@ -13,8 +13,8 @@ if (!isset($_SESSION['client_id'])) exit(json_encode(['success'=>false]));
 if ($note < 1 || $note > 5) exit(json_encode(['success'=>false]));
 
 $stmt = $pdo->prepare("
-    INSERT INTO commentaires (id_shoes, id_client, note, contenu)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO commentaires (id_shoes, id_client, note, contenu, useful)
+    VALUES (?, ?, ?, ?, 0)
     ON DUPLICATE KEY UPDATE note = VALUES(note), contenu = VALUES(contenu)
 ");
 $stmt->execute([$id, $_SESSION['client_id'], $note, $contenu]);
