@@ -1852,51 +1852,146 @@ nav {
    COMMENTAIRES & QUESTIONS — PairIA
 ════════════════════════════════════════ */
 /* ════════════════════════════════════════
-   COMMENTAIRES & QUESTIONS — STYLE PREMIUM
+   COMMENTAIRES PREMIUM — PAIRIA
 ════════════════════════════════════════ */
 
-.section-block {
+.comments-premium {
+  display: flex;
+  gap: 2.5rem;
+  margin-top: 3rem;
+}
+
+/* COLONNE GAUCHE — LISTE DES AVIS */
+.comments-left {
+  flex: 2;
+}
+
+/* COLONNE DROITE — RÉSUMÉ + HISTOGRAMME */
+.comments-right {
+  flex: 1;
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 2.2rem;
-  margin-top: 3rem;
+  padding: 1.8rem;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  height: fit-content;
+  position: sticky;
+  top: 80px;
 }
 
-.section-title {
+/* TITRES */
+.comments-right h3 {
   font-family: var(--font-serif);
-  font-size: 1.8rem;
-  margin-bottom: 1.8rem;
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+}
+
+/* BOUTON DONNER MON AVIS */
+.btn-review {
+  width: 100%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.9rem 1.2rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  transition: opacity 0.2s;
+}
+
+.btn-review:hover {
+  opacity: 0.85;
+}
+
+/* ════════════════════════════════════════
+   RÉSUMÉ DES NOTES
+════════════════════════════════════════ */
+
+#comments-summary {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.summary-note {
+  font-size: 3rem;
+  font-weight: 700;
   color: var(--dark);
 }
 
-/* Étoiles */
-.stars {
-  display: flex;
-  gap: 4px;
+.summary-stars {
   font-size: 1.6rem;
   color: var(--accent);
+  margin: 0.3rem 0;
+}
+
+.summary-count {
+  font-size: 0.9rem;
+  color: var(--gray);
+}
+
+/* ════════════════════════════════════════
+   HISTOGRAMME DES ÉTOILES
+════════════════════════════════════════ */
+
+#comments-histogram {
+  margin-top: 1.5rem;
+}
+
+.hist-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   margin-bottom: 0.4rem;
 }
 
-/* Résumé */
-.rating-summary {
-  background: var(--cream);
-  padding: 1rem 1.2rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  margin-bottom: 1.8rem;
-  font-size: 1rem;
+.hist-label {
+  width: 40px;
+  font-size: 0.9rem;
+  color: var(--dark);
 }
 
-/* Commentaires */
-.comment-card {
+.hist-bar {
+  flex: 1;
+  height: 10px;
   background: var(--light);
-  border-radius: 10px;
-  padding: 1.2rem 1.4rem;
-  margin-bottom: 1.2rem;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hist-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 6px;
+}
+
+/* ════════════════════════════════════════
+   TRI + FILTRES
+════════════════════════════════════════ */
+
+.comments-filters {
+  margin-bottom: 1.5rem;
+}
+
+.comments-filters select {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
   border: 1px solid var(--border);
+  background: var(--cream);
+  font-size: 0.95rem;
+}
+
+/* ════════════════════════════════════════
+   CARTE AVIS
+════════════════════════════════════════ */
+
+.comment-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.4rem 1.6rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   transition: transform 0.15s ease;
 }
 
@@ -1920,96 +2015,122 @@ nav {
   color: var(--gray);
 }
 
+.comment-stars {
+  font-size: 1.3rem;
+  color: var(--accent);
+  margin: 0.4rem 0;
+}
+
 .comment-content {
   margin: 0.6rem 0 1rem;
   line-height: 1.55;
 }
 
+/* ACHAT VÉRIFIÉ */
+.verified-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+/* ACTIONS (utile / pas utile / supprimer) */
 .comment-actions {
   display: flex;
   gap: 1.2rem;
-}
-
-.like-btn {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 1rem;
-  transition: transform 0.15s ease;
-}
-
-.like-btn:hover {
-  transform: scale(1.2);
-}
-
-.delete-btn {
-  background: none;
-  border: none;
-  color: #b33;
   font-size: 0.9rem;
 }
 
-/* Formulaire */
-.comment-form textarea,
-.question-form textarea {
+.action-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.action-btn:hover {
+  opacity: 0.7;
+}
+
+.delete-btn {
+  color: #b33;
+}
+
+/* ════════════════════════════════════════
+   MODAL AJOUT D’AVIS
+════════════════════════════════════════ */
+
+.review-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.review-modal-content {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: 12px;
+  width: 420px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.review-modal-content h3 {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+/* ÉTOILES INTERACTIVES */
+.rating-input {
+  display: flex;
+  gap: 6px;
+  font-size: 2rem;
+  color: var(--border);
+  cursor: pointer;
+  margin-bottom: 1rem;
+}
+
+.rating-input span:hover,
+.rating-input span.active {
+  color: var(--accent);
+}
+
+#review-text {
   width: 100%;
+  min-height: 120px;
   padding: 1rem;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--cream);
-  resize: vertical;
-  min-height: 110px;
   margin-bottom: 1rem;
-  font-size: 0.95rem;
 }
 
-.comment-form button,
-.question-form button {
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.btn-cancel {
+  background: var(--light);
+  border: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: 8px;
+}
+
+.btn-submit {
   background: var(--accent);
   color: white;
   border: none;
-  padding: 0.8rem 1.6rem;
-  border-radius: 10px;
-  font-size: 1rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 8px;
   font-weight: 600;
-  transition: opacity 0.2s;
-}
-
-.comment-form button:hover,
-.question-form button:hover {
-  opacity: 0.85;
-}
-
-/* Questions */
-.question-card {
-  background: var(--light);
-  border-radius: 10px;
-  padding: 1.2rem 1.4rem;
-  margin-bottom: 1.2rem;
-  border: 1px solid var(--border);
-}
-
-.reply-card {
-  margin-left: 2rem;
-  margin-top: 0.8rem;
-  border-left: 3px solid var(--accent);
-  padding-left: 1rem;
-}
-
-.reply-btn {
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 0.95rem;
-  margin-top: 0.5rem;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.9rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--cream);
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
 }

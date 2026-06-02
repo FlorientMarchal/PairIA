@@ -147,23 +147,72 @@ function getCouleurCSS($couleur) {
   <!-- ════════════════════════════════════════
      COMMENTAIRES
 ════════════════════════════════════════ -->
-<div id="comments-section" class="section-block">
-    <h2 class="section-title">Commentaires</h2>
 
-    <div id="rating-summary" class="rating-summary"></div>
+<div id="comments-premium" class="comments-premium">
 
-    <div id="comment-form" class="comment-form"></div>
+    <!-- COLONNE GAUCHE : LISTE DES AVIS -->
+    <div class="comments-left">
 
-    <div id="comments-list" class="comments-list"></div>
+        <!-- Zone de tri -->
+        <div class="comments-filters">
+            <select id="comments-sort" onchange="filterComments()">
+                <option value="recent">Les plus récents</option>
+                <option value="best">Les mieux notés</option>
+                <option value="worst">Les moins bien notés</option>
+                <option value="useful">Les plus utiles</option>
+            </select>
+        </div>
+
+        <!-- Liste des avis -->
+        <div id="comments-list"></div>
+    </div>
+
+    <!-- COLONNE DROITE : RÉSUMÉ + HISTOGRAMME -->
+    <div class="comments-right">
+
+        <!-- Résumé -->
+        <div id="comments-summary"></div>
+
+        <!-- Histogramme -->
+        <div id="comments-histogram"></div>
+
+        <!-- Bouton donner mon avis -->
+        <button class="btn-review" onclick="openReviewModal()">Donner mon avis</button>
+    </div>
 </div>
+
+<!-- ════════════════════════════════════════
+     MODAL AJOUT D’AVIS
+════════════════════════════════════════ -->
+<div id="review-modal" class="review-modal" style="display:none;">
+    <div class="review-modal-content">
+
+        <h3>Laisser un avis</h3>
+
+        <!-- Étoiles interactives -->
+        <div class="rating-input">
+            <span data-value="5">★</span>
+            <span data-value="4">★</span>
+            <span data-value="3">★</span>
+            <span data-value="2">★</span>
+            <span data-value="1">★</span>
+        </div>
+
+        <textarea id="review-text" placeholder="Votre avis..."></textarea>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeReviewModal()">Annuler</button>
+            <button class="btn-submit" onclick="submitReview()">Publier</button>
+        </div>
+    </div>
+</div>
+
 
 </div>
 
 <script>
 var variants = <?= json_encode($variants) ?>;
-</script>
 
-<script>
 var PRODUCT_ID = <?= $id ?>;
 var qty = 1, selectedSize = null, selectedColor = null;
 
@@ -329,47 +378,7 @@ initProductContext({
   emoji:       "👟"
 });
 
+// CHARGEMENT AUTOMATIQUE AU RENDU SPA
 
-// ════════════════════════════════════════
-// COMMENTAIRES — AJAX
-// ════════════════════════════════════════
-
-window.loadComments = async function() {
-    const res = await fetch("commentaires/list.php?id=" + PRODUCT_ID);
-    const data = await res.json();
-
-    document.getElementById("rating-summary").innerHTML = data.summary_html;
-    document.getElementById("comment-form").innerHTML = data.form_html;
-    document.getElementById("comments-list").innerHTML = data.list_html;
-};
-
-window.addComment = async function() {
-    const contenu = document.getElementById("comment-text").value;
-    const note = document.getElementById("comment-note").value;
-
-    const res = await fetch("commentaires/add.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: PRODUCT_ID, contenu, note })
-    });
-
-    const data = await res.json();
-    if (data.success) loadComments();
-};
-
-window.likeComment = async function(id) {
-    await fetch("commentaires/like.php?id=" + id);
-    loadComments();
-};
-
-window.deleteComment = async function(id) {
-    await fetch("commentaires/delete.php?id=" + id);
-    loadComments();
-};
-
-// Charger automatiquement
-loadComments();
-
-
-
+loadCommentsPremium();
 </script>

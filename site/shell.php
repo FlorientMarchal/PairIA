@@ -1,4 +1,5 @@
 <?php
+session_start();
 // shell.php — coquille SPA permanente
 require_once 'includes/bd.php';
 
@@ -41,5 +42,6 @@ require_once 'includes/bd.php';
 <script src="js/image_search.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/spa.js"></script>
+<script src="js/comments.js"></script>
 </body>
 </html>

@@ -1,22 +1,41 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once '../includes/bd.php';
 session_start();
 
+header('Content-Type: application/json');
+
 $data = json_decode(file_get_contents("php://input"), true);
 
-$id = (int)$data['id'];
-$note = (int)$data['note'];
-$contenu = trim($data['contenu']);
+if (!$data) {
+    echo json_encode(['success' => false, 'error' => 'No data']);
+    exit;
+}
 
-if (!isset($_SESSION['client_id'])) exit(json_encode(['success'=>false]));
+$id      = (int)$data['id'];
+$note    = (int)$data['note'];
+$contenu = trim($data['contenu'] ?? '');
 
-if ($note < 1 || $note > 5) exit(json_encode(['success'=>false]));
+if (!isset($_SESSION['client_id'])) {
+    echo json_encode(['success' => false, 'error' => 'not_logged']);
+    exit;
+}
 
-$stmt = $pdo->prepare("
-    INSERT INTO commentaires (id_shoes, id_client, note, contenu)
-    VALUES (?, ?, ?, ?)
-    ON DUPLICATE KEY UPDATE note = VALUES(note), contenu = VALUES(contenu)
-");
-$stmt->execute([$id, $_SESSION['client_id'], $note, $contenu]);
+if ($note < 1 || $note > 5 || $contenu === '') {
+    echo json_encode(['success' => false, 'error' => 'invalid_input']);
+    exit;
+}
 
-echo json_encode(['success'=>true]);
+try {
+    $stmt = $pdo->prepare("
+        INSERT INTO commentaires (id_shoes, id_client, note, contenu, useful)
+        VALUES (?, ?, ?, ?, 0)
+        ON DUPLICATE KEY UPDATE note = VALUES(note), contenu = VALUES(contenu)
+    ");
+    $stmt->execute([$id, $_SESSION['client_id'], $note, $contenu]);
+    echo json_encode(['success' => true]);
+} catch (PDOException $e) {
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+}
