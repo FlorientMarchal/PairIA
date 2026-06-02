@@ -574,12 +574,22 @@ def _recherche_qdrant(
         results = []
 
     def _construire_produit(r) -> dict:
-        tailles  = r.payload.get("tailles",  [])
-        couleurs = r.payload.get("couleurs", [])
-        if isinstance(tailles, str):
-            tailles  = [t.strip() for t in tailles.split(",") if t.strip()]
-        if isinstance(couleurs, str):
-            couleurs = [c.strip() for c in couleurs.split(",") if c.strip()]
+        # Tailles/couleurs depuis MySQL — source de vérité pour cart/add.php
+        # Qdrant peut avoir des valeurs normalisées différemment
+        try:
+            from db_mysql import fetch_all as fa
+            sc = fa(f"SELECT taille, couleur FROM size_color WHERE id_shoes = {int(r.id)}")
+            tailles  = sorted({str(x["taille"])  for x in sc if x.get("taille")},
+                              key=lambda x: int(x) if x.isdigit() else x)
+            couleurs = sorted({x["couleur"] for x in sc if x.get("couleur")})
+        except Exception:
+            # Fallback Qdrant si MySQL indisponible
+            tailles  = r.payload.get("tailles",  [])
+            couleurs = r.payload.get("couleurs", [])
+            if isinstance(tailles, str):
+                tailles  = [t.strip() for t in tailles.split(",") if t.strip()]
+            if isinstance(couleurs, str):
+                couleurs = [c.strip() for c in couleurs.split(",") if c.strip()]
         return {
             "id":          r.id,
             "name":        r.payload.get("nom",         ""),
