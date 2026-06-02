@@ -1153,6 +1153,58 @@ nav {
   }
 }
 
+/* ── Skeleton shimmer ── */
+.skel {
+  background: var(--color-background-secondary, #f0f0f0);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.55) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+
+.chat-shoe-steps {
+  display: inline-flex;
+  gap: 3px;
+  align-items: flex-end;
+}
+.chat-shoe-steps span {
+  font-size: 1em;
+  opacity: 0.2;
+  display: inline-block;
+  animation: shoeStep 1s infinite;
+}
+.chat-shoe-steps span:nth-child(1) { animation-delay: 0s; }
+.chat-shoe-steps span:nth-child(2) { animation-delay: 0.2s; transform: scaleX(-1); }
+.chat-shoe-steps span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes shoeStep {
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-3px); }
+}
+.chat-shoe-steps span:nth-child(2) {
+  animation-delay: 0.2s;
+  transform: scaleX(-1);
+}
+.chat-shoe-steps span:nth-child(2).active {
+  transform: scaleX(-1) translateY(-3px);
+}
+
 /* ── Bouton historique ── */
 .chat-history-band {
   display: flex;

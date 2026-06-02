@@ -32,9 +32,9 @@ if ($page === 'article' && $product_name) {
         'Vegan'              => 'les',
     ];
     $det     = isset($determinants[$categorie]) ? $determinants[$categorie] : 'le';
-    $welcome = "<span style='opacity:0.5;font-size:0.85em'>✦ <span class='chat-dots'><span>.</span><span>.</span><span>.</span></span></span>";
+    $welcome = "<span class='chat-shoe-steps' style='opacity:0.7'><span>👟</span><span>👟</span><span>👟</span></span>";
 } elseif ($page === 'panier') {
-    $welcome = "<span style='opacity:0.5;font-size:0.85em'>✦ <span class='chat-dots'><span>.</span><span>.</span><span>.</span></span></span>";
+    $welcome = "<span class='chat-shoe-steps' style='opacity:0.7'><span>👟</span><span>👟</span><span>👟</span></span>";
 } else {
     $welcome = "Bonjour ! 👋 Je suis votre conseiller personnel. Décrivez-moi le style, l'usage ou le budget que vous recherchez et je trouve la paire parfaite pour vous.";
 }

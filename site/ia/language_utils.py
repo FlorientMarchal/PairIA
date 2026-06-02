@@ -167,12 +167,37 @@ def traduire_reponse(texte: str, langue_cible: str, llm_model: str = _LLM_MODEL)
         )
         traduction = response["message"]["content"].strip()
 
-        # Nettoyage post-génération : Llama ajoute parfois des artefacts
-        # comme "Übersetzung:" ou des lignes "Nom: Nom" en fin de réponse
+        # Nettoyage 1 : supprimer les préfixes parasites en début de réponse.
+        # Llama génère parfois "Here is the translation:\n\n..." ou équivalent
+        # dans n'importe quelle langue. On détecte structurellement :
+        # - La 1ère ligne est courte (< 60 chars) ET se termine par ":"
+        # - Elle est suivie d'une ligne vide
+        # → c'est un préfixe introductif, pas le contenu traduit.
+        lignes_brutes = traduction.splitlines()
+        if (
+            len(lignes_brutes) >= 3
+            and lignes_brutes[0].strip().endswith(":")
+            and len(lignes_brutes[0].strip()) < 60
+            and lignes_brutes[1].strip() == ""
+        ):
+            traduction = "\n".join(lignes_brutes[2:]).strip()
+
+        # Cas 2 : préfixe sur la 1ère ligne SANS ligne vide (ex: "Translation: Of course...")
+        # On vérifie que la clé est un mot court (≤ 6 mots) et la valeur est substantielle
+        elif lignes_brutes and ":" in lignes_brutes[0]:
+            premiere = lignes_brutes[0].strip()
+            idx_colon = premiere.index(":")
+            cle = premiere[:idx_colon].strip()
+            val_suite = premiere[idx_colon+1:].strip()
+            if len(cle.split()) <= 6 and val_suite:
+                # La vraie traduction commence après le ":"
+                traduction = val_suite + ("\n" + "\n".join(lignes_brutes[1:]) if len(lignes_brutes) > 1 else "")
+                traduction = traduction.strip()
+
+        # Nettoyage 2 ligne par ligne : artefacts "Nom: Nom" en fin de réponse
         lignes = traduction.splitlines()
         lignes_nettes = []
         for ligne in lignes:
-            # Supprimer les lignes du type "Mot: Mot" ou "X: X" (artefacts de traduction)
             stripped = ligne.strip()
             if ":" in stripped:
                 parties = stripped.split(":", 1)
@@ -180,16 +205,6 @@ def traduire_reponse(texte: str, langue_cible: str, llm_model: str = _LLM_MODEL)
                 val = parties[1].strip()
                 # Si clé == valeur (ou très proches) → artefact à ignorer
                 if cle.lower() == val.lower() or cle.lower() in val.lower().split():
-                    continue
-                # Si la ligne commence par un label de traduction connu → ignorer
-                labels_parasites = [
-                    "translation", "übersetzung", "traduction", "traducción",
-                    "tradução", "перевод", "翻译", "vertaling",
-                ]
-                if cle.lower() in labels_parasites:
-                    # Garder uniquement la valeur après le label si elle est non vide
-                    if val:
-                        lignes_nettes.append(val)
                     continue
             lignes_nettes.append(ligne)
 

@@ -34,6 +34,10 @@ const UI_LABELS_FR = {
   sizes:          "Tailles",
   colors:         "Couleurs",
   errorCart:      "Erreur lors de l'ajout.",
+  errorUnavailable: "Combinaison indisponible.",
+  errorNoSize:    "Veuillez sélectionner une taille et une couleur.",
+  errorLogin:     "Vous devez être connecté pour ajouter au panier.",
+  errorProduct:   "Produit introuvable.",
   errorNetwork:   "Erreur réseau",
   analyzing:      "Analyse en cours...",
   unavailable:    "Désolé, je suis temporairement indisponible. Réessayez dans un instant.",
@@ -510,7 +514,7 @@ async function _sendMessageImpl(text) {
   } catch (error) {
     typing.remove();
     appendBotMessageText(
-      "Désolé, je suis temporairement indisponible. Réessayez dans un instant.",
+      "${t('unavailable')}",
     );
     console.error("Erreur API chat :", error);
   } finally {
@@ -734,7 +738,7 @@ async function sendImageWithText(file, text) {
   } catch (error) {
     typing.remove();
     appendBotMessageText(
-      "Désolé, la recherche par image est temporairement indisponible.",
+      "${t('unavailableImg')}",
     );
     console.error("Erreur image+texte :", error);
   } finally {
@@ -814,10 +818,8 @@ function appendTyping() {
   div.id = "typing-indicator";
 
   div.innerHTML = `
-    <div class="chat-typing">
-      <div class="chat-typing-dot"></div>
-      <div class="chat-typing-dot"></div>
-      <div class="chat-typing-dot"></div>
+    <div class="chat-bubble" style="opacity:0.7;font-size:0.9em">
+      <span class="chat-shoe-steps"><span>👟</span><span>👟</span><span>👟</span></span>
     </div>
     <div class="chat-typing-msg"
          id="typing-msg"
@@ -861,18 +863,104 @@ async function toggleFavChat(productId, btn) {
   } catch (e) {}
 }
 
+// ── Skeleton loader pour les cartes produites pendant la traduction ──────────
+function _appendCardsSkeleton(container, n = 3, layout = "list") {
+  const div = document.createElement("div");
+  div.className = "chat-msg bot";
+  div.id = "cards-skeleton";
+
+  if (layout === "comparison") {
+    // Deux colonnes côte à côte comme la vraie comparaison
+    div.innerHTML = `
+      <div class="chat-compare-card">
+        <div class="skel" style="height:12px;width:80px;margin-bottom:12px"></div>
+        <div class="chat-compare-grid">
+          <div class="chat-compare-col">
+            <div class="skel" style="width:100%;aspect-ratio:1;border-radius:8px;margin-bottom:8px"></div>
+            <div class="skel" style="height:12px;width:80%;margin-bottom:6px"></div>
+            <div class="skel" style="height:11px;width:50%;margin-bottom:10px"></div>
+            <div class="skel" style="height:9px;width:100%;margin-bottom:4px"></div>
+            <div class="skel" style="height:9px;width:100%;margin-bottom:4px"></div>
+            <div class="skel" style="height:9px;width:100%;margin-bottom:4px"></div>
+            <div class="skel" style="height:9px;width:100%"></div>
+          </div>
+          <div style="flex-shrink:0;width:24px"></div>
+          <div class="chat-compare-col">
+            <div class="skel" style="width:100%;aspect-ratio:1;border-radius:8px;margin-bottom:8px"></div>
+            <div class="skel" style="height:12px;width:80%;margin-bottom:6px"></div>
+            <div class="skel" style="height:11px;width:50%;margin-bottom:10px"></div>
+            <div class="skel" style="height:9px;width:100%;margin-bottom:4px"></div>
+            <div class="skel" style="height:9px;width:100%;margin-bottom:4px"></div>
+            <div class="skel" style="height:9px;width:100%;margin-bottom:4px"></div>
+            <div class="skel" style="height:9px;width:100%"></div>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    // Cartes produits normales
+    div.innerHTML = Array.from({length: n}, () => `
+      <div class="chat-product-card" style="pointer-events:none">
+        <div class="chat-product-top">
+          <div class="skel" style="width:72px;height:72px;border-radius:14px;flex-shrink:0"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:4px 0">
+            <div class="skel" style="height:13px;width:70%"></div>
+            <div class="skel" style="height:12px;width:35%"></div>
+            <div class="skel" style="height:11px;width:55%"></div>
+          </div>
+        </div>
+        <div class="skel" style="height:32px;border-radius:8px;margin-top:4px"></div>
+      </div>`).join("");
+  }
+
+  if (container) {
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+  return div;
+}
+
+function _removeCardsSkeleton() {
+  document.getElementById("cards-skeleton")?.remove();
+}
+
+// Traduit les messages d'erreur retournés par cart/add.php
+function _cartErrorMsg(phpError) {
+  if (!phpError) return t('errorCart');
+  const e = phpError.toLowerCase();
+  if (e.includes("combinaison") || e.includes("unavailable") || e.includes("indisponible"))
+    return t('errorUnavailable');
+  if (e.includes("taille") || e.includes("couleur") || e.includes("sélectionner") || e.includes("select"))
+    return t('errorNoSize');
+  if (e.includes("connecté") || e.includes("connected") || e.includes("login"))
+    return t('errorLogin');
+  if (e.includes("introuvable") || e.includes("not found"))
+    return t('errorProduct');
+  return t('errorCart');
+}
+
 async function showProductPicker(produits, container) {
   if (!container) container = document.getElementById("messages");
   if (currentLangue !== "fr") {
+    _appendCardsSkeleton(container, produits.length);
     const toutesValeurs = produits.flatMap(p => [
       ...(p.tailles || []).map(String),
       ...(p.couleurs || []),
     ]);
     const cache = await traduireValeursDynamiques(toutesValeurs, currentLangue);
+    _removeCardsSkeleton();
     produits = produits.map(p => ({
       ...p,
+      tailles_fr:  (p.tailles  || []).map(String),        // originaux FR pour cart/add.php
+      couleurs_fr: (p.couleurs || []),
       tailles:  (p.tailles  || []).map(v => cache[String(v)] || v),
       couleurs: (p.couleurs || []).map(v => cache[v] || v),
+    }));
+  } else {
+    // En FR les valeurs sont déjà les bonnes
+    produits = produits.map(p => ({
+      ...p,
+      tailles_fr:  (p.tailles  || []).map(String),
+      couleurs_fr: (p.couleurs || []),
     }));
   }
 
@@ -885,17 +973,17 @@ async function showProductPicker(produits, container) {
       const hasCouleurs = (p.couleurs || []).length > 0;
 
       const taillesHtml = (p.tailles || [])
-        .map(
-          (t) =>
-            `<span class="chat-opt" onclick="chatPickOpt(this)" data-group="taille-${i}-${p.id}">${escapeHtml(t)}</span>`,
-        )
+        .map((t, ti) => {
+          const fr = (p.tailles_fr || [])[ti] || t;
+          return `<span class="chat-opt" onclick="chatPickOpt(this)" data-group="taille-${i}-${p.id}" data-value-fr="${escapeAttr(fr)}">${escapeHtml(t)}</span>`;
+        })
         .join("");
 
       const couleursHtml = (p.couleurs || [])
-        .map(
-          (c) =>
-            `<span class="chat-opt" onclick="chatPickOpt(this)" data-group="couleur-${i}-${p.id}">${escapeHtml(c)}</span>`,
-        )
+        .map((c, ci) => {
+          const fr = (p.couleurs_fr || [])[ci] || c;
+          return `<span class="chat-opt" onclick="chatPickOpt(this)" data-group="couleur-${i}-${p.id}" data-value-fr="${escapeAttr(fr)}">${escapeHtml(c)}</span>`;
+        })
         .join("");
 
       return `
@@ -1000,9 +1088,13 @@ async function confirmChatCartFromPicker(productId, btn) {
   const taille =
     selector.querySelector(
       '.chat-option-group[data-type="taille"] .chat-opt.active',
+    )?.dataset.valueFr || selector.querySelector(
+      '.chat-option-group[data-type="taille"] .chat-opt.active',
     )?.textContent || null;
   const couleur =
     selector.querySelector(
+      '.chat-option-group[data-type="couleur"] .chat-opt.active',
+    )?.dataset.valueFr || selector.querySelector(
       '.chat-option-group[data-type="couleur"] .chat-opt.active',
     )?.textContent || null;
 
@@ -1018,7 +1110,7 @@ async function confirmChatCartFromPicker(productId, btn) {
   } else {
     btn.disabled = false;
     btn.textContent = t('confirm');
-    if (errEl) errEl.textContent = result?.error || t('errorCart');
+    if (errEl) errEl.textContent = _cartErrorMsg(result?.error);
   }
 }
 
@@ -1096,22 +1188,53 @@ async function confirmCartDirect(productId, taille, couleur, btn) {
   } else {
     btn.disabled = false;
     btn.textContent = '✓ ' + t('confirm');
-    if (errEl) errEl.textContent = result?.error || t('errorCart');
+    if (errEl) errEl.textContent = _cartErrorMsg(result?.error);
   }
+}
+
+// Wrapper pour le bouton "Choisir ce modèle" — feedback immédiat pendant le chargement
+async function _choisirModele(produit, btn) {
+  // Désactiver le bouton et afficher un état de chargement
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.innerHTML = `<span class="chat-shoe-steps"><span>👟</span><span>👟</span><span>👟</span></span>`;
+  // Désactiver aussi l'autre bouton "Choisir ce modèle" dans la comparaison
+  btn.closest(".chat-msg")?.querySelectorAll(".chat-cart-btn").forEach(b => b.disabled = true);
+
+  const container = document.getElementById("messages");
+  await showCartSelector(produit, container);
+
+  // Rétablir au cas où showCartSelector n'aurait pas retiré la carte
+  btn.disabled = false;
+  btn.textContent = originalText;
 }
 
 async function showCartSelector(produit, container) {
   if (!container) container = document.getElementById("messages");
   if (currentLangue !== "fr") {
-    const vals = [
-      ...(produit.tailles  || []).map(String),
-      ...(produit.couleurs || []),
-    ];
-    const cache = await traduireValeursDynamiques(vals, currentLangue);
+    // Si couleurs_fr est déjà présent (produit venant de showComparisonView),
+    // les valeurs sont déjà traduites — pas besoin de retraduire
+    if (!produit.couleurs_fr) {
+      _appendCardsSkeleton(container, 1);
+      const vals = [
+        ...(produit.tailles  || []).map(String),
+        ...(produit.couleurs || []),
+      ];
+      const cache = await traduireValeursDynamiques(vals, currentLangue);
+      _removeCardsSkeleton();
+      produit = {
+        ...produit,
+        tailles_fr:  (produit.tailles  || []).map(String),
+        couleurs_fr: (produit.couleurs || []),
+        tailles:  (produit.tailles  || []).map(v => cache[String(v)] || v),
+        couleurs: (produit.couleurs || []).map(v => cache[v] || v),
+      };
+    }
+  } else {
     produit = {
       ...produit,
-      tailles:  (produit.tailles  || []).map(v => cache[String(v)] || v),
-      couleurs: (produit.couleurs || []).map(v => cache[v] || v),
+      tailles_fr:  (produit.tailles  || []).map(String),
+      couleurs_fr: (produit.couleurs || []),
     };
   }
 
@@ -1122,17 +1245,17 @@ async function showCartSelector(produit, container) {
   const hasCouleurs = (produit.couleurs || []).length > 0;
 
   const taillesHtml = (produit.tailles || [])
-    .map(
-      (t) =>
-        `<button class="chat-option-btn" onclick="chatSelectOption(this)" data-value="${escapeAttr(t)}">${escapeHtml(t)}</button>`,
-    )
+    .map((t, i) => {
+      const fr = (produit.tailles_fr || [])[i] || t;
+      return `<button class="chat-option-btn" onclick="chatSelectOption(this)" data-value="${escapeAttr(t)}" data-value-fr="${escapeAttr(fr)}">${escapeHtml(t)}</button>`;
+    })
     .join("");
 
   const couleursHtml = (produit.couleurs || [])
-    .map(
-      (c) =>
-        `<button class="chat-option-btn" onclick="chatSelectOption(this)" data-value="${escapeAttr(c)}">${escapeHtml(c)}</button>`,
-    )
+    .map((c, i) => {
+      const fr = (produit.couleurs_fr || [])[i] || c;
+      return `<button class="chat-option-btn" onclick="chatSelectOption(this)" data-value="${escapeAttr(c)}" data-value-fr="${escapeAttr(fr)}">${escapeHtml(c)}</button>`;
+    })
     .join("");
 
   div.innerHTML = `
@@ -1214,9 +1337,13 @@ async function confirmChatCart(productId, btn) {
   const taille =
     card.querySelector(
       '.chat-option-group[data-type="taille"] .chat-option-btn.active',
+    )?.dataset.valueFr || card.querySelector(
+      '.chat-option-group[data-type="taille"] .chat-option-btn.active',
     )?.dataset.value || null;
   const couleur =
     card.querySelector(
+      '.chat-option-group[data-type="couleur"] .chat-option-btn.active',
+    )?.dataset.valueFr || card.querySelector(
       '.chat-option-group[data-type="couleur"] .chat-option-btn.active',
     )?.dataset.value || null;
 
@@ -1232,7 +1359,7 @@ async function confirmChatCart(productId, btn) {
   } else {
     btn.disabled = false;
     btn.textContent = t('addToCart');
-    if (errEl) errEl.textContent = result?.error || t('errorCart');
+    if (errEl) errEl.textContent = _cartErrorMsg(result?.error);
   }
 }
 
@@ -1388,6 +1515,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function showComparisonView(p1, p2, container) {
   if (!container) container = document.getElementById("messages");
   if (currentLangue !== "fr") {
+    _appendCardsSkeleton(container, 2, "comparison");
     const toutesValeurs = [
       ...(p1.tailles || []).map(String),
       ...(p2.tailles || []).map(String),
@@ -1395,9 +1523,23 @@ async function showComparisonView(p1, p2, container) {
       ...(p2.couleurs || []),
     ];
     const cache = await traduireValeursDynamiques(toutesValeurs, currentLangue);
+    _removeCardsSkeleton();
     const traduire = (arr) => arr.map(v => cache[v] || v);
-    p1 = { ...p1, tailles: traduire(p1.tailles || []), couleurs: traduire(p1.couleurs || []) };
-    p2 = { ...p2, tailles: traduire(p2.tailles || []), couleurs: traduire(p2.couleurs || []) };
+    p1 = { ...p1,
+      tailles_fr: (p1.tailles || []).map(String),
+      couleurs_fr: (p1.couleurs || []),
+      tailles: traduire(p1.tailles || []),
+      couleurs: traduire(p1.couleurs || []),
+    };
+    p2 = { ...p2,
+      tailles_fr: (p2.tailles || []).map(String),
+      couleurs_fr: (p2.couleurs || []),
+      tailles: traduire(p2.tailles || []),
+      couleurs: traduire(p2.couleurs || []),
+    };
+  } else {
+    p1 = { ...p1, tailles_fr: (p1.tailles || []).map(String), couleurs_fr: (p1.couleurs || []) };
+    p2 = { ...p2, tailles_fr: (p2.tailles || []).map(String), couleurs_fr: (p2.couleurs || []) };
   }
 
   const div = document.createElement("div");
@@ -1442,7 +1584,7 @@ async function showComparisonView(p1, p2, container) {
 
             <button class="chat-cart-btn"
                 style="margin-top:10px;width:100%"
-                onclick="showCartSelector(${JSON.stringify(p).replace(/"/g, "&quot;")}, document.getElementById('messages'))">
+                onclick="_choisirModele(${JSON.stringify(p).replace(/"/g, "&quot;")}, this)">
                 ${t('chooseModel')}
             </button>
         </div>`;
@@ -1738,7 +1880,7 @@ async function _genererMessageAccueil(
   msgDiv.className = "chat-msg bot";
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
-  bubble.innerHTML = `<span style="opacity:0.5;font-size:0.85em">✦ <span class="chat-dots"><span>.</span><span>.</span><span>.</span></span></span>`;
+  bubble.innerHTML = `<span class="chat-shoe-steps" style="opacity:0.7"><span>👟</span><span>👟</span><span>👟</span></span>`;
   const time = document.createElement("div");
   time.className = "chat-time";
   time.dataset.ts = Date.now();
