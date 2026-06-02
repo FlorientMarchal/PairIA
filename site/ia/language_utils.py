@@ -2,7 +2,9 @@
 # Détection de langue et traduction vers le français pour le pipeline RAG
 
 from __future__ import annotations
+import os
 import ollama
+client = ollama.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 #75 langues
 LANGUES_SUPPORTEES: dict[str, str] = {
     "af": "afrikaans",
@@ -131,7 +133,7 @@ def traduire_en_francais(texte: str, langue_source: str, llm_model: str = _LLM_M
         f"Texte : {texte}"
     )
     try:
-        response = ollama.chat(
+        response = client.chat(
             model=llm_model,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 300, "temperature": 0.1},
@@ -160,7 +162,7 @@ def traduire_reponse(texte: str, langue_cible: str, llm_model: str = _LLM_MODEL)
         f"Text to translate:\n{texte}"
     )
     try:
-        response = ollama.chat(
+        response = client.chat(
             model=llm_model,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 500, "temperature": 0.1},
@@ -300,7 +302,7 @@ def traduire_catalogue(produits: list, langue: str, llm_model: str = _LLM_MODEL)
     )
 
     try:
-        response = ollama.chat(
+        response = client.chat(
             model=llm_model,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 800, "temperature": 0.1},

@@ -1,0 +1,21 @@
+FROM php:8.2-apache
+
+RUN docker-php-ext-install pdo pdo_mysql
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+RUN a2enmod rewrite
+
+RUN echo '<Directory /var/www/html>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' > /etc/apache2/conf-available/site.conf \
+ && a2enconf site
+
+# Installe les dépendances Stripe au build
+WORKDIR /var/www/html
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader
+
+EXPOSE 80

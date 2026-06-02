@@ -33,3 +33,8 @@ includes/config.php
 
 # Logs de Stripes
 stripe/debug.log
+
+ia/qdrant-server/qdrant.exe
+
+# Fichier SQL d'init (peut contenir des données)
+init.sql

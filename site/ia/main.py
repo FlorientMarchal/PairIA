@@ -5,10 +5,11 @@
 
 import sys
 import os
-
-# ── Mode offline total : aucun appel vers HuggingFace Hub ──────────────────
+os.environ.setdefault("OLLAMA_HOST", "http://localhost:11434")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
+import ollama as _ollama_lib
+_ollama_lib.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 
 import json
 import time

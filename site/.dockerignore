@@ -1,0 +1,9 @@
+ia/qdrant_db/
+ia/chroma_db/
+ia/__pycache__/
+ia/modele_intention/
+ia/qdrant-server/
+images/
+vendor/
+.env
+*.pyc

@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import ollama
+client = ollama.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 from database import qdrant
 from llm_prompt import build_prompt, get_system_prompt
 from language_utils import normaliser_question, traduire_reponse, detecter_langue
@@ -264,7 +265,7 @@ def _resumer_description(produit: dict, langue: str = "fr") -> str:
     from language_utils import nom_langue
     langue_label = nom_langue(langue) if langue != "fr" else "français"
     try:
-        resp = ollama.chat(
+        resp = client.chat(
             model=LLM_MODEL,
             messages=[{"role": "user", "content": (
                 f"Tu es un assistant. Réponds UNIQUEMENT en {langue_label}.\n"
@@ -296,7 +297,7 @@ def _identifier_produits_a_comparer(question: str, produits: list) -> tuple[dict
         f"Si vraiment non précisé, réponds : {{\"p1\": 1, \"p2\": 2}}"
     )
     try:
-        resp = ollama.chat(
+        resp = client.chat(
             model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 20, "temperature": 0},
@@ -335,7 +336,7 @@ def _llm_enrichir_question(question: str, history: list) -> str:
         f"Réponds UNIQUEMENT en français, avec les mots-clés séparés par des espaces, sans ponctuation."
     )
     try:
-        resp = ollama.chat(
+        resp = client.chat(
             model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 100, "temperature": 0},
@@ -365,7 +366,7 @@ def _llm_categories_candidates(question: str, history: list) -> list[str]:
         f"Réponds UNIQUEMENT en JSON : {{\"categories\": [{{\"nom\": \"categorie1\", \"score\": nombre entier 1}}, {{\"nom\": \"categorie2\", \"score\": nombre entier 2}}]}}"
     )
     try:
-        resp = ollama.chat(
+        resp = client.chat(
             model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             options={"num_predict": 250, "temperature": 0},
@@ -1046,7 +1047,7 @@ def get_response_stream(
             )},
         ]
         try:
-            stream = ollama.chat(
+            stream = client.chat(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history, 1024),
@@ -1092,7 +1093,7 @@ def get_response_stream(
         )
 
         try:
-            stream = ollama.chat(
+            stream = client.chat(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options=gen_options,
             )
@@ -1120,7 +1121,7 @@ def get_response_stream(
             )},
         ]
         try:
-            stream = ollama.chat(
+            stream = client.chat(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history, 1024),
@@ -1190,7 +1191,7 @@ def get_response_stream(
 
         texte_complet = ""
         try:
-            stream = ollama.chat(
+            stream = client.chat(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history, 1024),
@@ -1406,7 +1407,7 @@ def get_response_stream(
                     ]
                     texte_fb = ""
                     try:
-                        stream_fb = ollama.chat(model=LLM_MODEL, messages=msgs_fb, stream=True,
+                        stream_fb = client.chat(model=LLM_MODEL, messages=msgs_fb, stream=True,
                             options={"num_ctx": _calculer_ctx(history), "num_predict": 350, "temperature": 0.7})
                         for chunk in stream_fb:
                             texte_fb += chunk["message"]["content"]
@@ -1463,7 +1464,7 @@ def get_response_stream(
                 ]
                 texte_manque = ""
                 try:
-                    stream = ollama.chat(
+                    stream = client.chat(
                         model=LLM_MODEL, messages=messages_manque, stream=True,
                         options={"num_ctx": 1024, "num_predict": 80, "temperature": 0.4},
                     )
@@ -1526,7 +1527,7 @@ def get_response_stream(
                 )},
             ]
             try:
-                stream = ollama.chat(
+                stream = client.chat(
                     model=LLM_MODEL, messages=messages, stream=True,
                     options={
                         "num_ctx":     _calculer_ctx(history),
@@ -1667,7 +1668,7 @@ def get_response_stream(
             )},
         ]
         try:
-            stream = ollama.chat(
+            stream = client.chat(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history),
@@ -1754,7 +1755,7 @@ def get_response_stream(
 
     texte_complet = ""
     try:
-        stream = ollama.chat(
+        stream = client.chat(
             model=LLM_MODEL, messages=messages, stream=True,
             options={
                 "num_ctx":     _calculer_ctx(history),

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+qdrant_db/
+chroma_db/
+modele_intention/
+qdrant-server/
+.env

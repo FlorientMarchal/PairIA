@@ -7,8 +7,10 @@
 #   - tailles et couleurs stockées en LISTES (filtres natifs Qdrant)
 #   - prix, genre, categorie, marque indexés pour filtrage natif
 #   - création des index payload pour accélérer les filtres
-
+import os
 import ollama
+client = ollama.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+
 import mysql.connector
 from database import qdrant as client
 from qdrant_client.models import (
@@ -135,7 +137,7 @@ def indexer_produits():
 
         try:
             # Embedding texte (nomic) → collection produits
-            embed_texte = ollama.embeddings(model="nomic-embed-text", prompt=texte)
+            embed_texte = client.embeddings(model="nomic-embed-text", prompt=texte)
             client.upsert(
                 collection_name="produits",
                 points=[PointStruct(

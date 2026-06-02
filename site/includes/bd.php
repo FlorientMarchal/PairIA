@@ -1,25 +1,25 @@
 <?php
-// bd.php — Connexion à la base de données
-// À inclure dans toutes les pages qui ont besoin de MySQL
+// includes/bd.php — Connexion à la base de données
+// Lit la config depuis les variables d'environnement (Docker)
+// avec fallback sur les valeurs locales pour le développement
 
-$host     = 'localhost';
-$dbname   = 'e_commmerce';
-$user     = 'root';
-$password = 'root';
+$host     = getenv('MYSQL_HOST')     ?: 'localhost';
+$dbname   = getenv('MYSQL_DATABASE') ?: 'e_commmerce';
+$user     = getenv('MYSQL_USER')     ?: 'root';
+$password = getenv('MYSQL_PASSWORD') ?: 'root';
 $charset  = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
 
 $options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,  // affiche les erreurs SQL
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,        // retourne des tableaux associatifs
-    PDO::ATTR_EMULATE_PREPARES   => false,                   // requêtes préparées réelles
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
 ];
 
 try {
     $pdo = new PDO($dsn, $user, $password, $options);
 } catch (PDOException $e) {
-    // En développement : affiche l'erreur
-    // En production : remplacer par un message générique
-    die('Erreur de connexion : ' . $e->getMessage());
+    // En production : message générique (ne pas exposer l'erreur)
+    die('Erreur de connexion à la base de données.');
 }
