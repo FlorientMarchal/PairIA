@@ -63,32 +63,20 @@ function _formatTime(tsMs, locale) {
   if (diffSec < 60) {
     // "maintenant" / "just now" / "ahora" … via RelativeTimeFormat
     try {
-      return new Intl.RelativeTimeFormat(lang, { numeric: "auto" }).format(
-        0,
-        "second",
-      );
-    } catch (_) {
-      return "now";
-    }
+      return new Intl.RelativeTimeFormat(lang, { numeric: "auto" }).format(0, "second");
+    } catch (_) { return "now"; }
   }
   // Au-delà d'une minute : afficher l'heure HH:MM
   try {
-    return new Intl.DateTimeFormat(lang, {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(tsMs));
+    return new Intl.DateTimeFormat(lang, { hour: "2-digit", minute: "2-digit" }).format(new Date(tsMs));
   } catch (_) {
     const d = new Date(tsMs);
-    return (
-      String(d.getHours()).padStart(2, "0") +
-      ":" +
-      String(d.getMinutes()).padStart(2, "0")
-    );
+    return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
   }
 }
 
 function _refreshTimestamps() {
-  document.querySelectorAll(".chat-time[data-ts]").forEach((el) => {
+  document.querySelectorAll(".chat-time[data-ts]").forEach(el => {
     el.textContent = _formatTime(parseInt(el.dataset.ts), currentLangue);
   });
 }
@@ -146,6 +134,7 @@ async function _mettreAjourLangue(langue) {
     if (typingMsg) typingMsg.textContent = t("analyzing");
   }
 }
+
 
 // ── Crée une session BDD au premier message ──
 async function ensureDbSession(firstMessage) {
@@ -218,7 +207,7 @@ async function loadSessionMessages(sessionId) {
 // APRÈS — utiliser t() pour les labels traduits, et traduire taille/couleur dynamiquement
 async function _messageConfirmationPanier(name, taille, couleur) {
   const langue = sessionStorage.getItem("chatLangue") || "fr";
-  let tailleLabel = taille ? `${t("sizeLabel")} ${taille}` : "";
+  let tailleLabel = taille ? `${t('sizeLabel')} ${taille}` : "";
 
   // Traduire la couleur si elle est en français et qu'on est dans une autre langue
   let couleurLabel = couleur || "";
@@ -229,7 +218,7 @@ async function _messageConfirmationPanier(name, taille, couleur) {
 
   const details = [tailleLabel, couleurLabel].filter(Boolean).join(", ");
   // "added" est déjà traduit via t()
-  return `${t("added")} ${name}${details ? ` (${details})` : ""}`;
+  return `${t('added')} ${name}${details ? ` (${details})` : ""}`;
 }
 
 /*
@@ -238,70 +227,29 @@ async function _messageConfirmationPanier(name, taille, couleur) {
 // Mots de confirmation pour valider une carte panier par message
 // Filtre l'historique pour n'envoyer que les vrais échanges au backend
 function _histoirePropre() {
-  return conversationHistory.filter(
-    (m) =>
-      !m.internal && !(m.role === "user" && m.silent) && m.role !== "system",
+  return conversationHistory.filter(m =>
+    !m.internal && !(m.role === "user" && m.silent) && m.role !== "system"
   );
 }
 
 const _CONFIRMATIONS_MSG = [
-  "oui",
-  "yes",
-  "ok",
-  "ouais",
-  "c'est bon",
-  "c bon",
-  "parfait",
-  "confirme",
-  "go",
-  "vas y",
-  "vas-y",
-  "d'accord",
-  "exact",
-  "correct",
-  "oui je confirme",
-  "oui c'est ça",
-  "oui c'est bon",
-  "allez",
-  "yep",
-  "je confirme",
-  "je valide",
-  "c'est ça",
-  "c'est exact",
-  "ajoute",
-  "ajoute le",
-  "ajoute la",
-  "ajoute les",
-  "ok c'est bon",
-  "nickel",
-  "super",
-  "top",
-  "impeccable",
-  "parfait merci",
+  "oui", "yes", "ok", "ouais", "c'est bon", "c bon", "parfait",
+  "confirme", "go", "vas y", "vas-y", "d'accord", "exact", "correct",
+  "oui je confirme", "oui c'est ça", "oui c'est bon", "allez", "yep",
+  "je confirme", "je valide", "c'est ça", "c'est exact", "ajoute",
+  "ajoute le", "ajoute la", "ajoute les", "ok c'est bon", "nickel",
+  "super", "top", "impeccable", "parfait merci",
 ];
+
 
 // Détecte le tutoiement depuis le texte de l'utilisateur et le stocke
 function _detecterEtStockerTutoiement(text) {
   const q = text.toLowerCase();
-  const moisVous = [
-    "vous avez",
-    "vous êtes",
-    "avez-vous",
-    "pouvez-vous",
-    "faites-vous",
-  ];
-  const moisTu = [
-    "tu as",
-    "t'as",
-    "tu es",
-    "t'es",
-    "as-tu",
-    "es-tu",
-    "peux-tu",
-  ];
-  if (moisVous.some((m) => q.includes(m))) {
+  const moisVous = ["vous avez", "vous êtes", "avez-vous", "pouvez-vous", "faites-vous"];
+  const moisTu = ["tu as", "t'as", "tu es", "t'es", "as-tu", "es-tu", "peux-tu"];
+  if (moisVous.some(m => q.includes(m))) {
     sessionStorage.setItem("chatTutoiement", "vous");
-  } else if (moisTu.some((m) => q.includes(m))) {
+  } else if (moisTu.some(m => q.includes(m))) {
     sessionStorage.setItem("chatTutoiement", "tu");
   }
 }
@@ -309,7 +257,7 @@ function _detecterEtStockerTutoiement(text) {
 let _sendingLock = false;
 
 async function sendMessage(text) {
-  if (_sendingLock) return; // bloquer les doubles envois
+  if (_sendingLock) return;          // bloquer les doubles envois
   _sendingLock = true;
   try {
     await _sendMessageImpl(text);
@@ -329,32 +277,12 @@ async function _sendMessageImpl(text) {
   if (pendingFollowUp === "panier") {
     const textLower = text.trim().toLowerCase().replace(/[?!.]/g, "");
     // Réponse négative → effacer et laisser passer normalement
-    if (
-      [
-        "non",
-        "non merci",
-        "ça va",
-        "c'est bon",
-        "pas besoin",
-        "no",
-        "nope",
-      ].includes(textLower)
-    ) {
+    if (["non", "non merci", "ça va", "c'est bon", "pas besoin", "no", "nope"].includes(textLower)) {
       sessionStorage.removeItem("pendingFollowUp");
       // Laisser passer au backend normalement
     }
     // Réponse affirmative courte → transformer en vraie question
-    else if (
-      [
-        "oui",
-        "yes",
-        "ok",
-        "ouais",
-        "yep",
-        "volontiers",
-        "avec plaisir",
-      ].includes(textLower)
-    ) {
+    else if (["oui", "yes", "ok", "ouais", "yep", "volontiers", "avec plaisir"].includes(textLower)) {
       sessionStorage.removeItem("pendingFollowUp");
       appendUserMessage(text);
       // Envoyer une vraie question au bot
@@ -369,45 +297,28 @@ async function _sendMessageImpl(text) {
 
   // Vérifier si une confirmation panier est en attente
   const pendingRaw = sessionStorage.getItem("pendingCartConfirm");
-  if (
-    pendingRaw &&
-    _CONFIRMATIONS_MSG.includes(text.trim().toLowerCase().replace(/[?!.]/g, ""))
-  ) {
+  if (pendingRaw && _CONFIRMATIONS_MSG.includes(text.trim().toLowerCase().replace(/[?!.]/g, ""))) {
     try {
       const pending = JSON.parse(pendingRaw);
       appendUserMessage(text);
-      const result = await addToCart(
-        pending.id,
-        1,
-        pending.taille,
-        pending.couleur,
-      );
+      const result = await addToCart(pending.id, 1, pending.taille, pending.couleur);
       if (result?.success) {
         sessionStorage.removeItem("pendingCartConfirm");
         // Marquer le bouton de la carte comme confirmé
         const btns = document.querySelectorAll(".chat-cart-btn");
-        btns.forEach((btn) => {
+        btns.forEach(btn => {
           if (btn.textContent.includes("Confirmer")) {
-            btn.textContent = t("added");
+            btn.textContent = t('added');
             btn.style.background = "#2f855a";
             btn.disabled = true;
-            btn
-              .closest(".chat-product-card")
-              ?.querySelector("button[style*='e53e3e']")
-              ?.remove();
+            btn.closest(".chat-product-card")?.querySelector("button[style*='e53e3e']")?.remove();
           }
         });
-        // APRÈS
-        const msgConfirm = await _messageConfirmationPanier(
-          pending.name,
-          pending.taille,
-          pending.couleur,
-        );
-        appendBotMessageText(msgConfirm);
+// APRÈS
+      const msgConfirm = await _messageConfirmationPanier(pending.name, pending.taille, pending.couleur);
+      appendBotMessageText(msgConfirm);      
       } else {
-        appendBotMessageText(
-          result?.error || "Erreur lors de l'ajout au panier.",
-        );
+        appendBotMessageText(result?.error || "Erreur lors de l'ajout au panier.");
       }
       return;
     } catch (e) {}
@@ -439,8 +350,7 @@ async function _sendMessageImpl(text) {
       question: text,
       history: historyToSend,
       session_id: sessionId,
-      langue_session:
-        sessionStorage.getItem("chatLangue") || currentLangue || "fr",
+      langue_session: sessionStorage.getItem("chatLangue") || currentLangue || "fr",
     };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
 
@@ -508,13 +418,14 @@ async function _sendMessageImpl(text) {
             show_products = data.show_products !== false;
             confirm_required = data.confirm_required !== false;
             if (data.langue) langueRecue = data.langue;
-            if (data.tutoiement)
-              sessionStorage.setItem("chatTutoiement", data.tutoiement);
-            if (data.couleur)
-              sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+            if (data.tutoiement) sessionStorage.setItem("chatTutoiement", data.tutoiement);
+            if (data.couleur) sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
             if (data.question_fr) questionFr = data.question_fr;
-          } // ← accolade fermante du if products_final
-          else if (data.products !== undefined && data.products.length === 0) {
+        }                    // ← accolade fermante du if products_final
+          else if (
+            data.products !== undefined &&
+            data.products.length === 0
+          ) {
             // Metadata initiale vide — on ignore
           } else if (data.chunk !== undefined) {
             // Token texte — streaming normal
@@ -546,16 +457,12 @@ async function _sendMessageImpl(text) {
 
     // Si une couleur a été normalisée (ex: Rouge→Bordeaux), l'intégrer dans le message user
     const normalizedCouleur = sessionStorage.getItem("lastNormalizedCouleur");
-    const textToStore =
-      normalizedCouleur && couleur && normalizedCouleur !== couleur
-        ? text + ` [couleur:${normalizedCouleur}]`
-        : text;
+    const textToStore = (normalizedCouleur && couleur && normalizedCouleur !== couleur)
+      ? text + ` [couleur:${normalizedCouleur}]`
+      : text;
     if (normalizedCouleur) sessionStorage.removeItem("lastNormalizedCouleur");
 
-    conversationHistory.push({
-      role: "user",
-      content: questionFr || textToStore,
-    });
+    conversationHistory.push({ role: "user", content: questionFr || textToStore });
     conversationHistory.push({
       role: "assistant",
       content: message,
@@ -592,8 +499,7 @@ async function _sendMessageImpl(text) {
         const needsCouleur = (produit.couleurs || []).length > 0;
         const hasTaille = !!taille;
         const hasCouleur = !!couleur;
-        const infoComplete =
-          (!needsTaille || hasTaille) && (!needsCouleur || hasCouleur);
+        const infoComplete = (!needsTaille || hasTaille) && (!needsCouleur || hasCouleur);
 
         if (infoComplete) {
           // Toujours afficher la carte de confirmation
@@ -689,10 +595,7 @@ async function sendImageWithText(file, text) {
     const historyToSendImg = _histoirePropre();
     formData.append("history", JSON.stringify(historyToSendImg));
     formData.append("session_id", sessionId);
-    formData.append(
-      "langue_session",
-      sessionStorage.getItem("chatLangue") || currentLangue || "fr",
-    );
+    formData.append("langue_session", sessionStorage.getItem("chatLangue") || currentLangue || "fr");
 
     const response = await fetch(`${API_URL}/chat/stream-image`, {
       method: "POST",
@@ -750,12 +653,11 @@ async function sendImageWithText(file, text) {
             couleur = data.couleur || null;
             show_products = data.show_products !== false;
             confirm_required = data.confirm_required !== false;
-            if (data.langue) langueRecue = data.langue; // ← AJOUTER cette ligne
-            if (data.tutoiement)
-              sessionStorage.setItem("chatTutoiement", data.tutoiement);
-            if (data.couleur)
-              sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
+            if (data.langue) langueRecue = data.langue;  // ← AJOUTER cette ligne
+            if (data.tutoiement) sessionStorage.setItem("chatTutoiement", data.tutoiement);
+            if (data.couleur) sessionStorage.setItem("lastNormalizedCouleur", data.couleur);
             if (data.question_fr) questionFr = data.question_fr;
+        
           } else if (
             data.products !== undefined &&
             data.products.length === 0
@@ -849,18 +751,18 @@ async function sendImageWithText(file, text) {
 }
 
 function resetConversation() {
-  conversationHistory = [];
-  sessionId = crypto.randomUUID();
-  dbSessionId = null;
-  currentLangue = "fr";
-  sessionStorage.removeItem("chatHistory");
-  sessionStorage.removeItem("dbSessionId");
-  sessionStorage.removeItem("chatLangue");
-  sessionStorage.setItem("chatSessionId", sessionId);
+    conversationHistory = [];
+    sessionId = crypto.randomUUID();
+    dbSessionId = null;
+    currentLangue = "fr";
+    sessionStorage.removeItem("chatHistory");
+    sessionStorage.removeItem("dbSessionId");
+    sessionStorage.removeItem("chatLangue");
+    sessionStorage.setItem("chatSessionId", sessionId);
 
-  const container = document.getElementById("messages");
-  if (container) container.innerHTML = "";
-  closeHistoryPanel();
+    const container = document.getElementById("messages");
+    if (container) container.innerHTML = "";
+    closeHistoryPanel();
 }
 
 /* ══════════════════════════════════════
@@ -922,7 +824,7 @@ function appendTyping() {
     <div class="chat-typing-msg"
          id="typing-msg"
          style="font-size:11px;color:#999;margin-top:4px;display:none">
-      ${t("analyzing")}
+      ${t('analyzing')}
     </div>`;
 
   container.appendChild(div);
@@ -944,8 +846,7 @@ function appendTyping() {
 async function toggleFavChat(productId, btn) {
   try {
     const currentDir = window.location.pathname.substring(
-      0,
-      window.location.pathname.lastIndexOf("/") + 1,
+      0, window.location.pathname.lastIndexOf("/") + 1
     );
     const res = await fetch(currentDir + "favorites/toggle.php", {
       method: "POST",
@@ -1102,7 +1003,7 @@ async function showProductPicker(produits, container) {
         </a>
         <div style="display:flex;gap:6px;padding:0 10px 6px">
           <button class="chat-pick-toggle-btn" style="flex:1" onclick="chatToggleSelector(this)">
-            ${t("addToCart")}
+            ${t('addToCart')}
           </button>
           <button class="chat-fav-btn" title="Ajouter aux favoris"
             onclick="toggleFavChat(${p.id}, this)">
@@ -1113,7 +1014,7 @@ async function showProductPicker(produits, container) {
           ${
             hasTailles
               ? `
-            <div class="chat-option-title">${t("size")}</div>
+            <div class="chat-option-title">${t('size')}</div>
             <div class="chat-option-group" data-type="taille">${taillesHtml}</div>
           `
               : ""
@@ -1121,7 +1022,7 @@ async function showProductPicker(produits, container) {
           ${
             hasCouleurs
               ? `
-            <div class="chat-option-title">${t("color")}</div>
+            <div class="chat-option-title">${t('color')}</div>
             <div class="chat-option-group" data-type="couleur">${couleursHtml}</div>
           `
               : ""
@@ -1130,7 +1031,7 @@ async function showProductPicker(produits, container) {
           <button class="chat-cart-btn"
             onclick="confirmChatCartFromPicker(${p.id}, this)"
             ${hasTailles || hasCouleurs ? "disabled" : ""}>
-            ${t("confirm")}
+            ${t('confirm')}
           </button>
         </div>
       </div>`;
@@ -1139,7 +1040,7 @@ async function showProductPicker(produits, container) {
 
   div.innerHTML = `
     <div class="chat-product-card">
-      <div class="chat-pick-title">${t("suggestions")}</div>
+      <div class="chat-pick-title">${t('suggestions')}</div>
       <div class="chat-product-pick-list">${itemsHtml}</div>
     </div>`;
 
@@ -1163,9 +1064,7 @@ function selectProductFromPicker(btn) {
 }
 
 function chatToggleSelector(btn) {
-  const selector = btn
-    .closest(".chat-pick-item")
-    .querySelector(".chat-pick-selector");
+  const selector = btn.closest(".chat-pick-item").querySelector(".chat-pick-selector");
   const isOpen = selector.style.display !== "none";
   selector.style.display = isOpen ? "none" : "block";
   btn.style.opacity = isOpen ? "1" : "0.6";
@@ -1206,7 +1105,7 @@ async function confirmChatCartFromPicker(productId, btn) {
   const result = await addToCart(productId, 1, taille, couleur);
 
   if (result?.success) {
-    btn.textContent = t("added");
+    btn.textContent = t('added');
     btn.style.background = "#2f855a";
   } else {
     btn.disabled = false;
@@ -1222,22 +1121,19 @@ async function showCartConfirm(produit, taille, couleur, container) {
   if (!container) container = document.getElementById("messages");
 
   // Mémoriser l'état en attente de confirmation
-  sessionStorage.setItem(
-    "pendingCartConfirm",
-    JSON.stringify({
-      id: produit.id,
-      name: produit.name,
-      price: produit.price,
-      taille: taille || null,
-      couleur: couleur || null,
-    }),
-  );
+  sessionStorage.setItem("pendingCartConfirm", JSON.stringify({
+    id: produit.id,
+    name: produit.name,
+    price: produit.price,
+    taille: taille || null,
+    couleur: couleur || null,
+  }));
 
   const div = document.createElement("div");
   div.className = "chat-msg bot";
 
   // Traduire le label "taille" et la valeur couleur via le cache UI
-  const tailleStr = taille ? `${t("sizeLabel")} ${taille}` : "";
+  const tailleStr = taille ? `${t('sizeLabel')} ${taille}` : "";
   let couleurStr = couleur || "";
   if (couleur && currentLangue !== "fr") {
     const cache = await traduireValeursDynamiques([couleur], currentLangue);
@@ -1249,11 +1145,9 @@ async function showCartConfirm(produit, taille, couleur, container) {
     <div class="chat-product-card">
       <div class="chat-product-top">
         <div class="chat-product-img">
-          ${
-            produit.url_image
-              ? `<img src="${escapeHtml(produit.url_image)}" alt="${escapeHtml(produit.name)}" onerror="this.style.display='none'">`
-              : "👟"
-          }
+          ${produit.url_image
+            ? `<img src="${escapeHtml(produit.url_image)}" alt="${escapeHtml(produit.name)}" onerror="this.style.display='none'">`
+            : "👟"}
         </div>
         <div>
           <div class="chat-product-name">${escapeHtml(produit.name)}</div>
@@ -1264,11 +1158,11 @@ async function showCartConfirm(produit, taille, couleur, container) {
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="chat-cart-btn" style="flex:1"
           onclick="confirmCartDirect(${produit.id}, '${escapeAttr(taille || "")}', '${escapeAttr(couleur || "")}', this)">
-          ✓ ${t("confirm")}
+          ✓ ${t('confirm')}
         </button>
         <button class="chat-cart-btn" style="flex:1;background:#e53e3e"
           onclick="sessionStorage.removeItem('pendingCartConfirm'); this.closest('.chat-msg').remove()">
-          ${t("cancel")}
+          ${t('cancel')}
         </button>
       </div>
       <div class="chat-selector-error" style="font-size:12px;color:#e53e3e;margin-top:6px;min-height:16px;"></div>
@@ -1282,13 +1176,13 @@ async function confirmCartDirect(productId, taille, couleur, btn) {
   const card = btn.closest(".chat-product-card");
   const errEl = card.querySelector(".chat-selector-error");
   btn.disabled = true;
-  btn.textContent = t("added");
+  btn.textContent = t('added');
 
   const result = await addToCart(productId, 1, taille || null, couleur || null);
 
   if (result?.success) {
     sessionStorage.removeItem("pendingCartConfirm");
-    btn.textContent = t("added");
+    btn.textContent = t('added');
     btn.style.background = "#2f855a";
     card.querySelector("button[style*='e53e3e']")?.remove();
   } else {
@@ -1383,7 +1277,7 @@ async function showCartSelector(produit, container) {
       ${
         hasTailles
           ? `
-        <div class="chat-option-title">${t("size")}</div>
+        <div class="chat-option-title">${t('size')}</div>
         <div class="chat-option-group" data-type="taille">${taillesHtml}</div>
       `
           : ""
@@ -1392,7 +1286,7 @@ async function showCartSelector(produit, container) {
       ${
         hasCouleurs
           ? `
-        <div class="chat-option-title">${t("color")}</div>
+        <div class="chat-option-title">${t('color')}</div>
         <div class="chat-option-group" data-type="couleur">${couleursHtml}</div>
       `
           : ""
@@ -1404,7 +1298,7 @@ async function showCartSelector(produit, container) {
         <button class="chat-cart-btn" style="flex:1"
           onclick="confirmChatCart(${produit.id}, this)"
           ${hasTailles || hasCouleurs ? "disabled" : ""}>
-          ${t("addToCart")}
+          ${t('addToCart')}
         </button>
         <button class="chat-fav-btn" title="Ajouter aux favoris"
           onclick="toggleFavChat(${produit.id}, this)">
@@ -1454,13 +1348,13 @@ async function confirmChatCart(productId, btn) {
     )?.dataset.value || null;
 
   btn.disabled = true;
-  btn.textContent = t("added");
+  btn.textContent = t('added');
   if (errEl) errEl.textContent = "";
 
   const result = await addToCart(productId, 1, taille, couleur);
 
   if (result?.success) {
-    btn.textContent = t("added");
+    btn.textContent = t('added');
     btn.style.background = "#2f855a";
   } else {
     btn.disabled = false;
@@ -1592,11 +1486,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (msg.products.length === 1) {
             await showCartSelector(msg.products[0], container);
           } else if (msg.layout === "comparison" && msg.products.length >= 2) {
-            await showComparisonView(
-              msg.products[0],
-              msg.products[1],
-              container,
-            );
+            await showComparisonView(msg.products[0], msg.products[1], container);
           } else if (msg.products.length > 1) {
             await showProductPicker(msg.products, container);
           }
@@ -1675,19 +1565,19 @@ async function showComparisonView(p1, p2, container) {
             ${resume ? `<div class="chat-compare-resume">${escapeHtml(resume)}</div>` : ""}
             <table class="chat-compare-table">
                 <tr>
-                    <td class="chat-compare-label">${t("brand")}</td>
+                    <td class="chat-compare-label">${t('brand')}</td>
                     <td>${escapeHtml(p.marque || "—")}</td>
                 </tr>
                 <tr>
-                    <td class="chat-compare-label">${t("category")}</td>
+                    <td class="chat-compare-label">${t('category')}</td>
                     <td>${escapeHtml(p.categorie || "—")}</td>
                 </tr>
                 <tr>
-                    <td class="chat-compare-label">${t("sizes")}</td>
+                    <td class="chat-compare-label">${t('sizes')}</td>
                     <td>${escapeHtml(tailles)}</td>
                 </tr>
                 <tr>
-                    <td class="chat-compare-label">${t("colors")}</td>
+                    <td class="chat-compare-label">${t('colors')}</td>
                     <td>${escapeHtml(couleurs)}</td>
                 </tr>
             </table>
@@ -1702,7 +1592,7 @@ async function showComparisonView(p1, p2, container) {
 
   div.innerHTML = `
         <div class="chat-compare-card">
-            <div class="chat-compare-title">${t("comparison")}</div>
+            <div class="chat-compare-title">${t('comparison')}</div>
             <div class="chat-compare-grid">
                 ${colHtml(p1, 0)}
                 <div class="chat-compare-vs">VS</div>
@@ -1813,16 +1703,16 @@ function initProductContext(produit) {
   } else if (nbVisites === 2) {
     question = `En une à deux phrases (max 25 mots), tu remarques que le client revient sur "${produit.name}" (${produit.price.toFixed(2)}€). Encourage-le chaleureusement à passer à l'achat en soulignant ce qui le séduisait. ${pronLe}.${sansBonjour}`;
   } else if (estPremiereVisite) {
-    question =
-      variantesPremiere[Math.floor(Math.random() * variantesPremiere.length)];
+    question = variantesPremiere[Math.floor(Math.random() * variantesPremiere.length)];
   } else {
-    question =
-      variantesRetour[Math.floor(Math.random() * variantesRetour.length)] +
-      sansBonjour;
+    question = variantesRetour[Math.floor(Math.random() * variantesRetour.length)] + sansBonjour;
   }
+
+ 
 
   _genererMessageAccueil(question, produit.id);
 }
+
 
 async function initFavorisContext(favorisItems) {
   const tutoiement = sessionStorage.getItem("chatTutoiement") || "tu";
@@ -1845,28 +1735,23 @@ async function initFavorisContext(favorisItems) {
       `Le client regarde ses favoris (${resumeFav}). En 2 phrases : commente positivement ces choix, puis demande s'il veut qu'on l'aide à choisir ou à trouver autre chose. Ne cite AUCUN autre produit. ${pronLe}.`,
       `Le client a sauvegardé ${resumeFav} dans ses favoris. En 2 phrases : valorise ces sélections, puis propose ton aide pour finaliser un achat. Ne cite AUCUN autre produit. ${pronLe}.`,
     ];
-    question =
-      variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else {
     contexte = `L'utilisateur est sur sa page favoris mais elle est vide.`;
     const variantes = [
       `En une phrase, dis au client que sa liste de favoris est vide et propose de l'aider à trouver des chaussures qui lui plairont. ${pronLe}.`,
       `En une phrase, invite le client à explorer le catalogue pour ajouter ses coups de cœur en favoris. ${pronLe}.`,
     ];
-    question =
-      variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   }
 
   conversationHistory = conversationHistory.filter(
-    (msg) =>
-      !(msg.role === "system" && msg.content.startsWith("L'utilisateur")),
+    (msg) => !(msg.role === "system" && msg.content.startsWith("L'utilisateur"))
   );
-  conversationHistory.push({
-    role: "system",
-    internal: true,
-    content: contexte,
-  });
+  conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
+
+
 
   _genererMessageAccueil(question, null, []);
 }
@@ -1899,8 +1784,7 @@ async function initPanierContext(panierItems) {
       .join(", ");
     contexte = `L'utilisateur est sur sa page panier. Contenu : ${resume}.`;
     const resumeNoms = panierItems.map((it) => it.nom).join(", ");
-    const interdiction =
-      "Ne cite AUCUN autre produit que tu n'as pas dans le catalogue fourni.";
+    const interdiction = "Ne cite AUCUN autre produit que tu n'as pas dans le catalogue fourni.";
     const variantes = [
       `Le client a ${resumeNoms} dans son panier. En 2 phrases : félicite-le pour ce choix, puis demande-lui s'il cherche autre chose ou si tu peux l'aider. ${interdiction} ${pronLe}.`,
       `Le client a ${resumeNoms} dans son panier. En 2 phrases : rassure-le sur son excellent choix, puis propose ton aide s'il a besoin d'une autre paire. ${interdiction} ${pronLe}.`,
@@ -1908,8 +1792,7 @@ async function initPanierContext(panierItems) {
       `Le client a ${resumeNoms} dans son panier. En 2 phrases : valorise son choix, puis demande s'il a trouvé tout ce qu'il cherchait ou s'il veut explorer d'autres modèles. ${interdiction} ${pronLe}.`,
       `Le client a ${resumeNoms} dans son panier. En 2 phrases : félicite-le pour ce choix et rappelle une qualité clé, puis demande si tu peux l'aider pour autre chose. ${interdiction} ${pronLe}.`,
     ];
-    question =
-      variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else if (derniersProduitsChat.length > 0) {
     const resumeChat = derniersProduitsChat
       .map((p) => `${p.name} (${p.price.toFixed(2)}€)`)
@@ -1920,8 +1803,7 @@ async function initPanierContext(panierItems) {
       `En 1-2 phrases, dis au client que ${resumeChat} l'attend et qu'il peut les ajouter facilement.`,
       `En 1-2 phrases, encourage le client à craquer pour ${resumeChat} qu'il vient de consulter.`,
     ];
-    question =
-      variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else if (visited.length > 0) {
     const resumeVisites = visited
       .slice(-3)
@@ -1933,21 +1815,19 @@ async function initPanierContext(panierItems) {
       `En une phrase (max 20 mots), rappelle au client ses consultations récentes (${resumeVisites}) et invite-le à se décider.`,
       `En une phrase (max 20 mots), interpelle le client sur ${resumeVisites} qu'il a consulté et propose ton aide.`,
     ];
-    question =
-      variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+    question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else {
     // Panier vide, aucun historique → vérifier les favoris
     contexte = `L'utilisateur arrive sur sa page panier vide.`;
     let favorisNoms = "";
     try {
       const currentDir = window.location.pathname.substring(
-        0,
-        window.location.pathname.lastIndexOf("/") + 1,
+        0, window.location.pathname.lastIndexOf("/") + 1
       );
       const resFav = await fetch(currentDir + "favorites/list.php");
       const dataFav = await resFav.json();
       if (dataFav.success && dataFav.favoris.length > 0) {
-        favorisNoms = dataFav.favoris.map((f) => f.nom).join(", ");
+        favorisNoms = dataFav.favoris.map(f => f.nom).join(", ");
         contexte = `L'utilisateur a un panier vide. Ses favoris : ${favorisNoms}.`;
       }
     } catch (e) {}
@@ -1957,16 +1837,14 @@ async function initPanierContext(panierItems) {
         `Le client a ${favorisNoms} dans ses favoris. En une phrase, rappelle-lui et propose de l'aider à choisir. ${pronLe}.`,
         `Le client a des favoris (${favorisNoms}). En une phrase, invite-le à les ajouter au panier ou à explorer d'autres modèles. ${pronLe}.`,
       ];
-      question =
-        variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+      question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
     } else {
       const variantes = [
         `En une phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire. ${pronLe}.`,
         `En une phrase (max 20 mots), propose au client de l'aider à trouver la chaussure parfaite dans le catalogue. ${pronLe}.`,
         `En une phrase (max 20 mots), encourage le client à explorer le catalogue et à se faire plaisir. ${pronLe}.`,
       ];
-      question =
-        variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
+      question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
     }
   }
 
@@ -1974,19 +1852,12 @@ async function initPanierContext(panierItems) {
     (msg) =>
       !(msg.role === "system" && msg.content.startsWith("L'utilisateur")),
   );
-  conversationHistory.push({
-    role: "system",
-    internal: true,
-    content: contexte,
-  });
+  conversationHistory.push({ role: "system", internal: true, content: contexte });
   sessionStorage.setItem("chatHistory", JSON.stringify(conversationHistory));
 
-  _genererMessageAccueil(
-    question,
-    null,
-    derniersProduitsChat,
-    panierItems && panierItems.length > 0,
-  );
+
+
+  _genererMessageAccueil(question, null, derniersProduitsChat, panierItems && panierItems.length > 0);
 }
 
 async function _genererMessageAccueil(
@@ -1996,8 +1867,7 @@ async function _genererMessageAccueil(
   produitsDejaAuPanier = false,
 ) {
   const container = document.getElementById("messages");
-  const langueEffective =
-    sessionStorage.getItem("chatLangue") || currentLangue || "fr";
+  const langueEffective = sessionStorage.getItem("chatLangue") || currentLangue || "fr";
   if (!container) return;
   if (langueEffective !== currentLangue) {
     currentLangue = langueEffective;
@@ -2025,7 +1895,7 @@ async function _genererMessageAccueil(
       question: question,
       history: _histoirePropre(),
       session_id: sessionId,
-      langue_session: langueEffective,
+      langue_session: langueEffective, 
     };
     if (productId) body.product_id = productId;
 
@@ -2233,10 +2103,10 @@ async function traduireValeursDynamiques(valeurs, langue) {
   if (!langue || langue === "fr" || !valeurs.length) return {};
 
   const cache = _uiTranslationsCache[langue] || {};
-  const aTraduire = [...new Set(valeurs)].filter((v) => v && !(v in cache));
+  const aTraduire = [...new Set(valeurs)].filter(v => v && !(v in cache));
 
   if (aTraduire.length > 0) {
-    const texts = Object.fromEntries(aTraduire.map((v) => [v, v]));
+    const texts = Object.fromEntries(aTraduire.map(v => [v, v]));
     try {
       const res = await fetch(`${API_URL}/translate-ui`, {
         method: "POST",
@@ -2248,7 +2118,7 @@ async function traduireValeursDynamiques(valeurs, langue) {
       _uiTranslationsCache[langue] = { ...cache, ...data.translations };
     } catch (e) {
       // Fallback : valeur originale
-      aTraduire.forEach((v) => {
+      aTraduire.forEach(v => {
         if (!_uiTranslationsCache[langue]) _uiTranslationsCache[langue] = {};
         _uiTranslationsCache[langue][v] = v;
       });
