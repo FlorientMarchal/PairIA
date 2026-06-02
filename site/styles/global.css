@@ -1777,3 +1777,169 @@ nav {
   background: #f0ece7;
   color: var(--accent);
 }
+
+/* ════════════════════════════════════════
+   COMMENTAIRES & QUESTIONS — PairIA
+════════════════════════════════════════ */
+/* ════════════════════════════════════════
+   COMMENTAIRES & QUESTIONS — STYLE PREMIUM
+════════════════════════════════════════ */
+
+.section-block {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2.2rem;
+  margin-top: 3rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  margin-bottom: 1.8rem;
+  color: var(--dark);
+}
+
+/* Étoiles */
+.stars {
+  display: flex;
+  gap: 4px;
+  font-size: 1.6rem;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+
+/* Résumé */
+.rating-summary {
+  background: var(--cream);
+  padding: 1rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 1.8rem;
+  font-size: 1rem;
+}
+
+/* Commentaires */
+.comment-card {
+  background: var(--light);
+  border-radius: 10px;
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid var(--border);
+  transition: transform 0.15s ease;
+}
+
+.comment-card:hover {
+  transform: translateY(-2px);
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.comment-date {
+  font-size: 0.8rem;
+  color: var(--gray);
+}
+
+.comment-content {
+  margin: 0.6rem 0 1rem;
+  line-height: 1.55;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 1.2rem;
+}
+
+.like-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 1rem;
+  transition: transform 0.15s ease;
+}
+
+.like-btn:hover {
+  transform: scale(1.2);
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: #b33;
+  font-size: 0.9rem;
+}
+
+/* Formulaire */
+.comment-form textarea,
+.question-form textarea {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--cream);
+  resize: vertical;
+  min-height: 110px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.comment-form button,
+.question-form button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 0.8rem 1.6rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.comment-form button:hover,
+.question-form button:hover {
+  opacity: 0.85;
+}
+
+/* Questions */
+.question-card {
+  background: var(--light);
+  border-radius: 10px;
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid var(--border);
+}
+
+.reply-card {
+  margin-left: 2rem;
+  margin-top: 0.8rem;
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+}
+
+.reply-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--cream);
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}

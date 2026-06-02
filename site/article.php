@@ -143,6 +143,20 @@ function getCouleurCSS($couleur) {
     </div>
   </div>
   <?php endif; ?>
+
+  <!-- ════════════════════════════════════════
+     COMMENTAIRES
+════════════════════════════════════════ -->
+<div id="comments-section" class="section-block">
+    <h2 class="section-title">Commentaires</h2>
+
+    <div id="rating-summary" class="rating-summary"></div>
+
+    <div id="comment-form" class="comment-form"></div>
+
+    <div id="comments-list" class="comments-list"></div>
+</div>
+
 </div>
 
 <script>
@@ -314,4 +328,48 @@ initProductContext({
   couleurs:    <?= json_encode($couleurs) ?>,
   emoji:       "👟"
 });
+
+
+// ════════════════════════════════════════
+// COMMENTAIRES — AJAX
+// ════════════════════════════════════════
+
+window.loadComments = async function() {
+    const res = await fetch("commentaires/list.php?id=" + PRODUCT_ID);
+    const data = await res.json();
+
+    document.getElementById("rating-summary").innerHTML = data.summary_html;
+    document.getElementById("comment-form").innerHTML = data.form_html;
+    document.getElementById("comments-list").innerHTML = data.list_html;
+};
+
+window.addComment = async function() {
+    const contenu = document.getElementById("comment-text").value;
+    const note = document.getElementById("comment-note").value;
+
+    const res = await fetch("commentaires/add.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: PRODUCT_ID, contenu, note })
+    });
+
+    const data = await res.json();
+    if (data.success) loadComments();
+};
+
+window.likeComment = async function(id) {
+    await fetch("commentaires/like.php?id=" + id);
+    loadComments();
+};
+
+window.deleteComment = async function(id) {
+    await fetch("commentaires/delete.php?id=" + id);
+    loadComments();
+};
+
+// Charger automatiquement
+loadComments();
+
+
+
 </script>
