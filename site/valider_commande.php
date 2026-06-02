@@ -1,8 +1,8 @@
 <?php
 session_start();
-require_once '../includes/bd.php';
-require_once '../includes/config.php';   // ← même config centralisée
-require __DIR__ . '/../../vendor/autoload.php';  // Stripe PHP via Composer
+require_once 'includes/bd.php';        // ← site/ donc pas de ../
+require_once 'includes/config.php';    // ← idem
+require __DIR__ . '/../vendor/autoload.php';  // ← un seul niveau au-dessus
 
 header('Content-Type: application/json');
 
@@ -34,7 +34,6 @@ if ($intent->status !== 'succeeded') {
     exit;
 }
 
-// Vérifier que ce PaymentIntent n'a pas déjà été utilisé (idempotence)
 $check = $pdo->prepare("SELECT id_commande FROM commandes WHERE stripe_payment_intent = ?");
 $check->execute([$payment_intent_id]);
 if ($check->fetch()) {
@@ -42,7 +41,6 @@ if ($check->fetch()) {
     exit;
 }
 
-// Récupérer le panier
 $stmt = $pdo->prepare("
     SELECT p.id_variant, p.quantite,
            sc.taille, sc.couleur, sc.stock,
@@ -64,31 +62,28 @@ $sous_total = array_sum(array_map(fn($i) => $i['Prix'] * $i['quantite'], $panier
 $livraison  = $sous_total >= 80 ? 0 : 10;
 $total      = $sous_total + $livraison;
 
-$adresse = $pdo->prepare("SELECT adresse FROM clients WHERE id_client = ?");
-$adresse->execute([$client_id]);
-$adresse = $adresse->fetchColumn() ?? '';
+$stmtAdresse = $pdo->prepare("SELECT adresse FROM clients WHERE id_client = ?");
+$stmtAdresse->execute([$client_id]);
+$adresse = $stmtAdresse->fetchColumn() ?? '';
 
 try {
     $pdo->beginTransaction();
 
-    // 1. Vérifier le stock
     foreach ($panier as $item) {
         if ($item['quantite'] > $item['stock']) {
             throw new Exception("Stock insuffisant pour « {$item['nom']} » (taille {$item['taille']}).");
         }
     }
 
-    // 2. Créer la commande
     $pdo->prepare("
         INSERT INTO commandes
             (id_client, date_commande, statut, sous_total, frais_livraison, total,
              adresse_livraison, stripe_payment_intent, stripe_statut)
         VALUES (?, NOW(), 'payée', ?, ?, ?, ?, ?, 'succeeded')
-    ")->execute([$client_id, $sous_total, $livraison, $total, $adresse, $payment_intent_id, $intent->status]);
+    ")->execute([$client_id, $sous_total, $livraison, $total, $adresse, $payment_intent_id]);
 
     $id_commande = (int)$pdo->lastInsertId();
 
-    // 3. Insérer les lignes
     $stmtLigne = $pdo->prepare("
         INSERT INTO lignes_commande
             (id_commande, id_shoes, id_variant, nom_article, taille, couleur, prix_unitaire, quantite, sous_total)
@@ -102,7 +97,6 @@ try {
         ]);
     }
 
-    // 4. Décrémenter le stock dans size_color
     $stmtStock = $pdo->prepare("UPDATE size_color SET stock = stock - ? WHERE id_variant = ? AND stock >= ?");
     foreach ($panier as $item) {
         $stmtStock->execute([$item['quantite'], $item['id_variant'], $item['quantite']]);
@@ -111,7 +105,6 @@ try {
         }
     }
 
-    // 5. Recalculer stock_total dans articles
     $stmtStockTotal = $pdo->prepare("
         UPDATE articles SET stock_total = (
             SELECT COALESCE(SUM(stock), 0) FROM size_color WHERE id_shoes = articles.id_shoes
@@ -121,7 +114,6 @@ try {
         $stmtStockTotal->execute([$id_shoes]);
     }
 
-    // 6. Vider le panier
     $pdo->prepare("DELETE FROM panier WHERE id_client = ?")->execute([$client_id]);
     unset($_SESSION['panier']);
 
