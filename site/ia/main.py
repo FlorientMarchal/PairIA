@@ -1,15 +1,12 @@
 # ia/main.py
-# Serveur FastAPI
-# Lancer avec : py -m uvicorn main:app --reload --port 8000
-# Ollama florient: $env:OLLAMA_HOST="0.0.0.0"; $env:OLLAMA_ORIGINS="*"; & "C:\Users\Dell\Desktop\ollama-windows-amd64\ollama.exe" serve
-#Lancement kardiatou: uvicorn ia.main:app --reload --port 8000
+# Serveur FastAPI — multi-workers compatible
+# Lancer avec : python -m uvicorn main:app --port 8000 --workers 4
+# Ollama : $env:OLLAMA_HOST="0.0.0.0"; $env:OLLAMA_ORIGINS="*"; $env:OLLAMA_NUM_PARALLEL="2"; ollama serve
 
 import sys
 import os
 
 # ── Mode offline total : aucun appel vers HuggingFace Hub ──────────────────
-# Tous les modèles (CamemBERT, CLIP) doivent être présents localement.
-# Supprimer ces lignes uniquement pour un premier téléchargement intentionnel.
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 os.environ.setdefault("HF_DATASETS_OFFLINE", "1")
 
@@ -43,17 +40,61 @@ print("Chargement du modèle Whisper...")
 whisper_model = whisper.load_model("small")
 print("Whisper prêt ✓")
 
-# ── Stockage temporaire des vecteurs image par session ──
-_image_vectors: dict = {}
+# ── Stockage temporaire des vecteurs image par session ──────────────────────
+# Utilise des fichiers JSON dans le dossier système temporaire pour être
+# compatible avec le mode multi-workers (chaque worker a sa propre mémoire).
+# Les fichiers sont nommés "pairia_vec_{session_id}.json" et expirent après 1h.
 
-def _clean_old_vectors(max_age_seconds: int = 3600):
+_VEC_PREFIX = "pairia_vec_"
+_VEC_TTL    = 3600  # secondes
+
+def _vec_path(session_id: str) -> str:
+    safe = "".join(c for c in session_id if c.isalnum() or c in "-_")
+    return os.path.join(tempfile.gettempdir(), f"{_VEC_PREFIX}{safe}.json")
+
+def _save_vector(session_id: str, vector: list) -> None:
+    try:
+        data = {"vector": vector, "ts": time.time()}
+        with open(_vec_path(session_id), "w") as f:
+            json.dump(data, f)
+        print(f"[SESSION] vecteur image stocké pour {session_id}")
+    except Exception as e:
+        print(f"[SESSION] erreur sauvegarde vecteur : {e}")
+
+def _load_vector(session_id: str) -> list | None:
+    if not session_id:
+        return None
+    path = _vec_path(session_id)
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        if time.time() - data["ts"] > _VEC_TTL:
+            os.unlink(path)
+            return None
+        print(f"[SESSION] vecteur image récupéré pour {session_id}")
+        return data["vector"]
+    except (FileNotFoundError, KeyError, json.JSONDecodeError):
+        return None
+
+def _clean_old_vectors() -> None:
+    """Supprime les fichiers vecteurs expirés dans le dossier tmp."""
+    tmp = tempfile.gettempdir()
     now = time.time()
-    expired = [sid for sid, v in _image_vectors.items()
-               if now - v["ts"] > max_age_seconds]
-    for sid in expired:
-        del _image_vectors[sid]
-    if expired:
-        print(f"[SESSION] {len(expired)} vecteur(s) expirés supprimés")
+    try:
+        for fname in os.listdir(tmp):
+            if not fname.startswith(_VEC_PREFIX):
+                continue
+            fpath = os.path.join(tmp, fname)
+            try:
+                with open(fpath) as f:
+                    data = json.load(f)
+                if now - data.get("ts", 0) > _VEC_TTL:
+                    os.unlink(fpath)
+                    print(f"[SESSION] vecteur expiré supprimé : {fname}")
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 # ── Modèles Pydantic ──
@@ -132,8 +173,6 @@ def translate_ui(request: TranslateUIRequest):
         )
         raw = response["message"]["content"].strip()
 
-        # Fallback structurel : ignorer tout ce qui précède le premier |SEP|
-        # Un préambule ("Here are...", "Voici...") ne contient pas |SEP|
         if "|SEP|" in raw:
             lines = raw.splitlines()
             for line in lines:
@@ -164,10 +203,8 @@ def chat_stream(request: ChatRequest):
         if not m.internal
     ]
 
-    entry = _image_vectors.get(request.session_id)
-    image_vector = entry["vector"] if entry else None
-    if image_vector:
-        print(f"[SESSION] vecteur image récupéré pour {request.session_id}")
+    # Chargement du vecteur image depuis fichier (compatible multi-workers)
+    image_vector = _load_vector(request.session_id) if request.session_id else None
 
     def generate():
         try:
@@ -176,7 +213,7 @@ def chat_stream(request: ChatRequest):
                 product_id=request.product_id,
                 history=history,
                 image_vector=image_vector,
-                langue_session=request.langue_session, 
+                langue_session=request.langue_session,
             )
             for chunk in generator:
                 if isinstance(chunk, dict):
@@ -197,7 +234,7 @@ async def chat_stream_image(
     question: str    = Form(default=""),
     history: str     = Form(default="[]"),
     session_id: str  = Form(default=""),
-    langue_session: str = Form(default="fr"),   # ← ajouter
+    langue_session: str = Form(default="fr"),
 ):
     history_parsed = json.loads(history)
 
@@ -214,11 +251,7 @@ async def chat_stream_image(
         image_vec = clip_model.encode(Image.open(tmp_path)).tolist()
         if session_id:
             _clean_old_vectors()
-            _image_vectors[session_id] = {
-                "vector": image_vec,
-                "ts": time.time()
-            }
-            print(f"[SESSION] vecteur image stocké pour {session_id}")
+            _save_vector(session_id, image_vec)
     except Exception as e:
         print(f"[SESSION] erreur vectorisation : {e}")
 
