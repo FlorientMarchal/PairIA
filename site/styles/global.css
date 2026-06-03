@@ -1584,7 +1584,6 @@ nav {
 .compte-grid-col > .compte-card:first-child {
   flex: 1;
 }
-
 /* ── BOUTONS ── */
 .compte-btn {
   width: 100%;
@@ -1692,9 +1691,9 @@ nav {
 
 .commande-ligne {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 0;
+  gap: 1rem;
+  padding: 0.7rem 0;
   border-bottom: 1px dashed var(--border);
 }
 
@@ -1719,6 +1718,36 @@ nav {
   font-weight: 700;
   color: var(--accent);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.commande-ligne-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: var(--cream);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.commande-ligne-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.commande-ligne-emoji {
+  font-size: 1.4rem;
+}
+
+.commande-ligne-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .commande-adresse {

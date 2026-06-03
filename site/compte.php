@@ -260,12 +260,31 @@ $totalDepense = array_sum(array_column($commandes, 'total'));
 
             <div class="commande-detail" id="detail-<?= $cmd['id_commande'] ?>" style="display:none">
               <?php
-                $stmtL = $pdo->prepare("SELECT * FROM lignes_commande WHERE id_commande = ?");
+                $stmtL = $pdo->prepare("
+                    SELECT lc.*, a.url_image
+                    FROM lignes_commande lc
+                    LEFT JOIN articles a ON a.id_shoes = lc.id_shoes
+                    WHERE lc.id_commande = ?
+                ");
                 $stmtL->execute([$cmd['id_commande']]);
                 $lignes = $stmtL->fetchAll();
               ?>
               <?php foreach ($lignes as $l): ?>
                 <div class="commande-ligne">
+
+                  <!-- Miniature -->
+                  <div class="commande-ligne-img">
+                    <?php if (!empty($l['url_image'])): ?>
+                      <img src="<?= htmlspecialchars($l['url_image']) ?>"
+                           alt="<?= htmlspecialchars($l['nom_article']) ?>"
+                           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                      <span class="commande-ligne-emoji" style="display:none">👟</span>
+                    <?php else: ?>
+                      <span class="commande-ligne-emoji">👟</span>
+                    <?php endif; ?>
+                  </div>
+
+                  <!-- Infos -->
                   <div class="commande-ligne-info">
                     <div class="commande-ligne-nom"><?= htmlspecialchars($l['nom_article']) ?></div>
                     <div class="commande-ligne-meta">
@@ -274,9 +293,12 @@ $totalDepense = array_sum(array_column($commandes, 'total'));
                       · Qté <?= (int)$l['quantite'] ?>
                     </div>
                   </div>
+
+                  <!-- Prix -->
                   <div class="commande-ligne-prix">
                     <?= number_format($l['sous_total'], 2, ',', ' ') ?> €
                   </div>
+
                 </div>
               <?php endforeach; ?>
 
