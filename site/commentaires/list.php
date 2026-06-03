@@ -2,6 +2,8 @@
 require_once '../includes/bd.php';
 session_start();
 
+$is_logged = isset($_SESSION['client_id']);
+
 $id = (int)($_GET['id'] ?? 0);
 $sort = $_GET['sort'] ?? "recent";
 
@@ -16,6 +18,17 @@ $stats = $stmt->fetch();
 
 $avg = $stats['avg_note'] ? round($stats['avg_note'], 1) : 0;
 $total = (int)$stats['total'];
+
+if ($total === 0) {
+    echo json_encode([
+        'summary_html'   => '',
+        'histogram_html' => '',
+        'list_html'      => '',
+        'empty'          => true,
+        'is_logged'      => $is_logged
+    ]);
+    exit;
+}
 
 $stars = str_repeat("★", floor($avg)) . str_repeat("☆", 5 - floor($avg));
 
@@ -118,5 +131,6 @@ foreach ($comments as $c) {
 echo json_encode([
     "summary_html" => $summary_html,
     "histogram_html" => $histogram_html,
-    "list_html" => $list_html
+    "list_html" => $list_html,
+    "is_logged"      => $is_logged 
 ]);
