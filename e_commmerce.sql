@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost:3306
--- Généré le : lun. 01 juin 2026 à 09:58
+-- Généré le : mer. 03 juin 2026 à 09:59
 -- Version du serveur : 5.7.24
 -- Version de PHP : 8.3.1
 
@@ -48,8 +48,8 @@ CREATE TABLE `articles` (
 --
 
 INSERT INTO `articles` (`id_shoes`, `nom`, `categorie`, `marque`, `genre`, `Prix`, `materiaux`, `usage`, `caracteristiques`, `description`, `mots_cles`, `stock_total`, `url_image`) VALUES
-(1, 'Nova Air Lifestyle', 'Baskets lifestyle', 'UrbanStep', 'Mixte', '89.99', 'Tige: Mesh respirant; Semelle: EVA; Doublure: Textile recyclé', 'Quotidien,Ville,Loisirs', 'Ultra légères,Respirantes,Semelle amortissante,Usage quotidien,Lacets plats', 'Les Nova Air Lifestyle sont conçues pour offrir un confort optimal au quotidien. Leur tige en mesh respirant assure une excellente circulation de l\'air même lors des longues journées. La semelle en EVA absorbe efficacement les chocs à chaque pas, réduisant la fatigue. Leur design épuré et moderne s\'adapte aussi bien à une tenue décontractée qu\'à un look urbain soigné. Légères et polyvalentes, elles sont idéales pour la ville, les courses et les sorties du week-end.', 'confort,ville,respirant,léger,quotidien,lifestyle,casual,urbain', 1309, 'images/image1.png'),
-(2, 'RetroWave 90s', 'Baskets lifestyle', 'UrbanStep', 'Mixte', '99.90', 'Tige: Cuir synthétique; Semelle: Caoutchouc; Doublure: Textile', 'Ville,Loisirs,Mode', 'Style rétro années 90,Semelle épaisse,Confort toute journée,Languette rembourrée', 'Inspirées des icônes des années 90, les RetroWave 90s revivent avec une touche moderne. Leur tige en cuir synthétique vieilli et leur semelle épaisse en caoutchouc rappellent les classiques du streetwear, tout en offrant le confort contemporain. La languette généreusement rembourrée et le col moelleux garantissent un maintien du pied excellent. Un must-have pour les amateurs de mode rétro et de style urbain décalé.', 'rétro,90s,streetwear,mode,lifestyle,vintage,tendance', 1348, 'images/image2.png'),
+(1, 'Nova Air Lifestyle', 'Baskets lifestyle', 'UrbanStep', 'Mixte', '89.99', 'Tige: Mesh respirant; Semelle: EVA; Doublure: Textile recyclé', 'Quotidien,Ville,Loisirs', 'Ultra légères,Respirantes,Semelle amortissante,Usage quotidien,Lacets plats', 'Les Nova Air Lifestyle sont conçues pour offrir un confort optimal au quotidien. Leur tige en mesh respirant assure une excellente circulation de l\'air même lors des longues journées. La semelle en EVA absorbe efficacement les chocs à chaque pas, réduisant la fatigue. Leur design épuré et moderne s\'adapte aussi bien à une tenue décontractée qu\'à un look urbain soigné. Légères et polyvalentes, elles sont idéales pour la ville, les courses et les sorties du week-end.', 'confort,ville,respirant,léger,quotidien,lifestyle,casual,urbain', 1308, 'images/image1.png'),
+(2, 'RetroWave 90s', 'Baskets lifestyle', 'UrbanStep', 'Mixte', '99.90', 'Tige: Cuir synthétique; Semelle: Caoutchouc; Doublure: Textile', 'Ville,Loisirs,Mode', 'Style rétro années 90,Semelle épaisse,Confort toute journée,Languette rembourrée', 'Inspirées des icônes des années 90, les RetroWave 90s revivent avec une touche moderne. Leur tige en cuir synthétique vieilli et leur semelle épaisse en caoutchouc rappellent les classiques du streetwear, tout en offrant le confort contemporain. La languette généreusement rembourrée et le col moelleux garantissent un maintien du pied excellent. Un must-have pour les amateurs de mode rétro et de style urbain décalé.', 'rétro,90s,streetwear,mode,lifestyle,vintage,tendance', 1347, 'images/image2.png'),
 (3, 'CloudStep Lite', 'Baskets lifestyle', 'UrbanStep', 'Femme', '74.90', 'Tige: Mesh doux; Semelle: Mousse mémoire; Doublure: Microfibre', 'Quotidien,Ville', 'Semelle mémoire de forme,Ultra douce,Légère,Lacets élastiques,Confort intensif', 'Les CloudStep Lite sont pensées pour les femmes qui recherchent avant tout le confort sans sacrifier le style. Leur semelle en mousse mémoire de forme s\'adapte à la morphologie du pied pour un maintien personnalisé. La tige en mesh doux épouse le pied sans contraindre. Les lacets élastiques permettent d\'enfiler et d\'enlever les chaussures sans effort. Parfaites pour de longues journées debout ou pour se déplacer en ville.', 'confort,mousse mémoire,femme,légère,ville,quotidien,doux', 1153, 'images/image3.png'),
 (4, 'NeoUrban Street', 'Baskets lifestyle', 'UrbanStep', 'Homme', '109.90', 'Tige: Mesh technique + Overlays synthétiques; Semelle: EVA bi-densité; Doublure: Textile', 'Ville,Mode,Quotidien', 'Look technique urbain,Semelle bi-densité,Amorti renforcé,Languette zippée,Anti-odeur', 'Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.', 'technique,urbain,homme,amorti,quotidien,street,confort', 1282, 'images/image4.png'),
 (5, 'AirFlex Pastel', 'Baskets lifestyle', 'FlyMotion', 'Femme', '84.90', 'Tige: Mesh coloré; Semelle: EVA; Doublure: Textile doux', 'Quotidien,Ville,Loisirs', 'Coloris pastel tendance,Légères,Respirantes,Semelle flexible,Style décontracté', 'Les AirFlex Pastel apportent une touche de couleur douce et tendance à votre garde-robe. Disponibles en trois coloris pastel exclusifs, elles combinent légèreté et respirabilité pour un port agréable toute la journée. La semelle flexible en EVA offre un bon retour d\'énergie et absorbe les chocs sur les surfaces dures. Idéales pour les tenues printanières et estivales, elles s\'associent facilement à des robes, jupes ou jeans.', 'pastel,tendance,couleur,légère,femme,printanier,été,lifestyle', 1273, 'images/image5.png'),
@@ -74,7 +74,7 @@ INSERT INTO `articles` (`id_shoes`, `nom`, `categorie`, `marque`, `genre`, `Prix
 (24, 'SummerFlow Comfort', 'Sandales', 'SummerFeet', 'Femme', '39.90', 'Tige: Textile synthétique; Semelle: Mousse EVA; Doublure: Textile', 'Plage,Quotidien,Loisirs', 'Légères,Souples,Idéales plage,Semelle épaisse moelleuse,Économiques', 'Les SummerFlow Comfort sont des sandales simples, légères et abordables pour profiter pleinement de l\'été. La semelle en mousse EVA épaisse et moelleuse absorbe les chocs et offre un confort immédiat sans période d\'adaptation. Idéales pour la plage, les sorties en ville ou simplement pour flâner, elles s\'enfilent et se retirent en un instant. Leur prix accessible en fait le choix parfait pour avoir une paire de sandales de secours ou pour les vacances.', 'plage,été,légère,abordable,mousse,vacances,sandales,confort,simple', 936, 'images/image24.png'),
 (25, 'ComfortStep Pro', 'Sandales', 'GentleStep', 'Homme', '69.90', 'Tige: Cuir véritable; Semelle: Caoutchouc; Doublure: Cuir', 'Ville,Quotidien,Randonnée légère', 'Cuir véritable,Robustes,Style masculin,Polyvalentes,Semelle durable', 'Les ComfortStep Pro sont des sandales en cuir véritable pensées pour l\'homme actif. Leur construction robuste en cuir pleine fleur garantit une durabilité exceptionnelle, même avec un port quotidien intensif. Le cuir de la semelle intérieure absorbe la transpiration et régule naturellement la température. Les boucles métalliques solides permettent un réglage précis pour s\'adapter à tous les pieds. Parfaites pour les vacances actives, la ville ou les randonnées légères.', 'cuir,homme,robuste,ville,randonnée légère,qualité,sandales,quotidien', 1203, 'images/image25.png'),
 (26, 'UrbanRidge Winter', 'Bottines', 'NordCraft', 'Mixte', '129.00', 'Tige: Cuir; Semelle: Caoutchouc épais; Doublure: Laine mélangée', 'Hiver,Ville,Quotidien', 'Chaudes,Robustes,Antidérapantes,Doublure laine,Imperméabilité basique,Lacets + zip', 'Les UrbanRidge Winter sont pensées pour affronter les hivers rigoureux sans sacrifier le style. La doublure en laine mélangée maintient une chaleur optimale même par températures négatives. La semelle en caoutchouc épais offre une excellente résistance au froid et une bonne antidérapance sur les trottoirs glissants. L\'association lacets et zip latéral permet un enfilage rapide. Le cuir traité offre une résistance basique à l\'humidité pour les temps maussades.', 'hiver,froid,chaud,laine,antidérapant,bottines,cuir,ville,neige', 1679, 'images/image26.png'),
-(27, 'CityWalk Chelsea', 'Bottines', 'NordCraft', 'Femme', '109.90', 'Tige: Cuir synthétique; Semelle: Caoutchouc; Doublure: Textile', 'Ville,Bureau,Quotidien', 'Style Chelsea classique,Élastiques latéraux,Talon carré 3cm,Légère,Élégante', 'Les CityWalk Chelsea revisitent le classique intemporel des bottines Chelsea avec une touche contemporaine. Les élastiques latéraux en tissu élastiqué permettent un enfilage aisé tout en assurant un excellent maintien du pied. Le talon carré de 3cm apporte une légère élévation flatteuse sans compromettre la stabilité. Polyvalentes, elles se portent aussi bien avec un jean qu\'avec une jupe ou un tailleur. Un basique élégant pour toute garde-robe féminine.', 'chelsea,bottines,élégant,ville,bureau,femme,talon,intemporel,classique', 1257, 'images/image27.png'),
+(27, 'CityWalk Chelsea', 'Bottines', 'NordCraft', 'Femme', '109.90', 'Tige: Cuir synthétique; Semelle: Caoutchouc; Doublure: Textile', 'Ville,Bureau,Quotidien', 'Style Chelsea classique,Élastiques latéraux,Talon carré 3cm,Légère,Élégante', 'Les CityWalk Chelsea revisitent le classique intemporel des bottines Chelsea avec une touche contemporaine. Les élastiques latéraux en tissu élastiqué permettent un enfilage aisé tout en assurant un excellent maintien du pied. Le talon carré de 3cm apporte une légère élévation flatteuse sans compromettre la stabilité. Polyvalentes, elles se portent aussi bien avec un jean qu\'avec une jupe ou un tailleur. Un basique élégant pour toute garde-robe féminine.', 'chelsea,bottines,élégant,ville,bureau,femme,talon,intemporel,classique', 1256, 'images/image27.png'),
 (28, 'SnowShield Arctic', 'Bottines', 'NordCraft', 'Mixte', '149.90', 'Tige: Nylon imperméable; Semelle: Caoutchouc froid; Doublure: Polaire Thinsulate 200g', 'Grand froid,Neige,Hiver extrême', 'Imperméables 100%,Isolation Thinsulate 200g,Températures jusqu\'à -25°C,Crampon neige amovible,Fermeture velcro', 'Les SnowShield Arctic sont conçues pour les conditions hivernales les plus sévères. L\'isolation Thinsulate 200g garantit une chaleur optimale jusqu\'à -25°C sans alourdir excessivement la chaussure. La tige en nylon imperméable et la semelle résistante au froid empêchent tout durcissement par basses températures. Le crampon neige amovible fourni avec les chaussures offre une traction supplémentaire sur verglas. La fermeture velcro facilite l\'enfilage avec des gants.', 'neige,grand froid,hiver,thinsulate,imperméable,arctique,verglas,-25°C', 1597, 'images/image28.png'),
 (29, 'SoftWalk Classic', 'Mocassins', 'GentleStep', 'Homme', '79.90', 'Tige: Cuir souple; Semelle: Caoutchouc; Doublure: Cuir souple', 'Bureau,Ville,Quotidien', 'Souples,Confortables,Style classique,Pas de lacets,Élégants discrets', 'Les SoftWalk Classic sont des mocassins légers et confortables qui s\'adaptent aussi bien au bureau qu\'aux sorties en ville. Fabriqués en cuir souple pleine fleur, ils épousent naturellement la forme du pied au fil du temps pour un confort personnalisé. L\'absence de lacets permet de les enfiler et les retirer en quelques secondes. La doublure en cuir absorbe la transpiration et garantit une hygiène durable. Un classique masculin indémodable.', 'mocassins,bureau,travail,cuir,confort,homme,classique,sans lacets,élégant', 1609, 'images/image29.png'),
 (30, 'UrbanSoft Loafer', 'Mocassins', 'GentleStep', 'Femme', '69.90', 'Tige: Cuir synthétique doux; Semelle: Crêpe; Doublure: Microfibre', 'Bureau,Ville,Quotidien', 'Légère,Féminine,Semelle crêpe douce,Talon plat,Polyvalente', 'Les UrbanSoft Loafer revisitent le mocassin féminin avec une touche de légèreté et de modernité. Le cuir synthétique doux offre l\'esthétique du cuir sans les contraintes d\'entretien. La semelle crêpe ultra-souple amorti chaque pas pour un confort remarquable sur les journées chargées. À talon plat, elles assurent une posture naturelle et réduisent la fatigue. Elles s\'associent élégamment avec des pantalons, jupes ou robes mi-longues.', 'mocassins,femme,plat,bureau,léger,élégant,quotidien,confort,polyvalent', 1032, 'images/image30.png'),
@@ -89,7 +89,7 @@ INSERT INTO `articles` (`id_shoes`, `nom`, `categorie`, `marque`, `genre`, `Prix
 (39, 'GreenWalk Knit', 'Vegan', 'EcoFeet', 'Mixte', '94.90', 'Tige: Tricot en coton bio recyclé; Semelle: Liège + caoutchouc naturel; Doublure: Lin', 'Quotidien,Ville,Loisirs', 'Tricot bio respirant,Semelle liège naturel,Sans colle animale,Teintures naturelles,Confort naturel', 'Les GreenWalk Knit poussent l\'engagement écologique encore plus loin avec une tige entièrement tricotée en coton biologique recyclé. Les teintures naturelles utilisées évitent les produits chimiques nocifs et respectent les normes les plus strictes de l\'industrie textile. La semelle combinant liège naturel et caoutchouc végétal offre un amorti naturel qui s\'adapte au pied. Aucune colle d\'origine animale n\'entre dans leur fabrication. Une chaussure qui vous permet de marcher léger sur la planète.', 'vegan,bio,coton,liège,naturel,zéro animal,teinture naturelle,écologie,durable', 1759, 'images/image39.png'),
 (40, 'SoftHome Cozy', 'Indoor', 'HomeStep', 'Mixte', '34.90', 'Tige: Polaire sherpa; Semelle: Antidérapante mousse; Doublure: Sherpa', 'Maison,Intérieur,Détente', 'Ultra douces,Antidérapantes,Légères,Chaudes,Lavables machine', 'Les SoftHome Cozy sont les pantoufles dont vous ne pourrez plus vous passer. Le sherpa moelleux enveloppe les pieds d\'une chaleur douce et réconfortante, idéale pour les soirées d\'hiver ou les matinées paresseuses. La semelle antidérapante garantit votre sécurité sur les parquets et carrelages. Leur légèreté extrême fait oublier qu\'on les porte. Un vrai plus : elles sont entièrement lavables en machine pour rester fraîches et propres.', 'pantoufles,maison,intérieur,chaud,sherpa,confort,détente,hiver,lavable', 1637, 'images/image40.png'),
 (41, 'CozyWarm Memory', 'Indoor', 'HomeStep', 'Femme', '44.90', 'Tige: Velours côtelé; Semelle: Mousse mémoire + antidérapant; Doublure: Microfibre', 'Maison,Détente,Confort', 'Semelle mémoire personnalisée,Velours luxueux,Ouverture facile,Légère,Confort supérieur', 'Les CozyWarm Memory sont des chaussons pour femmes qui allient confort supérieur et esthétique raffinée. La semelle en mousse mémoire s\'adapte avec précision à la morphologie du pied pour un soutien personnalisé qui prévient la fatigue plantaire. Le velours côtelé de la tige est doux au toucher et conserve bien la chaleur. L\'ouverture large facilite l\'enfilage même à la sortie du lit. Un cadeau idéal ou un plaisir que l\'on s\'offre à soi-même.', 'chaussons,maison,femme,mousse mémoire,velours,confort,détente,cadeau,doux', 1324, 'images/image41.png'),
-(42, 'WalkPro Comfort', 'Marche', 'GentleStep', 'Mixte', '89.90', 'Tige: Cuir + mesh; Semelle: EVA renforcée; Doublure: Gel anatomique', 'Marche,Ville,Quotidien,Senior', 'Support plantaire gel,Large embout,Confort longue durée,Antidérapante,Facile à enfiler', 'Les WalkPro Comfort sont conçues pour les marcheurs qui privilégient le confort avant tout. Le support plantaire en gel anatomique répartit uniformément les pressions sous le pied, réduisant douleurs et fatigue même lors de très longues marches. L\'embout large offre la place nécessaire aux orteils sans pincement. La semelle EVA renforcée amorti efficacement sur tous les revêtements urbains. L\'ouverture large et le système de lacets à enroulement facilitent l\'enfilage pour les personnes à mobilité réduite.', 'marche,confort,gel,podologie,senior,large,antidérapant,quotidien,orthopédique', 1581, 'images/image42.png'),
+(42, 'WalkPro Comfort', 'Marche', 'GentleStep', 'Mixte', '89.90', 'Tige: Cuir + mesh; Semelle: EVA renforcée; Doublure: Gel anatomique', 'Marche,Ville,Quotidien,Senior', 'Support plantaire gel,Large embout,Confort longue durée,Antidérapante,Facile à enfiler', 'Les WalkPro Comfort sont conçues pour les marcheurs qui privilégient le confort avant tout. Le support plantaire en gel anatomique répartit uniformément les pressions sous le pied, réduisant douleurs et fatigue même lors de très longues marches. L\'embout large offre la place nécessaire aux orteils sans pincement. La semelle EVA renforcée amorti efficacement sur tous les revêtements urbains. L\'ouverture large et le système de lacets à enroulement facilitent l\'enfilage pour les personnes à mobilité réduite.', 'marche,confort,gel,podologie,senior,large,antidérapant,quotidien,orthopédique', 1580, 'images/image42.png'),
 (43, 'TrailWalk Nature', 'Marche', 'MountainEdge', 'Mixte', '74.90', 'Tige: Synthétique respirant; Semelle: Caoutchouc trail; Doublure: Textile', 'Marche,Nature,Campagne', 'Polyvalente,Légère,Accroche terrain mixte,Confortable,Bon rapport qualité-prix', 'Les TrailWalk Nature sont la chaussure de marche polyvalente par excellence pour ceux qui aiment alterner chemins de campagne et rues pavées. La semelle en caoutchouc trail offre une bonne accroche sur les sols variés : herbe humide, chemins de terre, pierres et asphalte. Légères et confortables dès le premier port, elles conviennent aussi bien aux promenades du dimanche qu\'aux marches de plusieurs heures. Un excellent rapport qualité-prix pour débuter la marche nature.', 'marche,nature,campagne,polyvalent,léger,terrain mixte,promenade,famille', 1716, 'images/image43.png'),
 (44, 'BareStep Zero Drop', 'Minimalistes', 'FreeMotion', 'Mixte', '99.90', 'Tige: Mesh ultra-fin; Semelle: 4mm caoutchouc naturel; Doublure: Aucune (minimal)', 'Running,Marche,Minimalisme', 'Drop 0mm,Semelle 4mm,Très flexible,Léger (150g),Renforcement pied naturel', 'Les BareStep Zero Drop sont la référence pour les adeptes du mouvement minimaliste. Le drop zéro place talon et avant-pied à la même hauteur, favorisant une posture naturelle et un renforcement progressif de toute la chaîne musculaire du pied et de la jambe. La semelle de 4mm en caoutchouc naturel offre une protection minimale tout en permettant une perception fine du sol. Avec seulement 150 grammes, elles disparaissent sous le pied. Idéales pour la transition minimaliste, à adopter progressivement.', 'minimaliste,zéro drop,barefoot,pieds nus,naturel,léger,running,transition,renforcement', 2127, 'images/image44.png'),
 (45, 'NatureFlex Wide', 'Minimalistes', 'FreeMotion', 'Mixte', '119.90', 'Tige: Mesh 3D respirant; Semelle: 6mm caoutchouc; Doublure: Lin naturel', 'Quotidien,Marche,Minimalisme', 'Embout large (wide),Drop 0mm,Tige très flexible,6mm protection,Quotidien minimaliste', 'Les NatureFlex Wide combinent les bénéfices du minimalisme avec un embout extra-large qui laisse les orteils libres de s\'étaler naturellement. L\'embout wide est particulièrement recommandé pour les personnes ayant des orteils en éventail, des oignons ou simplement préférant un espace généreux. La tige en mesh 3D offre une ventilation optimale pour les longues journées. La semelle de 6mm offre une protection légèrement supérieure au BareStep, idéale pour commencer la transition minimaliste en douceur.', 'minimaliste,wide,large,orteils,drop zéro,quotidien,transition,oignons,nature', 2095, 'images/image45.png'),
@@ -136,8 +136,13 @@ INSERT INTO `chat_sessions` (`id`, `id_client`, `titre`, `created_at`, `updated_
 (19, 3, '[Recherche par image avec message : \"Avez vous des chaussures comme cette paire', '2026-05-26 16:04:06', '2026-05-26 16:20:13'),
 (20, 3, 'Can you have shoes for party?', '2026-05-26 16:56:51', '2026-05-26 16:56:51'),
 (21, 4, 'Chaussures imperméables', '2026-05-28 09:26:01', '2026-05-28 09:30:05'),
-(22, 4, 'Avez vous des chaussure de soirées à me proposer?', '2026-05-29 09:22:26', '2026-05-29 09:43:02'),
-(23, 4, '[Recherche par image avec message : \"Avez des chaussures comme celle ci?\"] Produ', '2026-05-29 09:58:22', '2026-05-29 12:06:41');
+(23, 4, '[Recherche par image avec message : \"Avez des chaussures comme celle ci?\"] Produ', '2026-05-29 09:58:22', '2026-05-29 12:06:41'),
+(25, 4, 'Avez vous des chaussures adaptées pour la plage à me proposer?', '2026-06-01 14:13:36', '2026-06-01 14:47:15'),
+(26, 4, 'Avez des chaussures adaptées pour le bureau au quotidien à me proposer ?', '2026-06-01 15:27:04', '2026-06-01 15:27:04'),
+(27, 5, 'Je veux des chaussures confortables qui sont simples et sans lacets', '2026-06-02 09:35:13', '2026-06-02 09:48:20'),
+(28, 5, 'Vous avez des chaussures sans lacets ?', '2026-06-02 09:54:35', '2026-06-02 09:57:34'),
+(29, 5, 'Chaussures imperméables', '2026-06-02 10:33:25', '2026-06-02 10:33:25'),
+(30, 5, 'Pour le running', '2026-06-02 16:16:29', '2026-06-02 16:32:28');
 
 -- --------------------------------------------------------
 
@@ -162,7 +167,8 @@ CREATE TABLE `clients` (
 
 INSERT INTO `clients` (`id_client`, `nom`, `prenom`, `adresse`, `numero`, `mail`, `mdp`, `stripe_customer_id`) VALUES
 (3, 'Martin', 'Smith', '46 rue des renoncules', 712345678, 'martin.smith@gmail.com', '$2y$10$IdWK09lJw6foUhBPRArbruV6h9lvsYerQ5I0RJ.NxmhhsokgjMp9G', NULL),
-(4, 'Lerre', 'Dija', '45 allée pont de sas', 756122222, 'dija.lerre@gmail.com', '$2y$10$P61f07RQFwjGen6CXIfPrOqJZKk.9oBX78Vtkkh80/RBCjTUjCvtO', 'cus_UbafMjgUDig4cv');
+(4, 'Lerre', 'Dija', '45 allée pont de sas', 756122222, 'dija.lerre@gmail.com', '$2y$10$P61f07RQFwjGen6CXIfPrOqJZKk.9oBX78Vtkkh80/RBCjTUjCvtO', 'cus_UbafMjgUDig4cv'),
+(5, 'Oumina', 'Zey', '456 allées des broussiers', 612345678, 'ouminazey456@gmaim.com', '$2y$10$e4tea91BXNVBHDET.yFZYOblAGMDajuWLPFsGmlj5or5O2APYpKne', 'cus_Ud2qkWYx9Fh6Vj');
 
 -- --------------------------------------------------------
 
@@ -188,7 +194,50 @@ CREATE TABLE `commandes` (
 --
 
 INSERT INTO `commandes` (`id_commande`, `id_client`, `date_commande`, `statut`, `sous_total`, `frais_livraison`, `total`, `adresse_livraison`, `stripe_payment_intent`, `stripe_statut`) VALUES
-(1, 4, '2026-05-29 14:18:42', 'payée', '89.99', '0.00', '89.99', '45 allée pont de sas', 'pi_3TcPN2RmWEGP0CIN1AH2aIdP', 'succeeded');
+(1, 4, '2026-05-29 14:18:42', 'payée', '89.99', '0.00', '89.99', '45 allée pont de sas', 'pi_3TcPN2RmWEGP0CIN1AH2aIdP', 'succeeded'),
+(2, 4, '2026-06-01 12:04:11', 'payée', '89.90', '0.00', '89.90', '45 allée pont de sas', 'pi_3TdShERmWEGP0CIN0pSbxa1Q', 'succeeded'),
+(3, 5, '2026-06-02 09:28:39', 'payée', '109.90', '0.00', '109.90', '456 allées des broussiers', 'pi_3TdmkaRmWEGP0CIN0SSjpWfi', 'succeeded'),
+(4, 5, '2026-06-02 11:12:30', 'payée', '99.90', '0.00', '99.90', '456 allées des broussiers', 'pi_3TdoMwRmWEGP0CIN06P7FxwP', 'succeeded'),
+(5, 5, '2026-06-03 11:45:39', 'payée', '89.99', '0.00', '89.99', '456 allées des broussiers', 'pi_3TeBMZRmWEGP0CIN013l5iio', 'succeeded');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `commentaires`
+--
+
+CREATE TABLE `commentaires` (
+  `id_commentaire` int(11) NOT NULL,
+  `id_shoes` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `note` tinyint(1) NOT NULL,
+  `contenu` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `useful` int(11) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Déchargement des données de la table `commentaires`
+--
+
+INSERT INTO `commentaires` (`id_commentaire`, `id_shoes`, `id_client`, `note`, `contenu`, `created_at`, `useful`) VALUES
+(2, 11, 5, 5, 'Je trouve cette chaussure magnifique !!', '2026-06-03 09:59:42', 0),
+(3, 27, 5, 5, 'Waouh je trouve les chaussures incroyable et ça fait deux ans que je les ai !!', '2026-06-03 10:15:37', 0),
+(5, 2, 5, 4, 'Je trouve cette chaussure superbe !!', '2026-06-03 10:40:17', 0),
+(6, 1, 5, 5, 'J\'aime beaucoup ces chaussures et je vous le recommande, elle sont super belle!', '2026-06-03 11:46:50', 3);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `commentaire_likes`
+--
+
+CREATE TABLE `commentaire_likes` (
+  `id_like` int(11) NOT NULL,
+  `id_commentaire` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -262,21 +311,41 @@ INSERT INTO `conversations` (`id`, `id_session`, `id_client`, `role`, `message`,
 (96, 21, 4, 'assistant', 'Oui, la paire RainStep WP est disponible en taille 40. C\'est une des tailles proposées dans la liste de disponibilité.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}]', NULL, 0, 0, '2026-05-28 09:29:29'),
 (97, 21, 4, 'user', 'et en couleur bleu marine?', '[]', NULL, 0, 0, '2026-05-28 09:30:05'),
 (98, 21, 4, 'assistant', 'La RainStep WP est disponible en couleur bleu marine. Vous pouvez la trouver dans différentes tailles, notamment la taille 37 à 46.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\"}]', NULL, 0, 0, '2026-05-28 09:30:05'),
-(99, 22, 4, 'user', 'Avez vous des chaussure de soirées à me proposer?', '[]', NULL, 0, 0, '2026-05-29 09:22:27'),
-(100, 22, 4, 'assistant', 'Vous aimez les chaussures de soirée, n\'est-ce pas ? Pour un look élégant, je vous recommande le NightElegance Stiletto de la marque BelleMode. Il est disponible en taille 36 à 41 et en trois belles couleurs : Argent, Champagne et Rose gold. Son talon haut donne une touche de sophistication parfaite pour toute occasion de soirée !', '[{\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-05-29 09:22:27'),
-(101, 22, 4, 'user', 'Pouvez me faire une comparaison de cette chaussure proposée avec  une deuxième chaussure du même type?', '[]', NULL, 0, 0, '2026-05-29 09:37:04'),
-(102, 22, 4, 'assistant', 'Je vous ai trouvé deux chaussures qui répondent à vos attentes en matière de soirée élégante. Vous pouvez comparer le NightElegance Stiletto et l\'Élégance Haute Nuit pour trouver laquelle vous convient mieux. Le NightElegance Stiletto est disponible en taille 36-41 dans les couleurs Argent, Champagne et Rose gold (109.00€). L\'Élégance Haute Nuit est disponible en taille 36-41 dans les couleurs Noir, Or et Rouge carmin (89', '[{\"id\": 32, \"name\": \"Élégance Haute Nuit\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge carmin\"], \"categorie\": \"Talons\", \"url_image\": \"images/image32.png\", \"description\": \"Les Élégance Haute Nuit sont la chaussure de soirée par excellence pour les occasions qui méritent d\'être à la hauteur. Le talon aiguille de 9cm et le bout pointu créent une silhouette élancée et sophistiquée. La bride de cheville fine et ajustable assure le maintien du pied tout au long de la nuit. La semelle antidérapante apportée en embout métal offre une sécurité accrue sur les parquets lisses. Disponibles en noir sobre, rouge passion ou or festif pour toutes les tenues.\", \"caracteristiques\": \"\"}, {\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-05-29 09:37:04'),
-(103, 22, 4, 'user', 'Peux tu me comparer ces deux paires', '[]', NULL, 0, 0, '2026-05-29 09:43:02'),
-(104, 22, 4, 'assistant', 'Bien sûr, voici le comparatif Élégance Haute Nuit vs NightElegance Stiletto :', '[{\"id\": 32, \"name\": \"Élégance Haute Nuit\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"BelleMode\", \"resume\": \"Les Élégance Haute Nuit offrent un style élancé et sophistiqué avec un talon aiguille de 9cm.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge carmin\"], \"categorie\": \"Talons\", \"url_image\": \"images/image32.png\", \"description\": \"Les Élégance Haute Nuit sont la chaussure de soirée par excellence pour les occasions qui méritent d\'être à la hauteur. Le talon aiguille de 9cm et le bout pointu créent une silhouette élancée et sophistiquée. La bride de cheville fine et ajustable assure le maintien du pied tout au long de la nuit. La semelle antidérapante apportée en embout métal offre une sécurité accrue sur les parquets lisses. Disponibles en noir sobre, rouge passion ou or festif pour toutes les tenues.\", \"caracteristiques\": \"\"}, {\"id\": 34, \"name\": \"NightElegance Stiletto\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"BelleMode\", \"resume\": \"Les NightElegance Stiletto sont conçues pour des moments d\'exception avec élégance et luxueuse ornementation.\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Argent\", \"Champagne\", \"Rose gold\"], \"categorie\": \"Talons\", \"url_image\": \"images/image34.png\", \"description\": \"Les NightElegance Stiletto sont créées pour les moments d\'exception qui méritent une chaussure d\'exception. Le satin luxueux de la tige capte la lumière avec élégance, sublimé par une ornementation en cristaux sur la bride. Le talon de 10cm et le bout amande allongent visuellement la jambe pour une silhouette somptueuse. Disponibles dans des teintes métallisées précieuses, elles subliment les robes de soirée, les tenues de mariage ou de cocktail.\", \"caracteristiques\": \"\"}]', 'comparison', 0, 0, '2026-05-29 09:43:02'),
 (105, 23, 4, 'user', '[Recherche par image avec message : \"Avez des chaussures comme celle ci?\"] Produits suggérés : NeoUrban Street (109.90€), MaxBoost Gym (109.00€), SteelPro Light S1P (79.90€)', '[]', NULL, 0, 0, '2026-05-29 09:58:22'),
 (106, 23, 4, 'assistant', 'Tu as une paire de chaussures urbaines qui te plaît, et tu cherches quelque chose de similaire ? Tu pourrais essayer les NeoUrban Street d\'UrbanStep, ils ont un style très proche avec des couleurs comme le Gris anthracite ou le Noir. Et si tu veux quelque chose un peu plus sportif, les MaxBoost Gym de FlyMotion sont aussi une bonne option, notamment en Gris ou en Rouge bordeaux. Sinon, les SteelPro Light S1P de WorkGuard sont également disponibles en Gris et en Noir.', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\", \"caracteristiques\": \"\"}, {\"id\": 10, \"name\": \"MaxBoost Gym\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"FlyMotion\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir mat\", \"Rouge bordeaux\"], \"categorie\": \"Baskets sport\", \"url_image\": \"images/image10.png\", \"description\": \"Les MaxBoost Gym sont le choix des pratiquants de musculation sérieux. Leur semelle plate en caoutchouc avec un drop minimal favorise un meilleur transfert de force vers le sol lors des squats, soulevés de terre et presses. Le renfort talon rigide assure une stabilité maximale sous les charges lourdes. Légèrement plus rigides que des baskets classiques, elles offrent le maintien nécessaire pour progresser en toute sécurité.\", \"caracteristiques\": \"\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-05-29 09:58:22'),
-(107, 23, 4, 'user', 'Le client a Nova Air Lifestyle dans son panier. En 2 phrases : félicite-le pour ce choix, puis demande-lui s\'il cherche autre chose ou si tu peux l\'aider. Ne cite AUCUN autre produit que tu n\'as pas dans le catalogue fourni. Tutoie-le. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-29 10:27:53');
-INSERT INTO `conversations` (`id`, `id_session`, `id_client`, `role`, `message`, `products`, `layout`, `silent`, `internal`, `created_at`) VALUES
+(107, 23, 4, 'user', 'Le client a Nova Air Lifestyle dans son panier. En 2 phrases : félicite-le pour ce choix, puis demande-lui s\'il cherche autre chose ou si tu peux l\'aider. Ne cite AUCUN autre produit que tu n\'as pas dans le catalogue fourni. Tutoie-le. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-29 10:27:53'),
 (108, 23, 4, 'assistant', 'Wow, tu as choisi les superbes Nova Air Lifestyle ! C\'est un excellent choix pour une chaussure de sport polyvalente.\n\nTu cherches peut-être d\'autres modèles similaires ou veux-tu savoir si nous avons d\'autres produits qui t\'intéresseraient ?', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\", \"caracteristiques\": \"\"}, {\"id\": 10, \"name\": \"MaxBoost Gym\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"FlyMotion\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir mat\", \"Rouge bordeaux\"], \"categorie\": \"Baskets sport\", \"url_image\": \"images/image10.png\", \"description\": \"Les MaxBoost Gym sont le choix des pratiquants de musculation sérieux. Leur semelle plate en caoutchouc avec un drop minimal favorise un meilleur transfert de force vers le sol lors des squats, soulevés de terre et presses. Le renfort talon rigide assure une stabilité maximale sous les charges lourdes. Légèrement plus rigides que des baskets classiques, elles offrent le maintien nécessaire pour progresser en toute sécurité.\", \"caracteristiques\": \"\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\", \"caracteristiques\": \"\"}]', NULL, 0, 1, '2026-05-29 10:27:53'),
 (109, 23, 4, 'user', 'Le client a Nova Air Lifestyle dans son panier. En 2 phrases : félicite-le pour ce choix, puis demande-lui s\'il cherche autre chose ou si tu peux l\'aider. Ne cite AUCUN autre produit que tu n\'as pas dans le catalogue fourni. Tutoie-le. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-29 12:02:18'),
 (110, 23, 4, 'assistant', 'Tu as fait un excellent choix en optant pour les Nova Air Lifestyle, c\'est une excellente option pour passer la journée à l\'aise ! Qu\'est-ce que tu cherches maintenant ou peut-être que je peux t\'aider avec autre chose ?', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\", \"caracteristiques\": \"\"}, {\"id\": 10, \"name\": \"MaxBoost Gym\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"FlyMotion\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir mat\", \"Rouge bordeaux\"], \"categorie\": \"Baskets sport\", \"url_image\": \"images/image10.png\", \"description\": \"Les MaxBoost Gym sont le choix des pratiquants de musculation sérieux. Leur semelle plate en caoutchouc avec un drop minimal favorise un meilleur transfert de force vers le sol lors des squats, soulevés de terre et presses. Le renfort talon rigide assure une stabilité maximale sous les charges lourdes. Légèrement plus rigides que des baskets classiques, elles offrent le maintien nécessaire pour progresser en toute sécurité.\", \"caracteristiques\": \"\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\", \"caracteristiques\": \"\"}]', NULL, 0, 1, '2026-05-29 12:02:18'),
-(111, 23, 4, 'user', 'Le client a Nova Air Lifestyle dans son panier. En 2 phrases : rassure-le sur son excellent choix, puis propose ton aide s\'il a besoin d\'une autre paire. Ne cite AUCUN autre produit que tu n\'as pas dans le catalogue fourni. Tutoie-le. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-29 12:06:41'),
-(112, 23, 4, 'assistant', 'Tu as fait un super choix avec les Nova Air Lifestyle, c\'est une excellente option pour les occasions sportives ! Je suis là pour t\'aider si tu cherches une autre paire qui te convienne encore mieux ou si tu as d\'autres questions sur tes achats.', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\", \"caracteristiques\": \"\"}, {\"id\": 10, \"name\": \"MaxBoost Gym\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"FlyMotion\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir mat\", \"Rouge bordeaux\"], \"categorie\": \"Baskets sport\", \"url_image\": \"images/image10.png\", \"description\": \"Les MaxBoost Gym sont le choix des pratiquants de musculation sérieux. Leur semelle plate en caoutchouc avec un drop minimal favorise un meilleur transfert de force vers le sol lors des squats, soulevés de terre et presses. Le renfort talon rigide assure une stabilité maximale sous les charges lourdes. Légèrement plus rigides que des baskets classiques, elles offrent le maintien nécessaire pour progresser en toute sécurité.\", \"caracteristiques\": \"\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\", \"caracteristiques\": \"\"}]', NULL, 0, 1, '2026-05-29 12:06:41');
+(111, 23, 4, 'user', 'Le client a Nova Air Lifestyle dans son panier. En 2 phrases : rassure-le sur son excellent choix, puis propose ton aide s\'il a besoin d\'une autre paire. Ne cite AUCUN autre produit que tu n\'as pas dans le catalogue fourni. Tutoie-le. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-05-29 12:06:41');
+INSERT INTO `conversations` (`id`, `id_session`, `id_client`, `role`, `message`, `products`, `layout`, `silent`, `internal`, `created_at`) VALUES
+(112, 23, 4, 'assistant', 'Tu as fait un super choix avec les Nova Air Lifestyle, c\'est une excellente option pour les occasions sportives ! Je suis là pour t\'aider si tu cherches une autre paire qui te convienne encore mieux ou si tu as d\'autres questions sur tes achats.', '[{\"id\": 4, \"name\": \"NeoUrban Street\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"UrbanStep\", \"tailles\": [\"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris anthracite\", \"Kaki\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image4.png\", \"description\": \"Les NeoUrban Street combinent esthétique technique et confort urbain dans un design masculin assumé. Les overlays en matière synthétique renforcent les zones d\'usure tout en apportant une structure au pied. La semelle bi-densité offre un amorti adapté aux longues marches sur bitume. La languette zippée sur le côté facilite l\'enfilage. Le traitement anti-odeur de la doublure assure une hygiène durable même lors d\'une utilisation intensive.\", \"caracteristiques\": \"\"}, {\"id\": 10, \"name\": \"MaxBoost Gym\", \"emoji\": \"👟\", \"price\": 109, \"marque\": \"FlyMotion\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir mat\", \"Rouge bordeaux\"], \"categorie\": \"Baskets sport\", \"url_image\": \"images/image10.png\", \"description\": \"Les MaxBoost Gym sont le choix des pratiquants de musculation sérieux. Leur semelle plate en caoutchouc avec un drop minimal favorise un meilleur transfert de force vers le sol lors des squats, soulevés de terre et presses. Le renfort talon rigide assure une stabilité maximale sous les charges lourdes. Légèrement plus rigides que des baskets classiques, elles offrent le maintien nécessaire pour progresser en toute sécurité.\", \"caracteristiques\": \"\"}, {\"id\": 36, \"name\": \"SteelPro Light S1P\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"WorkGuard\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Gris\", \"Noir\"], \"categorie\": \"Sécurité\", \"url_image\": \"images/image36.png\", \"description\": \"Les SteelPro Light S1P prouvent que sécurité et confort ne sont pas incompatibles. Conformes à la norme S1P, elles intègrent un embout en composite léger (30% plus léger que l\'acier) sans sacrifier la protection contre les impacts de 200 joules. La semelle anti-perforation protège sans rigidifier. Légères et respirantes grâce à leur tige en mesh renforcé, elles réduisent considérablement la fatigue lors des longues journées en entrepôt ou en logistique. La doublure anti-bactérienne combat les odeurs.\", \"caracteristiques\": \"\"}]', NULL, 0, 1, '2026-05-29 12:06:41'),
+(123, 25, 4, 'user', 'Avez vous des chaussures adaptées pour la plage à me proposer?', '[]', NULL, 0, 0, '2026-06-01 14:13:36'),
+(124, 25, 4, 'assistant', 'Je vous recommande les SummerFlow Comfort, parfaites pour une journée au bord de l\'eau ! Elles sont légères et confortables avec des talons plats, idéales pour flâner sur la plage. Disponibles en 36-41 dans Beige, Blanc ou Rose.', '[{\"id\": 24, \"name\": \"SummerFlow Comfort\", \"emoji\": \"👟\", \"price\": 39.9, \"marque\": \"SummerFeet\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Beige\", \"Blanc\", \"Rose\"], \"categorie\": \"Sandales\", \"url_image\": \"images/image24.png\", \"description\": \"Les SummerFlow Comfort sont des sandales simples, légères et abordables pour profiter pleinement de l\'été. La semelle en mousse EVA épaisse et moelleuse absorbe les chocs et offre un confort immédiat sans période d\'adaptation. Idéales pour la plage, les sorties en ville ou simplement pour flâner, elles s\'enfilent et se retirent en un instant. Leur prix accessible en fait le choix parfait pour avoir une paire de sandales de secours ou pour les vacances.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-01 14:13:36'),
+(125, 25, 4, 'user', 'En une à deux phrases (max 20 mots), mets en avant le point fort des \"SummerFlow Comfort\" (39.90€) et propose ton aide pour choisir la taille ou la couleur. Vouvoyez le client. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-06-01 14:16:18'),
+(126, 25, 4, 'assistant', 'Le \"SummerFlow Comfort\" est idéal pour les étés chauds avec son système de ventilation qui garantit une respiration optimale. Quelle taille souhaitez-vous pour ce modèle ? Nous avons les tailles 37-46. Qu\'en est-il de la couleur, nous proposons le noir ou le bleu marine ?', '[]', NULL, 0, 1, '2026-06-01 14:16:18'),
+(127, 25, 4, 'user', 'cette paires est disponible en beigne comme l\'indique le catalogue ?', '[]', NULL, 0, 0, '2026-06-01 14:35:51'),
+(128, 25, 4, 'assistant', 'Oui, la SummerFlow Comfort est disponible en Beige. C\'est l\'une des trois couleurs proposées pour cette paire de chaussures.', '[{\"id\": 24, \"name\": \"SummerFlow Comfort\", \"emoji\": \"👟\", \"price\": 39.9, \"marque\": \"SummerFeet\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Beige\", \"Blanc\", \"Rose\"], \"categorie\": \"Sandales\", \"url_image\": \"images/image24.png\", \"description\": \"Les SummerFlow Comfort sont des sandales simples, légères et abordables pour profiter pleinement de l\'été. La semelle en mousse EVA épaisse et moelleuse absorbe les chocs et offre un confort immédiat sans période d\'adaptation. Idéales pour la plage, les sorties en ville ou simplement pour flâner, elles s\'enfilent et se retirent en un instant. Leur prix accessible en fait le choix parfait pour avoir une paire de sandales de secours ou pour les vacances.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-01 14:35:51'),
+(129, 25, 4, 'user', 'Quelle sont toutes les couleurs disponibles pour la paire ?', '[]', NULL, 0, 0, '2026-06-01 14:47:15'),
+(130, 25, 4, 'assistant', 'Vous trouverez les couleurs disponibles pour la SummerFlow Comfort en Beige, Blanc ou Rose.\n\nLa comparaison entre l\'OceanBreeze Sport et le BreezeWalk Liège montre que ces deux modèles ont des tailles similaires mais pas exactement les mêmes, ainsi que différentes couleurs : l\'OceanBreeze Sport est disponible en Bleu océan, Corail et Vert aqua tandis que le BreezeWalk Liège est disponible en Beige naturel, Marron ou Noir.', '[{\"id\": 23, \"name\": \"OceanBreeze Sport\", \"emoji\": \"👟\", \"price\": 49.9, \"marque\": \"SummerFeet\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\"], \"couleurs\": [\"Bleu océan\", \"Corail\", \"Vert aqua\"], \"categorie\": \"Sandales\", \"url_image\": \"images/image23.png\", \"description\": \"Les OceanBreeze Sport sont conçues pour tous les environnements aquatiques. Le tissu synthétique à séchage ultra-rapide évite l\'inconfort des sandales détrempées. La semelle en caoutchouc antidérapant assure une sécurité maximale sur les rochers mouillés, les bords de piscine et les pontons. Le système de drainage intégré évacue l\'eau immédiatement. Résistantes à l\'eau salée, au sable et au chlore, elles sont le compagnon idéal de toutes les aventures aquatiques.\", \"caracteristiques\": \"\"}, {\"id\": 22, \"name\": \"BreezeWalk Liège\", \"emoji\": \"👟\", \"price\": 59.9, \"marque\": \"SummerFeet\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Beige naturel\", \"Marron\", \"Noir\"], \"categorie\": \"Sandales\", \"url_image\": \"images/image22.png\", \"description\": \"Les BreezeWalk Liège s\'inspirent des meilleures sandales de confort européennes. La semelle en liège naturel s\'adapte progressivement à la forme du pied pour un confort personnalisé unique. Les brides en cuir souple sont entièrement réglables pour s\'adapter à toutes les morphologies. Légères et respirantes, elles sont parfaites pour les longues journées d\'été en ville ou en vacances. Le cuir se patine avec le temps et devient encore plus beau à l\'usage.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-01 14:47:15'),
+(131, 26, 4, 'user', 'Avez des chaussures adaptées pour le bureau au quotidien à me proposer ? ', '[]', NULL, 0, 0, '2026-06-01 15:27:04'),
+(132, 26, 4, 'assistant', 'Je pense que la CityWalk Chelsea serait idéale pour un usage quotidien au bureau ! Elle propose une ligne de style sobre et chic, disponible en plusieurs couleurs qui seront parfaites pour une tenue professionnelle. Tu peux choisir entre trois couleurs : Bordeaux, Cognac ou Noir, disponibles dans les tailles 36 à 42.', '[{\"id\": 27, \"name\": \"CityWalk Chelsea\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"NordCraft\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Bordeaux\", \"Cognac\", \"Noir\"], \"categorie\": \"Bottines\", \"url_image\": \"images/image27.png\", \"description\": \"Les CityWalk Chelsea revisitent le classique intemporel des bottines Chelsea avec une touche contemporaine. Les élastiques latéraux en tissu élastiqué permettent un enfilage aisé tout en assurant un excellent maintien du pied. Le talon carré de 3cm apporte une légère élévation flatteuse sans compromettre la stabilité. Polyvalentes, elles se portent aussi bien avec un jean qu\'avec une jupe ou un tailleur. Un basique élégant pour toute garde-robe féminine.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-01 15:27:04'),
+(133, 27, 5, 'user', 'Je veux des chaussures confortables qui sont simples et sans lacets', '[]', NULL, 0, 0, '2026-06-02 09:35:13'),
+(134, 27, 5, 'assistant', 'Je te conseille le CloudStep Lite d\'UrbanStep, c\'est une chaussure très confortable avec un design minimaliste qui convient parfaitement à tes besoins. Et si tu préfères quelque chose de plus robuste, j\'ai aussi le StreetWave Bold d\'UrbanStep qui est également très confortable et sans lacets.\n\nSinon, l\'AirFlex Pastel de FlyMotion pourrait être une bonne option pour toi, il a un design simple et des matériaux à haute qualité pour une grande comfort.', '[{\"id\": 3, \"name\": \"CloudStep Lite\", \"emoji\": \"👟\", \"price\": 74.9, \"marque\": \"UrbanStep\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Blanc\", \"Lilas\", \"Rose\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image3.png\", \"description\": \"Les CloudStep Lite sont pensées pour les femmes qui recherchent avant tout le confort sans sacrifier le style. Leur semelle en mousse mémoire de forme s\'adapte à la morphologie du pied pour un maintien personnalisé. La tige en mesh doux épouse le pied sans contraindre. Les lacets élastiques permettent d\'enfiler et d\'enlever les chaussures sans effort. Parfaites pour de longues journées debout ou pour se déplacer en ville.\", \"caracteristiques\": \"\"}, {\"id\": 6, \"name\": \"StreetWave Bold\", \"emoji\": \"👟\", \"price\": 119, \"marque\": \"UrbanStep\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Blanc\", \"Colorblock rouge-blanc\", \"Noir\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image6.png\", \"description\": \"Les StreetWave Bold s\'imposent comme une pièce maîtresse de tout outfit streetwear. Leur semelle plateforme de 3cm donne une stature affirmée, tandis que le colorblock audacieux ne laisse personne indifférent. La combinaison cuir synthétique et mesh offre à la fois structure et respirabilité. Les renforts latéraux stabilisent le pied sur les terrains urbains variés. Pour ceux qui veulent se démarquer sans compromis sur le confort.\", \"caracteristiques\": \"\"}, {\"id\": 5, \"name\": \"AirFlex Pastel\", \"emoji\": \"👟\", \"price\": 84.9, \"marque\": \"FlyMotion\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Lavande\", \"Menthe\", \"Pêche\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image5.png\", \"description\": \"Les AirFlex Pastel apportent une touche de couleur douce et tendance à votre garde-robe. Disponibles en trois coloris pastel exclusifs, elles combinent légèreté et respirabilité pour un port agréable toute la journée. La semelle flexible en EVA offre un bon retour d\'énergie et absorbe les chocs sur les surfaces dures. Idéales pour les tenues printanières et estivales, elles s\'associent facilement à des robes, jupes ou jeans.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-02 09:35:13'),
+(135, 27, 5, 'user', 'En une à deux phrases (max 20 mots), rappelle ce qui fait le charme des CloudStep Lite et demande au client ce qui l\'intéresse. Tutoie-le. Ne commence pas par Bonjour.', '[]', NULL, 1, 1, '2026-06-02 09:35:51'),
+(136, 27, 5, 'assistant', 'Les CloudStep Lite sont des chaussures ultra légères avec un amorti max de 10mm. Qu\'est-ce que tu cherches dans une paire de chaussures ?', '[]', NULL, 0, 1, '2026-06-02 09:35:51'),
+(137, 27, 5, 'user', 'Des chaussures sans lacets', '[]', NULL, 0, 0, '2026-06-02 09:48:20'),
+(138, 27, 5, 'assistant', 'Je te recommande le CloudStep Lite d\'UrbanStep, c\'est une chaussure très confortable et simple avec des matériaux à haute qualité pour un grand comfort. J\'ai aussi le Nova Air Lifestyle d\'UrbanStep qui est également très adapté à tes besoins, il a un design minimaliste et des semelles épaisses pour une grande stabilité. Et si tu préfères quelque chose de plus robuste, l\'AirFlex Pastel de FlyMotion convient parfaitement avec ses matériaux solides et son design simple.', '[{\"id\": 3, \"name\": \"CloudStep Lite\", \"emoji\": \"👟\", \"price\": 74.9, \"marque\": \"UrbanStep\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\"], \"couleurs\": [\"Blanc\", \"Lilas\", \"Rose\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image3.png\", \"description\": \"Les CloudStep Lite sont pensées pour les femmes qui recherchent avant tout le confort sans sacrifier le style. Leur semelle en mousse mémoire de forme s\'adapte à la morphologie du pied pour un maintien personnalisé. La tige en mesh doux épouse le pied sans contraindre. Les lacets élastiques permettent d\'enfiler et d\'enlever les chaussures sans effort. Parfaites pour de longues journées debout ou pour se déplacer en ville.\", \"caracteristiques\": \"\"}, {\"id\": 5, \"name\": \"AirFlex Pastel\", \"emoji\": \"👟\", \"price\": 84.9, \"marque\": \"FlyMotion\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Lavande\", \"Menthe\", \"Pêche\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image5.png\", \"description\": \"Les AirFlex Pastel apportent une touche de couleur douce et tendance à votre garde-robe. Disponibles en trois coloris pastel exclusifs, elles combinent légèreté et respirabilité pour un port agréable toute la journée. La semelle flexible en EVA offre un bon retour d\'énergie et absorbe les chocs sur les surfaces dures. Idéales pour les tenues printanières et estivales, elles s\'associent facilement à des robes, jupes ou jeans.\", \"caracteristiques\": \"\"}, {\"id\": 1, \"name\": \"Nova Air Lifestyle\", \"emoji\": \"👟\", \"price\": 89.99, \"marque\": \"UrbanStep\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\"], \"couleurs\": [\"Beige\", \"Blanc\", \"Gris\"], \"categorie\": \"Baskets lifestyle\", \"url_image\": \"images/image1.png\", \"description\": \"Les Nova Air Lifestyle sont conçues pour offrir un confort optimal au quotidien. Leur tige en mesh respirant assure une excellente circulation de l\'air même lors des longues journées. La semelle en EVA absorbe efficacement les chocs à chaque pas, réduisant la fatigue. Leur design épuré et moderne s\'adapte aussi bien à une tenue décontractée qu\'à un look urbain soigné. Légères et polyvalentes, elles sont idéales pour la ville, les courses et les sorties du week-end.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-02 09:48:20'),
+(139, 28, 5, 'user', 'Vous avez des chaussures sans lacets ?', '[]', NULL, 0, 0, '2026-06-02 09:54:35'),
+(140, 28, 5, 'assistant', 'J\'ai trouvé plusieurs modèles qui pourraient vous intéresser ! Vous pouvez opter pour le StreetFlex Knit d\'UrbanStep, c\'est une chaussure en tissu qui n\'a pas de lacets. Le EasyStep Canvas de DailyWear est également un bon choix, il est en toile et offre une grande liberté de mouvement sans les lacets. Et si vous cherchez quelque chose avec un peu plus de style, le SoftWalk Classic de GentleStep pourrait correspondre à vos attentes, c\'est une chaussure classique qui n\'a pas besoin de lacets.', '[{\"id\": 47, \"name\": \"StreetFlex Knit\", \"emoji\": \"👟\", \"price\": 64.90000000000002, \"marque\": \"UrbanStep\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Beige\", \"Gris chiné\", \"Noir\"], \"categorie\": \"Slip-on\", \"url_image\": \"images/image47.png\", \"description\": \"Les StreetFlex Knit exploitent la technologie du tricot chaussette pour créer un slip-on d\'une légèreté et d\'un confort inégalés. La tige en tricot knit s\'adapte comme une seconde peau aux contours du pied, sans coutures irritantes. L\'élasticité naturelle du tricot facilite l\'enfilage et le retrait. La semelle EVA légère assure confort et amorti pour les journées actives. Un choix moderne et pratique pour le quotidien urbain ou le bureau casual.\", \"caracteristiques\": \"\"}, {\"id\": 46, \"name\": \"EasyStep Canvas\", \"emoji\": \"👟\", \"price\": 44.9, \"marque\": \"DailyWear\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Blanc\", \"Marine\", \"Rouge\"], \"categorie\": \"Slip-on\", \"url_image\": \"images/image46.png\", \"description\": \"Les EasyStep Canvas revisitent la chaussure canvas de toile classique en version slip-on sans lacets. Les élastiques latéraux discrets permettent d\'enfiler et d\'enlever les chaussures sans effort. La semelle vulcanisée en caoutchouc assure une bonne durabilité et une adhérence suffisante pour le quotidien. Légères et respirantes en toile, elles sont parfaites pour l\'été, la plage ou le quotidien décontracté. Passent en machine à 30°C pour un entretien facile.\", \"caracteristiques\": \"\"}, {\"id\": 29, \"name\": \"SoftWalk Classic\", \"emoji\": \"👟\", \"price\": 79.9, \"marque\": \"GentleStep\", \"tailles\": [\"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Marron\", \"Noir\"], \"categorie\": \"Mocassins\", \"url_image\": \"images/image29.png\", \"description\": \"Les SoftWalk Classic sont des mocassins légers et confortables qui s\'adaptent aussi bien au bureau qu\'aux sorties en ville. Fabriqués en cuir souple pleine fleur, ils épousent naturellement la forme du pied au fil du temps pour un confort personnalisé. L\'absence de lacets permet de les enfiler et les retirer en quelques secondes. La doublure en cuir absorbe la transpiration et garantit une hygiène durable. Un classique masculin indémodable.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-02 09:54:35'),
+(141, 28, 5, 'user', 'Le client regarde ses favoris (WalkPro Comfort). En 2 phrases : commente positivement ces choix, puis demande s\'il veut qu\'on l\'aide à choisir ou à trouver autre chose. Ne cite AUCUN autre produit. Vouvoyez-le.', '[]', NULL, 1, 1, '2026-06-02 09:57:34'),
+(142, 28, 5, 'assistant', 'C\'est un excellent choix que de préférer le WalkPro Comfort ! Il est conçu pour une confort maximale grâce à sa semelle GentleStep, ce qui te permettra d\'aller loin sans sentir la fatigue. Tu as choisi une excellente option, maintenant veux-tu que je t\'aide à choisir la taille et la couleur idéales ou bien tu souhaites peut-être découvrir d\'autres options ?', '[{\"id\": 42, \"name\": \"WalkPro Comfort\", \"price\": 89.9, \"marque\": \"GentleStep\", \"tailles\": [37, 38, 39, 40, 41, 42, 43, 44, 45, 46], \"couleurs\": [\"Blanc\", \"Gris\", \"Bleu ciel\"], \"categorie\": \"Marche\", \"url_image\": \"images/image42.png\", \"description\": \"Les WalkPro Comfort sont conçues pour les marcheurs qui privilégient le confort avant tout. Le support plantaire en gel anatomique répartit uniformément les pressions sous le pied, réduisant douleurs et fatigue même lors de très longues marches. L\'embout large offre la place nécessaire aux orteils sans pincement. La semelle EVA renforcée amorti efficacement sur tous les revêtements urbains. L\'ouverture large et le système de lacets à enroulement facilitent l\'enfilage pour les personnes à mobilité réduite.\"}]', NULL, 0, 1, '2026-06-02 09:57:34'),
+(143, 29, 5, 'user', 'Chaussures imperméables', '[]', NULL, 0, 0, '2026-06-02 10:33:25'),
+(144, 29, 5, 'assistant', 'Tu peux essayer les RainStep WP de DryWalk, elles sont imperméables et chaudes, tu trouveras des tailles comprises entre 37 et 46 ainsi que trois couleurs différentes. C\'est aussi une bonne option les StormGuard Boot de DryWalk qui offrent la même qualité d\'imperméabilité avec un design légèrement différent, disponibles en plusieurs tailles et trois nuances de couleur. Si tu préfères quelque chose de moins cher, les CityWalk Chelsea de NordCraft sont également imperméables et chaudes avec une touche de style.', '[{\"id\": 48, \"name\": \"RainStep WP\", \"emoji\": \"👟\", \"price\": 99.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bleu marine\", \"Kaki\", \"Noir\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image48.png\", \"description\": \"Les RainStep WP prouvent qu\'une chaussure imperméable peut être élégante et discrète. Leur aspect de baskets classiques ne trahit pas leur imperméabilité totale garantie par la membrane waterproof intégrée. La tige en cuir synthétique traité repousse l\'eau dès le premier contact. La semelle en caoutchouc avec rainures profondes assure une adhérence sécurisée sur les trottoirs mouillés. Respirantes malgré leur imperméabilité, elles évitent l\'effet de botte chaude.\", \"caracteristiques\": \"\"}, {\"id\": 49, \"name\": \"StormGuard Boot\", \"emoji\": \"👟\", \"price\": 129.9, \"marque\": \"DryWalk\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Bordeaux\", \"Noir\", \"Vert hunter\"], \"categorie\": \"Imperméables\", \"url_image\": \"images/image49.png\", \"description\": \"Les StormGuard Boot sont les bottes tout-terrain pour ceux qui n\'ont pas peur des éléments. La tige en caoutchouc naturel de 20cm de hauteur offre une étanchéité absolue même dans les flaques profondes. La doublure en néoprène maintient les pieds chauds dans l\'eau froide jusqu\'à environ 5°C. Les crampons profonds de la semelle mordent efficacement dans la boue épaisse et les terrains détrempés. Idéales pour la chasse, la pêche, le jardinage ou les festivals pluvieux.\", \"caracteristiques\": \"\"}, {\"id\": 27, \"name\": \"CityWalk Chelsea\", \"emoji\": \"👟\", \"price\": 109.9, \"marque\": \"NordCraft\", \"tailles\": [\"36\", \"37\", \"38\", \"39\", \"40\", \"41\", \"42\"], \"couleurs\": [\"Bordeaux\", \"Cognac\", \"Noir\"], \"categorie\": \"Bottines\", \"url_image\": \"images/image27.png\", \"description\": \"Les CityWalk Chelsea revisitent le classique intemporel des bottines Chelsea avec une touche contemporaine. Les élastiques latéraux en tissu élastiqué permettent un enfilage aisé tout en assurant un excellent maintien du pied. Le talon carré de 3cm apporte une légère élévation flatteuse sans compromettre la stabilité. Polyvalentes, elles se portent aussi bien avec un jean qu\'avec une jupe ou un tailleur. Un basique élégant pour toute garde-robe féminine.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-02 10:33:25'),
+(145, 30, 5, 'user', 'Pour le running', '[]', NULL, 0, 0, '2026-06-02 16:16:29'),
+(146, 30, 5, 'assistant', 'Je te conseille le FlowLite Daily d\'Athletica, c\'est un bon choix pour le running, il est léger et confortable. Le SpeedFlow Race de FlyMotion est aussi une excellente option, avec ses chaussures aérodynamiques qui t\'aideront à améliorer ta performance. Si tu cherches quelque chose un peu plus haut de gamme, l\'UltraStep Boost de FlyMotion est également disponible.', '[{\"id\": 15, \"name\": \"FlowLite Daily\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"Athletica\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Bleu ciel\", \"Corail\", \"Gris\"], \"categorie\": \"Running\", \"url_image\": \"images/image15.png\", \"description\": \"Les FlowLite Daily sont la chaussure de running idéale pour débuter ou courir régulièrement sans se ruiner. Leur semelle en EVA confortable et leur tige respirante offrent tout le nécessaire pour des sorties plaisantes de 5 à 15km. Le drop de 10mm accompagne naturellement la foulée talon des coureurs débutants. Solides et durables, elles résistent aux entraînements répétés sur route et chemin. Un excellent premier choix pour se lancer dans la course à pied.\", \"caracteristiques\": \"\"}, {\"id\": 16, \"name\": \"UltraStep Boost\", \"emoji\": \"👟\", \"price\": 169, \"marque\": \"FlyMotion\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\", \"46\"], \"couleurs\": [\"Blanc\", \"Bleu nuit\", \"Rose fluo\"], \"categorie\": \"Running\", \"url_image\": \"images/image16.png\", \"description\": \"Les UltraStep Boost intègrent une technologie de mousse Boost révolutionnaire qui offre un retour d\'énergie inégalé à chaque foulée. La tige en mesh 3D knit s\'adapte comme une chaussette à la forme exacte du pied pour un maintien sans coutures irritantes. Idéales pour les longues sorties du dimanche ou la préparation marathon, elles maintiennent leur niveau de confort kilomètre après kilomètre. La légèreté de l\'ensemble réduit significativement la fatigue musculaire.\", \"caracteristiques\": \"\"}, {\"id\": 13, \"name\": \"SpeedFlow Race\", \"emoji\": \"👟\", \"price\": 159.9, \"marque\": \"FlyMotion\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge vif\"], \"categorie\": \"Running\", \"url_image\": \"images/image13.png\", \"description\": \"Les SpeedFlow Race sont les chaussures des coureurs qui visent la performance absolue en compétition. La plaque carbone intégrée dans la semelle crée un effet propulsif unique qui optimise l\'économie de course. La mousse racing ultra-légère et le drop de 4mm favorisent une foulée avant-pied dynamique. Pesant seulement 220 grammes, elles minimisent la fatigue sur les distances de 5km au marathon. Réservées aux coureurs entraînés pour une utilisation en course ou en entraînement rapide.\", \"caracteristiques\": \"\"}]', NULL, 0, 0, '2026-06-02 16:16:29'),
+(147, 30, 5, 'user', 'Fais moi la comparaison entre les deux paires', '[]', NULL, 0, 0, '2026-06-02 16:32:28'),
+(148, 30, 5, 'assistant', 'Bien sûr, voici le comparatif FlowLite Daily vs SpeedFlow Race :', '[{\"id\": 15, \"name\": \"FlowLite Daily\", \"emoji\": \"👟\", \"price\": 89.9, \"marque\": \"Athletica\", \"resume\": \"Les FlowLite Daily sont des chaussures de running confortables et solides pour les courses courtes.\", \"tailles\": [\"37\", \"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Bleu ciel\", \"Corail\", \"Gris\"], \"categorie\": \"Running\", \"url_image\": \"images/image15.png\", \"description\": \"Les FlowLite Daily sont la chaussure de running idéale pour débuter ou courir régulièrement sans se ruiner. Leur semelle en EVA confortable et leur tige respirante offrent tout le nécessaire pour des sorties plaisantes de 5 à 15km. Le drop de 10mm accompagne naturellement la foulée talon des coureurs débutants. Solides et durables, elles résistent aux entraînements répétés sur route et chemin. Un excellent premier choix pour se lancer dans la course à pied.\", \"caracteristiques\": \"\"}, {\"id\": 13, \"name\": \"SpeedFlow Race\", \"emoji\": \"👟\", \"price\": 159.9, \"marque\": \"FlyMotion\", \"resume\": \"Les SpeedFlow Race sont conçues pour optimiser l\'économie de course et réduire la fatigue.\", \"tailles\": [\"38\", \"39\", \"40\", \"41\", \"42\", \"43\", \"44\", \"45\"], \"couleurs\": [\"Noir\", \"Or\", \"Rouge vif\"], \"categorie\": \"Running\", \"url_image\": \"images/image13.png\", \"description\": \"Les SpeedFlow Race sont les chaussures des coureurs qui visent la performance absolue en compétition. La plaque carbone intégrée dans la semelle crée un effet propulsif unique qui optimise l\'économie de course. La mousse racing ultra-légère et le drop de 4mm favorisent une foulée avant-pied dynamique. Pesant seulement 220 grammes, elles minimisent la fatigue sur les distances de 5km au marathon. Réservées aux coureurs entraînés pour une utilisation en course ou en entraînement rapide.\", \"caracteristiques\": \"\"}]', 'comparison', 0, 0, '2026-06-02 16:32:28');
 
 -- --------------------------------------------------------
 
@@ -298,8 +367,8 @@ CREATE TABLE `favoris` (
 INSERT INTO `favoris` (`id`, `id_client`, `id_shoes`, `created_at`) VALUES
 (21, 3, 31, '2026-05-26 13:53:42'),
 (29, 4, 34, '2026-05-28 10:56:09'),
-(30, 4, 53, '2026-05-28 10:56:17'),
-(32, 4, 1, '2026-05-28 10:56:33');
+(33, 4, 1, '2026-06-01 10:03:03'),
+(34, 5, 42, '2026-06-02 07:27:08');
 
 -- --------------------------------------------------------
 
@@ -325,7 +394,11 @@ CREATE TABLE `lignes_commande` (
 --
 
 INSERT INTO `lignes_commande` (`id_ligne`, `id_commande`, `id_shoes`, `id_variant`, `nom_article`, `taille`, `couleur`, `prix_unitaire`, `quantite`, `sous_total`) VALUES
-(1, 1, 1, 1, 'Nova Air Lifestyle', 38, 'Blanc', '89.99', 1, '89.99');
+(1, 1, 1, 1, 'Nova Air Lifestyle', 38, 'Blanc', '89.99', 1, '89.99'),
+(2, 2, 42, 960, 'WalkPro Comfort', 38, 'Bleu ciel', '89.90', 1, '89.90'),
+(3, 3, 27, 640, 'CityWalk Chelsea', 40, 'Noir', '109.90', 1, '109.90'),
+(4, 4, 2, 32, 'RetroWave 90s', 41, 'Rouge', '99.90', 1, '99.90'),
+(5, 5, 1, 4, 'Nova Air Lifestyle', 39, 'Blanc', '89.99', 1, '89.99');
 
 -- --------------------------------------------------------
 
@@ -349,7 +422,45 @@ CREATE TABLE `panier` (
 INSERT INTO `panier` (`id_panier`, `id_client`, `quantite`, `date_ajout`, `statut`, `id_variant`) VALUES
 (12, 3, 1, '2026-05-21 12:05:21', 'en_cours', 730),
 (15, 3, 1, '2026-05-26 13:53:46', 'en_cours', 730),
-(17, 3, 1, '2026-05-26 14:37:59', 'en_cours', 70);
+(17, 3, 1, '2026-05-26 14:37:59', 'en_cours', 70),
+(19, 4, 1, '2026-06-01 10:04:53', 'en_cours', 793);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `questions`
+--
+
+CREATE TABLE `questions` (
+  `id_question` int(11) NOT NULL,
+  `id_shoes` int(11) NOT NULL,
+  `id_client` int(11) NOT NULL,
+  `contenu` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Déchargement des données de la table `questions`
+--
+
+INSERT INTO `questions` (`id_question`, `id_shoes`, `id_client`, `contenu`, `created_at`) VALUES
+(1, 8, 4, 'Superbe chaussure !!!', '2026-06-01 16:08:00'),
+(4, 3, 4, 'Vous trouvez que la paire CloudStep Lite est bien ?', '2026-06-02 11:53:44');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `reponses_questions`
+--
+
+CREATE TABLE `reponses_questions` (
+  `id_reponse` int(11) NOT NULL,
+  `id_question` int(11) NOT NULL,
+  `id_parent` int(11) DEFAULT NULL,
+  `id_client` int(11) NOT NULL,
+  `contenu` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -373,7 +484,7 @@ INSERT INTO `size_color` (`id_variant`, `id_shoes`, `taille`, `couleur`, `stock`
 (1, 1, 38, 'Blanc', 21),
 (2, 1, 38, 'Beige', 75),
 (3, 1, 38, 'Gris', 90),
-(4, 1, 39, 'Blanc', 89),
+(4, 1, 39, 'Blanc', 88),
 (5, 1, 39, 'Beige', 50),
 (6, 1, 39, 'Gris', 74),
 (7, 1, 40, 'Blanc', 60),
@@ -401,7 +512,7 @@ INSERT INTO `size_color` (`id_variant`, `id_shoes`, `taille`, `couleur`, `stock`
 (29, 2, 40, 'Rouge', 41),
 (30, 2, 40, 'Bleu marine', 99),
 (31, 2, 41, 'Blanc', 57),
-(32, 2, 41, 'Rouge', 80),
+(32, 2, 41, 'Rouge', 79),
 (33, 2, 41, 'Bleu marine', 63),
 (34, 2, 42, 'Blanc', 80),
 (35, 2, 42, 'Rouge', 72),
@@ -1009,7 +1120,7 @@ INSERT INTO `size_color` (`id_variant`, `id_shoes`, `taille`, `couleur`, `stock`
 (637, 27, 39, 'Noir', 38),
 (638, 27, 39, 'Cognac', 71),
 (639, 27, 39, 'Bordeaux', 79),
-(640, 27, 40, 'Noir', 84),
+(640, 27, 40, 'Noir', 83),
 (641, 27, 40, 'Cognac', 59),
 (642, 27, 40, 'Bordeaux', 23),
 (643, 27, 41, 'Noir', 40),
@@ -1329,7 +1440,7 @@ INSERT INTO `size_color` (`id_variant`, `id_shoes`, `taille`, `couleur`, `stock`
 (957, 42, 37, 'Bleu ciel', 45),
 (958, 42, 38, 'Blanc', 46),
 (959, 42, 38, 'Gris', 30),
-(960, 42, 38, 'Bleu ciel', 37),
+(960, 42, 38, 'Bleu ciel', 36),
 (961, 42, 39, 'Blanc', 80),
 (962, 42, 39, 'Gris', 20),
 (963, 42, 39, 'Bleu ciel', 22),
@@ -1871,6 +1982,22 @@ ALTER TABLE `commandes`
   ADD KEY `fk_commande_client` (`id_client`);
 
 --
+-- Index pour la table `commentaires`
+--
+ALTER TABLE `commentaires`
+  ADD PRIMARY KEY (`id_commentaire`),
+  ADD UNIQUE KEY `uq_commentaire_client_shoes` (`id_client`,`id_shoes`),
+  ADD UNIQUE KEY `unique_comment` (`id_shoes`,`id_client`);
+
+--
+-- Index pour la table `commentaire_likes`
+--
+ALTER TABLE `commentaire_likes`
+  ADD PRIMARY KEY (`id_like`),
+  ADD UNIQUE KEY `uq_like` (`id_commentaire`,`id_client`),
+  ADD KEY `id_client` (`id_client`);
+
+--
 -- Index pour la table `conversations`
 --
 ALTER TABLE `conversations`
@@ -1903,6 +2030,23 @@ ALTER TABLE `panier`
   ADD KEY `id_variant` (`id_variant`);
 
 --
+-- Index pour la table `questions`
+--
+ALTER TABLE `questions`
+  ADD PRIMARY KEY (`id_question`),
+  ADD KEY `id_shoes` (`id_shoes`),
+  ADD KEY `id_client` (`id_client`);
+
+--
+-- Index pour la table `reponses_questions`
+--
+ALTER TABLE `reponses_questions`
+  ADD PRIMARY KEY (`id_reponse`),
+  ADD KEY `id_question` (`id_question`),
+  ADD KEY `id_parent` (`id_parent`),
+  ADD KEY `id_client` (`id_client`);
+
+--
 -- Index pour la table `size_color`
 --
 ALTER TABLE `size_color`
@@ -1917,43 +2061,67 @@ ALTER TABLE `size_color`
 -- AUTO_INCREMENT pour la table `chat_sessions`
 --
 ALTER TABLE `chat_sessions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT pour la table `clients`
 --
 ALTER TABLE `clients`
-  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id_client` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT pour la table `commandes`
 --
 ALTER TABLE `commandes`
-  MODIFY `id_commande` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_commande` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT pour la table `commentaires`
+--
+ALTER TABLE `commentaires`
+  MODIFY `id_commentaire` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT pour la table `commentaire_likes`
+--
+ALTER TABLE `commentaire_likes`
+  MODIFY `id_like` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT pour la table `conversations`
 --
 ALTER TABLE `conversations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=113;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=149;
 
 --
 -- AUTO_INCREMENT pour la table `favoris`
 --
 ALTER TABLE `favoris`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT pour la table `lignes_commande`
 --
 ALTER TABLE `lignes_commande`
-  MODIFY `id_ligne` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id_ligne` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT pour la table `panier`
 --
 ALTER TABLE `panier`
-  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id_panier` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
+--
+-- AUTO_INCREMENT pour la table `questions`
+--
+ALTER TABLE `questions`
+  MODIFY `id_question` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT pour la table `reponses_questions`
+--
+ALTER TABLE `reponses_questions`
+  MODIFY `id_reponse` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Contraintes pour les tables déchargées
@@ -1970,6 +2138,20 @@ ALTER TABLE `chat_sessions`
 --
 ALTER TABLE `commandes`
   ADD CONSTRAINT `fk_commande_client` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Contraintes pour la table `commentaires`
+--
+ALTER TABLE `commentaires`
+  ADD CONSTRAINT `commentaires_ibfk_1` FOREIGN KEY (`id_shoes`) REFERENCES `articles` (`id_shoes`) ON DELETE CASCADE,
+  ADD CONSTRAINT `commentaires_ibfk_2` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `commentaire_likes`
+--
+ALTER TABLE `commentaire_likes`
+  ADD CONSTRAINT `commentaire_likes_ibfk_1` FOREIGN KEY (`id_commentaire`) REFERENCES `commentaires` (`id_commentaire`) ON DELETE CASCADE,
+  ADD CONSTRAINT `commentaire_likes_ibfk_2` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `conversations`
@@ -1998,6 +2180,21 @@ ALTER TABLE `lignes_commande`
 ALTER TABLE `panier`
   ADD CONSTRAINT `fk_panier_client` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`),
   ADD CONSTRAINT `panier_ibfk_1` FOREIGN KEY (`id_variant`) REFERENCES `size_color` (`id_variant`);
+
+--
+-- Contraintes pour la table `questions`
+--
+ALTER TABLE `questions`
+  ADD CONSTRAINT `questions_ibfk_1` FOREIGN KEY (`id_shoes`) REFERENCES `articles` (`id_shoes`) ON DELETE CASCADE,
+  ADD CONSTRAINT `questions_ibfk_2` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `reponses_questions`
+--
+ALTER TABLE `reponses_questions`
+  ADD CONSTRAINT `reponses_questions_ibfk_1` FOREIGN KEY (`id_question`) REFERENCES `questions` (`id_question`) ON DELETE CASCADE,
+  ADD CONSTRAINT `reponses_questions_ibfk_2` FOREIGN KEY (`id_parent`) REFERENCES `reponses_questions` (`id_reponse`) ON DELETE CASCADE,
+  ADD CONSTRAINT `reponses_questions_ibfk_3` FOREIGN KEY (`id_client`) REFERENCES `clients` (`id_client`) ON DELETE CASCADE;
 
 --
 -- Contraintes pour la table `size_color`
