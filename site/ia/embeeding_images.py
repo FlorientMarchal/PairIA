@@ -14,17 +14,18 @@ from image_preprocessing import preprocess_image
 # =========================================================
 
 DB_CONFIG = {
-    "host": "127.0.0.1",
-    "user": "root",
-    "password": "root",  # Remplace par ton mot de passe si besoin
-    "database": "e_commmerce",
-    "port": 3306
+    "host":     os.environ.get("MYSQL_HOST", "localhost"),
+    "user":     os.environ.get("MYSQL_USER", "root"),
+    "password": os.environ.get("MYSQL_PASSWORD", "root"),
+    "database": os.environ.get("MYSQL_DATABASE", "e_commmerce"),
+    "port":     3306
 }
 
 COLLECTION_NAME = "produits_image"
 
 # On utilise Qdrant en local (dossier persistant)
-qdrant = QdrantClient(path="./qdrant_db")
+from database import qdrant
+
 
 qdrant.recreate_collection(
     collection_name=COLLECTION_NAME,
@@ -89,7 +90,7 @@ def indexer_images():
 
         # --- Construction du chemin absolu vers l'image ---
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        image_path = os.path.abspath(os.path.join(BASE_DIR, "..", "images", image_filename))
+        image_path = os.path.abspath(os.path.join(BASE_DIR, "images", image_filename))
 
         if not os.path.exists(image_path):
             print(f"✗ Image introuvable : {image_path}")

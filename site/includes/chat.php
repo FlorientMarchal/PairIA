@@ -1,6 +1,5 @@
 <?php
 // includes/chat.php
-session_start(); // ← AJOUTÉ : indispensable pour $_SESSION
 
 $page = basename($_SERVER['PHP_SELF'], '.php');
 

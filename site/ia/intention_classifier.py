@@ -4,7 +4,7 @@ import os
 from transformers import CamembertTokenizer, CamembertForSequenceClassification
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_DIR = os.path.join(BASE_DIR, "modele_intention")
+MODEL_DIR = os.environ.get("MODEL_DIR", os.path.join(BASE_DIR, "modele_intention"))
 MAX_LEN   = 64
 LABELS    = [
     "recherche",

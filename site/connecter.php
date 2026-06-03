@@ -11,7 +11,7 @@ if (empty($mail) || empty($mdp)) {
 }
 
 /* 1. chercher utilisateur */
-$stmt = $pdo->prepare("SELECT * FROM Clients WHERE mail = ?");
+$stmt = $pdo->prepare("SELECT * FROM clients WHERE mail = ?");
 $stmt->execute([$mail]);
 $client = $stmt->fetch();
 

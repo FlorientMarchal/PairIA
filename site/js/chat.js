@@ -514,7 +514,7 @@ async function _sendMessageImpl(text) {
   } catch (error) {
     typing.remove();
     appendBotMessageText(
-      "${t('unavailable')}",
+      t('unavailable'),
     );
     console.error("Erreur API chat :", error);
   } finally {
@@ -738,7 +738,7 @@ async function sendImageWithText(file, text) {
   } catch (error) {
     typing.remove();
     appendBotMessageText(
-      "${t('unavailableImg')}",
+      t('unavailableImg'),
     );
     console.error("Erreur image+texte :", error);
   } finally {

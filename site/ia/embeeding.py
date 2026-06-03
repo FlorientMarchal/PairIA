@@ -9,7 +9,7 @@
 #   - création des index payload pour accélérer les filtres
 import os
 import ollama
-client = ollama.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+ollama_client = ollama.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 
 import mysql.connector
 from database import qdrant as client
@@ -19,10 +19,10 @@ from qdrant_client.models import (
 )
 
 DB_CONFIG = {
-    "host":     "127.0.0.1",
-    "user":     "root",
-    "password": "root",
-    "database": "e_commmerce",
+    "host":     os.environ.get("MYSQL_HOST", "localhost"),
+    "user":     os.environ.get("MYSQL_USER", "root"),
+    "password": os.environ.get("MYSQL_PASSWORD", "root"),
+    "database": os.environ.get("MYSQL_DATABASE", "e_commmerce"),
     "port":     3306
 }
 
@@ -137,7 +137,7 @@ def indexer_produits():
 
         try:
             # Embedding texte (nomic) → collection produits
-            embed_texte = client.embeddings(model="nomic-embed-text", prompt=texte)
+            embed_texte = ollama_client.embeddings(model="nomic-embed-text", prompt=texte)
             client.upsert(
                 collection_name="produits",
                 points=[PointStruct(
