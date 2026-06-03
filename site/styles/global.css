@@ -1855,7 +1855,7 @@ nav {
 .comments-premium {
   display: flex;
   gap: 2.5rem;
-  margin-top: 3.5rem;
+  margin-top: 0;
   align-items: flex-start;
 }
 
@@ -1871,7 +1871,6 @@ nav {
   align-items: center;
   margin-bottom: 1.5rem;
   border-bottom: 2px solid var(--border);
-  padding-bottom: 1rem;
 }
 
 .comments-title {
