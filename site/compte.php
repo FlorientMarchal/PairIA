@@ -1,4 +1,3 @@
-```php
 <?php
 session_start();
 require_once 'includes/bd.php';
@@ -111,6 +110,9 @@ function statutLabel(string $statut): array {
         default      => ['label' => ucfirst($statut), 'color' => '#6b7280', 'bg' => '#f9fafb'],
     };
 }
+
+$nbCommandes  = count($commandes);
+$totalDepense = array_sum(array_column($commandes, 'total'));
 ?>
 
 <title>PairIA — Mon compte</title>
@@ -127,6 +129,16 @@ function statutLabel(string $statut): array {
       <h1>Bonjour <?= htmlspecialchars($client['prenom']) ?></h1>
       <p><?= htmlspecialchars($client['mail']) ?></p>
     </div>
+    <div class="compte-hero-stats">
+      <div>
+        <span class="compte-hero-stat-val"><?= $nbCommandes ?></span>
+        <span class="compte-hero-stat-lbl">Commandes</span>
+      </div>
+      <div>
+        <span class="compte-hero-stat-val"><?= number_format($totalDepense, 0, ',', ' ') ?> €</span>
+        <span class="compte-hero-stat-lbl">Total dépensé</span>
+      </div>
+    </div>
   </div>
 
   <!-- ALERTS -->
@@ -137,36 +149,38 @@ function statutLabel(string $statut): array {
     <div class="compte-alert error"><?= htmlspecialchars($error) ?></div>
   <?php endif; ?>
 
-  <!-- INFOS -->
-  <div>
-    <div class="compte-grid">
+  <!-- PROFIL -->
+  <div class="compte-section-title">Mon profil</div>
+  <div class="compte-grid">
 
-      <!-- Infos personnelles -->
-      <div class="compte-card">
-        <div class="compte-card-title">Informations personnelles</div>
-        <form method="POST" action="compte.php?ajax=1">
-          <input type="hidden" name="action" value="infos">
-          <div class="compte-field">
-            <label>Prénom</label>
-            <input type="text" name="prenom" value="<?= htmlspecialchars($client['prenom']) ?>">
-          </div>
-          <div class="compte-field">
-            <label>Nom</label>
-            <input type="text" name="nom" value="<?= htmlspecialchars($client['nom']) ?>">
-          </div>
-          <div class="compte-field">
-            <label>Email</label>
-            <input type="email" name="mail" value="<?= htmlspecialchars($client['mail']) ?>">
-          </div>
-          <div class="compte-field">
-            <label>Téléphone</label>
-            <input type="text" name="tel" value="<?= htmlspecialchars($client['numero']) ?>">
-          </div>
-          <button class="compte-btn">Sauvegarder</button>
-        </form>
-      </div>
+    <!-- Colonne gauche : Infos personnelles -->
+    <div class="compte-card">
+      <div class="compte-card-title">Informations personnelles</div>
+      <form method="POST" action="compte.php?ajax=1">
+        <input type="hidden" name="action" value="infos">
+        <div class="compte-field">
+          <label>Prénom</label>
+          <input type="text" name="prenom" value="<?= htmlspecialchars($client['prenom']) ?>">
+        </div>
+        <div class="compte-field">
+          <label>Nom</label>
+          <input type="text" name="nom" value="<?= htmlspecialchars($client['nom']) ?>">
+        </div>
+        <div class="compte-field">
+          <label>Email</label>
+          <input type="email" name="mail" value="<?= htmlspecialchars($client['mail']) ?>">
+        </div>
+        <div class="compte-field">
+          <label>Téléphone</label>
+          <input type="text" name="tel" value="<?= htmlspecialchars($client['numero']) ?>">
+        </div>
+        <button class="compte-btn">Sauvegarder</button>
+      </form>
+    </div>
 
-      <!-- Sécurité -->
+    <!-- Colonne droite : Sécurité + Adresse empilées -->
+    <div class="compte-grid-col">
+
       <div class="compte-card">
         <div class="compte-card-title">Sécurité</div>
         <form method="POST" action="compte.php?ajax=1">
@@ -187,7 +201,6 @@ function statutLabel(string $statut): array {
         </form>
       </div>
 
-      <!-- Adresse -->
       <div class="compte-card">
         <div class="compte-card-title">📍 Adresse de livraison</div>
         <form method="POST" action="compte.php?ajax=1">
@@ -200,10 +213,12 @@ function statutLabel(string $statut): array {
         </form>
       </div>
 
-    </div>
-  </div>
+    </div><!-- fin .compte-grid-col -->
+
+  </div><!-- fin .compte-grid -->
 
   <!-- COMMANDES -->
+  <div class="compte-section-title">Mes commandes</div>
   <div>
 
     <?php if (empty($commandes)): ?>
@@ -245,12 +260,31 @@ function statutLabel(string $statut): array {
 
             <div class="commande-detail" id="detail-<?= $cmd['id_commande'] ?>" style="display:none">
               <?php
-                $stmtL = $pdo->prepare("SELECT * FROM lignes_commande WHERE id_commande = ?");
+                $stmtL = $pdo->prepare("
+                    SELECT lc.*, a.url_image
+                    FROM lignes_commande lc
+                    LEFT JOIN articles a ON a.id_shoes = lc.id_shoes
+                    WHERE lc.id_commande = ?
+                ");
                 $stmtL->execute([$cmd['id_commande']]);
                 $lignes = $stmtL->fetchAll();
               ?>
               <?php foreach ($lignes as $l): ?>
                 <div class="commande-ligne">
+
+                  <!-- Miniature -->
+                  <div class="commande-ligne-img">
+                    <?php if (!empty($l['url_image'])): ?>
+                      <img src="<?= htmlspecialchars($l['url_image']) ?>"
+                           alt="<?= htmlspecialchars($l['nom_article']) ?>"
+                           onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                      <span class="commande-ligne-emoji" style="display:none">👟</span>
+                    <?php else: ?>
+                      <span class="commande-ligne-emoji">👟</span>
+                    <?php endif; ?>
+                  </div>
+
+                  <!-- Infos -->
                   <div class="commande-ligne-info">
                     <div class="commande-ligne-nom"><?= htmlspecialchars($l['nom_article']) ?></div>
                     <div class="commande-ligne-meta">
@@ -259,9 +293,12 @@ function statutLabel(string $statut): array {
                       · Qté <?= (int)$l['quantite'] ?>
                     </div>
                   </div>
+
+                  <!-- Prix -->
                   <div class="commande-ligne-prix">
                     <?= number_format($l['sous_total'], 2, ',', ' ') ?> €
                   </div>
+
                 </div>
               <?php endforeach; ?>
 
@@ -322,4 +359,3 @@ document.querySelectorAll('.compte-card form').forEach(form => {
     });
 });
 </script>
-```

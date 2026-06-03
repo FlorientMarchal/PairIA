@@ -28,6 +28,21 @@ if ($note < 1 || $note > 5 || $contenu === '') {
     exit;
 }
 
+// Vérifie que le client a bien acheté cette chaussure
+$stmt = $pdo->prepare("
+    SELECT 1
+    FROM lignes_commande lc
+    JOIN commandes co ON co.id_commande = lc.id_commande
+    WHERE lc.id_shoes = ? AND co.id_client = ?
+    LIMIT 1
+");
+$stmt->execute([$id, $_SESSION['client_id']]);
+
+if (!$stmt->fetch()) {
+    echo json_encode(['success' => false, 'error' => 'not_purchased']);
+    exit;
+}
+
 try {
     $stmt = $pdo->prepare("
         INSERT INTO commentaires (id_shoes, id_client, note, contenu, useful)

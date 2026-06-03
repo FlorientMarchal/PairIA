@@ -258,17 +258,16 @@
 }
 
 /* ── Produits similaires ── */
+/* Retire les anciens styles flottants */
 .similaires {
-  padding: 0 1.5rem 2rem;
-  border-top: 1px solid var(--border);
-  margin-top: 1rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
 .similaires-title {
-  font-family: var(--font-serif);
-  font-size: 1.4rem;
-  color: var(--dark);
-  padding: 1.5rem 0 1rem;
+  display: none; /* remplacé par .section-block-title */
 }
 
 .similaires-grid {
@@ -346,6 +345,7 @@
 /* ══════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════ */
+
 @media (max-width: 768px) {
   .product {
     grid-template-columns: 1fr;
@@ -355,11 +355,21 @@
   .breadcrumb {
     padding: 0.75rem 1rem 0;
   }
-  .similaires {
-    padding: 0 1rem 1.5rem;
-  }
   .similaires-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .section-block {
+    margin: 1rem 0 0;
+    padding: 1.2rem;
+    border-radius: 10px;
+  }
+  .comments-premium {
+    flex-direction: column;
+  }
+  .comments-right {
+    position: static;
+    min-width: unset;
+    width: 100%;
   }
 }
 
@@ -377,9 +387,6 @@
     padding: 2rem 2.5rem;
     max-width: 1100px;
     gap: 3rem;
-  }
-  .similaires {
-    padding: 0 2.5rem 2rem;
   }
 }
 
@@ -426,5 +433,49 @@
   }
   100% {
     transform: translateX(0);
+  }
+}
+
+/* ══════════════════════════════════════
+   BLOCS INFÉRIEURS — cohérence visuelle
+══════════════════════════════════════ */
+
+/* Wrapper blanc pour chaque section sous le produit */
+.section-block {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.8rem 2rem;
+  margin: 1.5rem 1.5rem 0;
+}
+
+.section-block-title {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  color: var(--dark);
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.comments-premium {
+  margin-top: 0; /* le section-block gère l'espacement */
+}
+
+/* Fond crème sur les cartes produits similaires */
+.sim-card {
+  background: var(--cream);
+}
+
+/* Fond crème sur les cartes avis */
+.comment-card {
+  background: var(--cream);
+}
+
+@media (max-width: 768px) {
+  .section-block {
+    margin: 1rem 0 0;
+    padding: 1.2rem;
+    border-radius: 10px;
   }
 }

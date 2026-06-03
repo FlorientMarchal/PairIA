@@ -7,9 +7,34 @@ window.loadCommentsPremium = async function () {
   );
   const data = await res.json();
 
+  const section = document.getElementById("comments-premium");
+  const right = document.querySelector(".comments-right");
+  const filters = document.querySelector(".comments-filters");
+
+  if (data.empty) {
+    // Aucun avis : cache les avis et le tri
+    document.getElementById("comments-list").innerHTML = "";
+    document.getElementById("comments-summary").innerHTML = "";
+    document.getElementById("comments-histogram").innerHTML = "";
+    if (filters) filters.style.display = "none";
+
+    // Bloc droit + section : visibles seulement si connecté
+    // (pour que le bouton "Donner mon avis" reste accessible)
+    if (right) right.style.display = data.is_logged ? "" : "none";
+    section.style.display = data.is_logged ? "" : "none";
+    return;
+  }
+
+  // Il y a des avis : tout afficher
+  section.style.display = "";
+  if (filters) filters.style.display = "";
+
   document.getElementById("comments-list").innerHTML = data.list_html;
   document.getElementById("comments-summary").innerHTML = data.summary_html;
   document.getElementById("comments-histogram").innerHTML = data.histogram_html;
+
+  // Bloc droit : visible seulement si connecté
+  if (right) right.style.display = data.is_logged ? "" : "none";
 };
 
 window.filterComments = function () {
@@ -66,6 +91,14 @@ window.submitReview = async function () {
   if (data.success) {
     closeReviewModal();
     loadCommentsPremium();
+  } else if (data.error === "not_logged") {
+    alert("Connecte-toi pour laisser un avis.");
+  } else if (data.error === "not_purchased") {
+    closeReviewModal();
+    showReviewMessage(
+      "🛍️ Tu dois avoir acheté cette chaussure pour laisser un avis.",
+      "info",
+    );
   } else {
     alert("Erreur : " + (data.error || "inconnue"));
   }
@@ -81,3 +114,18 @@ window.deleteComment = async function (id) {
   await fetch(`./commentaires/delete.php?id=${id}`);
   loadCommentsPremium();
 };
+
+function showReviewMessage(text, type = "info") {
+  const existing = document.getElementById("review-message");
+  if (existing) existing.remove();
+
+  const msg = document.createElement("div");
+  msg.id = "review-message";
+  msg.className = `review-message review-message--${type}`;
+  msg.textContent = text;
+
+  const btn = document.querySelector(".btn-review");
+  if (btn) btn.insertAdjacentElement("afterend", msg);
+
+  setTimeout(() => msg.remove(), 5000);
+}
