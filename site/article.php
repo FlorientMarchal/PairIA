@@ -150,35 +150,38 @@ function getCouleurCSS($couleur) {
 
 <div id="comments-premium" class="comments-premium">
 
-    <!-- COLONNE GAUCHE : LISTE DES AVIS -->
-    <div class="comments-left">
-
-        <!-- Zone de tri -->
-        <div class="comments-filters">
-            <select id="comments-sort" onchange="filterComments()">
-                <option value="recent">Les plus récents</option>
-                <option value="best">Les mieux notés</option>
-                <option value="worst">Les moins bien notés</option>
-                <option value="useful">Les plus utiles</option>
-            </select>
-        </div>
-
-        <!-- Liste des avis -->
-        <div id="comments-list"></div>
+  <!-- COLONNE GAUCHE : LISTE DES AVIS -->
+  <div class="comments-left">
+    <div class="comments-left-header">
+      <h2 class="comments-title">Avis clients</h2>
+      <div class="comments-filters">
+        <select id="comments-sort" onchange="filterComments()">
+          <option value="recent">Les plus récents</option>
+          <option value="best">Les mieux notés</option>
+          <option value="worst">Les moins bien notés</option>
+          <option value="useful">Les plus utiles</option>
+        </select>
+      </div>
     </div>
+    <div id="comments-list"></div>
+  </div>
 
-    <!-- COLONNE DROITE : RÉSUMÉ + HISTOGRAMME -->
-    <div class="comments-right">
+  <!-- COLONNE DROITE -->
+  <div class="comments-right">
+    <div id="comments-summary"></div>
+    <div id="comments-histogram"></div>
 
-        <!-- Résumé -->
-        <div id="comments-summary"></div>
+    <!-- Séparateur -->
+    <div class="review-divider"></div>
 
-        <!-- Histogramme -->
-        <div id="comments-histogram"></div>
-
-        <!-- Bouton donner mon avis -->
-        <button class="btn-review" onclick="openReviewModal()">Donner mon avis</button>
+    <!-- Bloc CTA -->
+    <div class="review-cta">
+      <p class="review-cta-title">Partagez votre expérience</p>
+      <p class="review-cta-sub">Votre avis aide les autres acheteurs</p>
+      <button class="btn-review" onclick="openReviewModal()">✍️ Donner mon avis</button>
     </div>
+  </div>
+
 </div>
 
 <!-- ════════════════════════════════════════

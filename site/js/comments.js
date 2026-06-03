@@ -94,7 +94,11 @@ window.submitReview = async function () {
   } else if (data.error === "not_logged") {
     alert("Connecte-toi pour laisser un avis.");
   } else if (data.error === "not_purchased") {
-    alert("Tu dois avoir acheté cette chaussure pour laisser un avis.");
+    closeReviewModal();
+    showReviewMessage(
+      "🛍️ Tu dois avoir acheté cette chaussure pour laisser un avis.",
+      "info",
+    );
   } else {
     alert("Erreur : " + (data.error || "inconnue"));
   }
@@ -110,3 +114,18 @@ window.deleteComment = async function (id) {
   await fetch(`./commentaires/delete.php?id=${id}`);
   loadCommentsPremium();
 };
+
+function showReviewMessage(text, type = "info") {
+  const existing = document.getElementById("review-message");
+  if (existing) existing.remove();
+
+  const msg = document.createElement("div");
+  msg.id = "review-message";
+  msg.className = `review-message review-message--${type}`;
+  msg.textContent = text;
+
+  const btn = document.querySelector(".btn-review");
+  if (btn) btn.insertAdjacentElement("afterend", msg);
+
+  setTimeout(() => msg.remove(), 5000);
+}
