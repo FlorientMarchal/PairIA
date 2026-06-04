@@ -1689,14 +1689,14 @@ function initProductContext(produit) {
   // Prompt adapté selon le nombre de visites sur ce produit
   let question;
   const variantesPremiere = [
-    `En une à deux phrases (max 20 mots), accueille le client sur la fiche "${produit.name}" en citant son point fort principal. Utilise "tu" et parle comme un vendeur enthousiaste.`,
-    `En une à deux phrases (max 20 mots), présente le point fort des ${produit.name} (${produit.price.toFixed(2)}€) de façon percutante. ${pronom} le client.`,
-    `En une à deux phrases (max 20 mots), accroche le client avec ce qui rend les ${produit.name} uniques. ${pronLe}, sois naturel.`,
+    `En une à deux phrases , accueille le client sur la fiche "${produit.name}" en citant son point fort principal. Utilise "tu" et parle comme un vendeur enthousiaste.`,
+    `En une à deux phrases , présente le point fort des ${produit.name} (${produit.price.toFixed(2)}€) de façon percutante. ${pronom} le client.`,
+    `En une à deux phrases , accroche le client avec ce qui rend les ${produit.name} uniques. ${pronLe}, sois naturel.`,
   ];
   const variantesRetour = [
-    `En une à deux phrases (max 20 mots), mets en avant le point fort des "${produit.name}" (${produit.price.toFixed(2)}€) et propose ton aide pour choisir la taille ou la couleur. ${pronom} le client.`,
-    `En une à deux phrases (max 20 mots), rappelle ce qui fait le charme des ${produit.name} et demande au client ce qui l'intéresse. ${pronLe}.`,
-    `En une à deux phrases (max 20 mots), souligne la qualité des ${produit.name} (${produit.price.toFixed(2)}€) et propose de répondre à ses questions. ${pronom} le client.`,
+    `En une à deux phrases , mets en avant le point fort des "${produit.name}" (${produit.price.toFixed(2)}€) et propose ton aide pour choisir la taille ou la couleur. ${pronom} le client.`,
+    `En une à deux phrases, rappelle ce qui fait le charme des ${produit.name} et demande au client ce qui l'intéresse. ${pronLe}.`,
+    `En une à deux phrases , souligne la qualité des ${produit.name} (${produit.price.toFixed(2)}€) et propose de répondre à ses questions. ${pronom} le client.`,
   ];
   if (nbVisites >= 3) {
     question = `En une à deux phrases percutantes (max 25 mots), tu remarques que le client revient encore sur "${produit.name}" (${produit.price.toFixed(2)}€). Crée un sentiment d'urgence ou mets en avant une raison décisive d'acheter maintenant. ${pronom} le client.${sansBonjour}`;
@@ -1811,9 +1811,9 @@ async function initPanierContext(panierItems) {
       .join(", ");
     contexte = `L'utilisateur a un panier vide. Il a récemment consulté : ${resumeVisites}.`;
     const variantes = [
-      `En une phrase (max 20 mots), dis au client que tu as vu qu'il regardait ${resumeVisites} et propose de l'aider.`,
-      `En une phrase (max 20 mots), rappelle au client ses consultations récentes (${resumeVisites}) et invite-le à se décider.`,
-      `En une phrase (max 20 mots), interpelle le client sur ${resumeVisites} qu'il a consulté et propose ton aide.`,
+      `En une phrase , dis au client que tu as vu qu'il regardait ${resumeVisites} et propose de l'aider.`,
+      `En une phrase , rappelle au client ses consultations récentes (${resumeVisites}) et invite-le à se décider.`,
+      `En une phrase , interpelle le client sur ${resumeVisites} qu'il a consulté et propose ton aide.`,
     ];
     question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
   } else {
@@ -1840,9 +1840,9 @@ async function initPanierContext(panierItems) {
       question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
     } else {
       const variantes = [
-        `En une phrase (max 20 mots), invite le client à découvrir le catalogue pour trouver sa prochaine paire. ${pronLe}.`,
-        `En une phrase (max 20 mots), propose au client de l'aider à trouver la chaussure parfaite dans le catalogue. ${pronLe}.`,
-        `En une phrase (max 20 mots), encourage le client à explorer le catalogue et à se faire plaisir. ${pronLe}.`,
+        `En une phrase, invite le client à découvrir le catalogue pour trouver sa prochaine paire. ${pronLe}.`,
+        `En une phrase , propose au client de l'aider à trouver la chaussure parfaite dans le catalogue. ${pronLe}.`,
+        `En une phrase, encourage le client à explorer le catalogue et à se faire plaisir. ${pronLe}.`,
       ];
       question = variantes[Math.floor(Math.random() * variantes.length)] + sansBonjour;
     }

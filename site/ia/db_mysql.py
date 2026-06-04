@@ -27,6 +27,7 @@ def fetch_all(query: str) -> list:
     if not conn:
         return []
     try:
+        conn.commit()  # force la lecture des données fraîches
         with conn.cursor() as cursor:
             cursor.execute(query)
             return cursor.fetchall()
