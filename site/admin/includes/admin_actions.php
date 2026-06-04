@@ -351,6 +351,14 @@ function dispatch_action(string $action, array $params = []): string {
         'ca_par_mois'               => 'admin_ca_par_mois',
     ];
 
+    // Casts de types pour les params courants (Ollama renvoie tout en string)
+    $int_params   = ['id_commande', 'id_shoes', 'id_client', 'id_commentaire', 'limit', 'nouveau_stock'];
+    $float_params = ['nouveau_prix'];
+    foreach ($params as $k => $v) {
+        if (in_array($k, $int_params))   $params[$k] = (int)$v;
+        if (in_array($k, $float_params)) $params[$k] = (float)$v;
+    }
+
     if (!isset($fn_map[$action])) {
         return json_encode(['success' => false, 'message' => "Action inconnue : $action", 'data' => null]);
     }

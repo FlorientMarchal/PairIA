@@ -295,31 +295,32 @@ $nb_articles  = $pdo->query("SELECT COUNT(*) FROM articles")->fetchColumn();
     });
   });
 
-  function showSection(name) {
+// Navigation avec hash URL
+function showSection(name) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById('section-' + name)?.classList.add('active');
     document.querySelector('[data-section="' + name + '"]')?.classList.add('active');
     document.getElementById('topbar-title').textContent =
-      {dashboard:'Dashboard', commandes:'Commandes', catalogue:'Catalogue', clients:'Clients', commentaires:'Commentaires'}[name] || name;
+        {dashboard:'Dashboard', commandes:'Commandes', catalogue:'Catalogue', clients:'Clients', commentaires:'Commentaires'}[name] || name;
+    window.location.hash = name;
 
-    // Lazy-load des tableaux
     if (name === 'commandes')    loadCommandes();
     if (name === 'catalogue')    loadCatalogue();
     if (name === 'clients')      loadClients();
     if (name === 'commentaires') loadCommentaires();
-  }
+}
 
-  function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
-  }
-  function focusChatInput() {
-    document.getElementById('achat-input')?.focus();
-  }
-  function adminChatAsk(msg) {
-    const input = document.getElementById('achat-input');
-    if (input) { input.value = msg; adminChatSend(); }
-  }
+// Restaure la section au refresh
+const hash = window.location.hash.replace('#', '') || 'dashboard';
+showSection(hash);
+
+document.querySelectorAll('[data-section]').forEach(el => {
+    el.addEventListener('click', e => {
+        e.preventDefault();
+        showSection(el.dataset.section);
+    });
+});
 </script>
 </body>
 </html>

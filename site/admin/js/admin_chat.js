@@ -185,16 +185,31 @@ function _appendActionBadge(wrapEl, action, status) {
 }
 
 function _updateActionBadge(wrapEl, action, result) {
-  const badge = wrapEl.querySelector(`.action-badge[data-action="${action}"]`);
-  if (!badge) return;
-  badge.classList.remove("action-running");
-  if (result?.success) {
-    badge.classList.add("action-ok");
-    badge.innerHTML = `✓ ${_actionLabel(action)} — ${_escapeHtml(result.message || "OK")}`;
-  } else {
-    badge.classList.add("action-error");
-    badge.innerHTML = `✗ ${_actionLabel(action)} — ${_escapeHtml(result?.message || "Erreur")}`;
-  }
+    const badge = wrapEl.querySelector(`.action-badge[data-action="${action}"]`);
+    if (!badge) return;
+    badge.classList.remove("action-running");
+    if (result?.success) {
+        badge.classList.add("action-ok");
+        badge.innerHTML = `✓ ${_actionLabel(action)} — ${_escapeHtml(result.message || "OK")}`;
+        
+        // Recharge le tableau concerné automatiquement
+        const section = window.location.hash.replace('#', '') || 'dashboard';
+        if (['modifier_statut_commande','detail_commande','lister_commandes'].includes(action)) {
+            if (section === 'commandes') loadCommandes();
+        }
+        if (['modifier_prix','modifier_stock','lister_articles','rechercher_article'].includes(action)) {
+            if (section === 'catalogue') loadCatalogue();
+        }
+        if (['rechercher_client','commandes_client'].includes(action)) {
+            if (section === 'clients') loadClients();
+        }
+        if (['supprimer_commentaire','lister_commentaires'].includes(action)) {
+            if (section === 'commentaires') loadCommentaires();
+        }
+    } else {
+        badge.classList.add("action-error");
+        badge.innerHTML = `✗ ${_actionLabel(action)} — ${_escapeHtml(result?.message || "Erreur")}`;
+    }
 }
 
 function _actionLabel(action) {
