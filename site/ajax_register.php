@@ -35,7 +35,7 @@ if (!preg_match('/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/', $mdp)) {
 }
 
 /* check email */
-$stmt = $pdo->prepare("SELECT id_client FROM Clients WHERE mail = ?");
+$stmt = $pdo->prepare("SELECT id_client FROM clients WHERE mail = ?");
 $stmt->execute([$mail]);
 
 if ($stmt->fetch()) {
@@ -47,7 +47,7 @@ if ($stmt->fetch()) {
 $hash = password_hash($mdp, PASSWORD_DEFAULT);
 
 $stmt = $pdo->prepare("
-  INSERT INTO Clients (nom, prenom, adresse, numero, mail, mdp)
+  INSERT INTO clients (nom, prenom, adresse, numero, mail, mdp)
   VALUES (?, ?, ?, ?, ?, ?)
 ");
 
