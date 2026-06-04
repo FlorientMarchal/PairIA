@@ -1,5 +1,4 @@
 <?php
-session_start();
 $current = basename($_SERVER['PHP_SELF'], '.php');
 ?>
 <nav>
