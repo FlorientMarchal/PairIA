@@ -1710,10 +1710,12 @@ def get_response_stream(
 
     description_visuelle = ""
     if is_image_search and produits_trouves:
+        noms_forces = ", ".join(f'"{p["name"]}"' for p in produits_trouves[:3])
         description_visuelle = (
-            "[Photo reçue] Présente ces 3 produits visuellement similaires à la photo. "
-            "Sois naturel et enthousiaste, comme un vendeur qui conseille un ami. "
-            "1 phrase par produit, pas de liste à puces, pas de 'Voici'."
+            f"[Photo reçue] Tu DOIS mentionner ces 3 produits dans cet ordre EXACT : {noms_forces}. "
+            f"Cite leurs noms EXACTEMENT tels qu'écrits ci-dessus, sans les modifier. "
+            f"Sois naturel et enthousiaste, comme un vendeur qui conseille un ami. "
+            f"1 phrase par produit, pas de liste à puces, pas de 'Voici'."
         )
     suffixe_recommandation = ""
     if intention == "recommandation":
@@ -1735,6 +1737,8 @@ def get_response_stream(
         f"{description_visuelle}{question or ''}"
         f"{suffixe_recommandation}\n{limite['consigne']} {consigne_nb}"
     )
+    for p in produits_trouves[:3]:
+        print(f"[DEBUG] {p['name']} | tailles={p.get('tailles')} | couleurs={p.get('couleurs')}")
 
     prompt = build_prompt(
         question=question_complete,

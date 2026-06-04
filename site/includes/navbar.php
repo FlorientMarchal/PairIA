@@ -17,16 +17,22 @@ $current = basename($_SERVER['PHP_SELF'], '.php');
       </a>
     </li>
     <li>
-    <a href="favoris.php"
-       class="<?= $current === 'favoris' ? 'active' : '' ?>">
-      ❤️ Favoris
-    </a>
+      <a href="favoris.php" class="<?= $current === 'favoris' ? 'active' : '' ?>">
+        ❤️ Favoris
+      </a>
     </li>
+    <?php if (!empty($_SESSION['is_admin'])): ?>
+    <li>
+      <a href="admin/index.php" class="nav-admin-link">
+        ⚙ Admin
+      </a>
+    </li>
+    <?php endif; ?>
     <?php endif; ?>
   </ul>
 
   <div class="nav-right">
-    <?php if (!isset($_SESSION['client_id'])): ?>
+    <?php if (!isset($_SESSION['client_id'])): ?>\
       <a href="connexion.php" class="cart-btn" style="background:var(--dark);border:1px solid rgba(255,255,255,0.2)">
         Se connecter
       </a>

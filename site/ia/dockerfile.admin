@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+# Pas de ffmpeg, pas de build-essential, pas de torch, pas de CLIP
+# Uniquement ce dont admin_main.py a besoin
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir \
+    fastapi==0.136.1 \
+    uvicorn==0.46.0 \
+    ollama==0.6.2 \
+    httpx==0.28.1 \
+    pydantic==2.13.4
+
+COPY admin_main.py .
+
+EXPOSE 8001
+
+CMD ["python", "-u", "-m", "uvicorn", "admin_main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]

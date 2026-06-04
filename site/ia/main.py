@@ -20,13 +20,15 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from decimal import Decimal
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile, BackgroundTasks, Request
+from typing import Optional
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from rag import get_response_stream
 from image_search import model as clip_model, rechercher_produits_similaires
 from PIL import Image
+from typing import Optional
 
 app = FastAPI(title="API Chatbot")
 
@@ -344,3 +346,57 @@ async def transcribe(file: UploadFile = File(...)):
                 os.unlink(path)
             except OSError:
                 pass
+
+
+class ReindexRequest(BaseModel):
+    article_id: Optional[int] = None
+
+@app.post("/reindex")
+async def reindex(request_body: ReindexRequest, background_tasks: BackgroundTasks, request: Request):
+    token = request.headers.get("X-Admin-Token", "")
+    if token != os.environ.get("ADMIN_ACTION_TOKEN", ""):
+        return JSONResponse(status_code=403, content={"error": "Non autorisé"})
+    background_tasks.add_task(run_reindex_task, request_body.article_id)
+    return {"status": "started", "article_id": request_body.article_id}
+
+def run_reindex_task(article_id: int = None):
+    import subprocess
+    # Texte
+    cmd_text = ["python", "/app/embeeding.py"]
+    if article_id:
+        cmd_text.append(str(article_id))
+    # Images
+    cmd_img = ["python", "/app/embeeding_images.py"]
+    if article_id:
+        cmd_img.append(str(article_id))
+
+    for cmd, name in [(cmd_text, "embeeding.py"), (cmd_img, "embeeding_images.py")]:
+        try:
+            print(f"[REINDEX] {name} article_id={article_id}...")
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            print(f"[REINDEX] ✓ {name}" if r.returncode == 0 else f"[REINDEX] ✗ {name}: {r.stderr[:300]}")
+        except Exception as e:
+            print(f"[REINDEX] Exception {name}: {e}")
+
+
+class DeleteIndexRequest(BaseModel):
+    article_id: int
+
+@app.post("/reindex/delete")
+async def reindex_delete(request_body: DeleteIndexRequest, request: Request):
+    token = request.headers.get("X-Admin-Token", "")
+    if token != os.environ.get("ADMIN_ACTION_TOKEN", ""):
+        return JSONResponse(status_code=403, content={"error": "Non autorisé"})
+    try:
+        from qdrant_client.models import PointIdsList
+        from database import qdrant
+        for collection in ["produits", "produits_image"]:
+            qdrant.delete(
+                collection_name=collection,
+                points_selector=PointIdsList(points=[request_body.article_id])
+            )
+        print(f"[REINDEX] ✓ Article #{request_body.article_id} supprimé de Qdrant.")
+        return {"status": "deleted", "article_id": request_body.article_id}
+    except Exception as e:
+        print(f"[REINDEX] ✗ Erreur suppression Qdrant : {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
