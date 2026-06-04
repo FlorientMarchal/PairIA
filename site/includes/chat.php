@@ -129,7 +129,11 @@ if ($page === 'article' && $product_name) {
         onclick="toggleVoice()" title="Dicter un message" style="display:none">🎤</button>
       <button class="chat-image-btn" type="button"
         onclick="openImageSearch()" title="Rechercher par image">📷</button>
-      <button class="chat-send-btn" type="button" onclick="sendFromInput()">→</button>
+      <button class="chat-stop-btn" id="chat-stop-btn" type="button"
+        onclick="stopGeneration()" title="Arrêter la génération" style="display:none">
+        <i class="ti ti-player-stop-filled" aria-hidden="true"></i>
+      </button>
+      <button class="chat-send-btn" id="chat-send-btn" type="button" onclick="sendFromInput()">→</button>
     </div>
   </div>
 
