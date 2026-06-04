@@ -47,7 +47,10 @@ docker exec pairia-api python embeeding_images.py
 ```powershell
 docker exec pairia-api python finetune_intention.py
 ```
-
+### Ajouer stripe
+```
+docker compose cp web:/var/www/html/vendor .
+```
 ---
 
 ## Accès
