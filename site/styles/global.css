@@ -553,6 +553,29 @@ nav {
   display: block;
 }
 
+/* Bouton Stop génération */
+.chat-stop-btn {
+  display: none; /* contrôlé par JS */
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1.5px solid #e53e3e;
+  background: transparent;
+  color: #e53e3e;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+}
+.chat-stop-btn:hover {
+  background: #e53e3e;
+  color: #fff;
+}
+
 /* ══════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════ */
