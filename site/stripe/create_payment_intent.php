@@ -1,10 +1,10 @@
 <?php
-ini_set('display_errors', 0);
+ini_set('display_errors', 1);
 error_reporting(E_ALL);
 session_start();
 require_once '../includes/bd.php';
 require_once '../includes/config.php';
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 header('Content-Type: application/json');
 

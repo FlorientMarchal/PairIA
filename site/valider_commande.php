@@ -2,8 +2,7 @@
 session_start();
 require_once 'includes/bd.php';        // ← site/ donc pas de ../
 require_once 'includes/config.php';    // ← idem
-require __DIR__ . '/../vendor/autoload.php';  // ← un seul niveau au-dessus
-
+require __DIR__ . '/vendor/autoload.php';
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['client_id'])) {

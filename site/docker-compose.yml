@@ -38,6 +38,7 @@ services:
       - "80:80"
     volumes:
       - .:/var/www/html
+      - vendor:/var/www/html/vendor
     environment:
       MYSQL_HOST: db
       MYSQL_USER: root
@@ -117,3 +118,4 @@ volumes:
   qdrant_data:
   ollama_models:
   modele_intention:
+  vendor:

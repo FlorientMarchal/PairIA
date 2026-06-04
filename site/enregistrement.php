@@ -6,7 +6,7 @@ function enregistrer($nom, $prenom, $adresse, $mail, $numero, $mdp)
 {
     global $pdo;
 
-    $check = $pdo->prepare("SELECT id_client FROM Clients WHERE mail = ?");
+    $check = $pdo->prepare("SELECT id_client FROM clients WHERE mail = ?");
     $check->execute([$mail]);
 
     if ($check->fetch()) {
