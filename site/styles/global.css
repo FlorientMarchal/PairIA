@@ -2188,6 +2188,67 @@ nav {
   flex-shrink: 0;
 }
 
+/* ════════════════════════════════════════
+  partie ia de suggestion des commentaires 
+════════════════════════════════════════ */
+.review-text-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Le textarea reste par-dessus, fond transparent
+   pour laisser voir le ghost en dessous */
+.review-text-wrapper textarea#review-text {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  caret-color: var(--dark); /* curseur visible */
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Calque ghost : copie exacte du textarea, en dessous */
+.review-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none; /* ne bloque pas les clics */
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  box-sizing: border-box;
+  color: transparent; /* cache la partie déjà tapée */
+  /* même style que le textarea — synchronisé par JS */
+}
+
+/* Texte déjà tapé : invisible (juste pour aligner) */
+.ghost-typed {
+  color: transparent;
+  white-space: pre-wrap;
+}
+
+/* Continuation suggérée : gris clair transparent */
+.ghost-hint {
+  color: var(--gray, #9e9e9e);
+  opacity: 0.55;
+  white-space: pre-wrap;
+}
+
+/* Petit label "Tab pour accepter" */
+.review-text-wrapper:has(.ghost-hint:not(:empty))::after {
+  content: "Tab ou → pour accepter";
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  font-size: 0.68rem;
+  color: var(--gray, #9e9e9e);
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 3;
+}
+
 /* SÉPARATEUR */
 .review-divider {
   height: 1px;
