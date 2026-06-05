@@ -18,6 +18,7 @@ cd site
 Créer un fichier `.env` dans le dossier `site/` avec le contenu suivant :
 ```
 MYSQL_ROOT_PASSWORD=tonmotdepasse
+ADMIN_ACTION_TOKEN=pairia_admin_secret_change_me
 ```
 
 ### 3. Copier la base de données
