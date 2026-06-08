@@ -295,15 +295,17 @@ async def transcribe(file: UploadFile = File(...)):
 
     try:
         result = whisper_model.transcribe(
-            wav_path, language="fr", fp16=False, temperature=0,
+            wav_path, language=None, fp16=False, temperature=0,
             condition_on_previous_text=False, no_speech_threshold=0.6,
             compression_ratio_threshold=1.4, logprob_threshold=-1.0,
         )
         text = result["text"].strip()
+        detected_lang = result.get("language", "unknown")
+        print(f"[WHISPER] langue détectée : {detected_lang}")
         print(f"[WHISPER] transcrit : {text!r}")
         if len(text) < 2:
             return {"text": "", "success": False, "error": "Aucune parole détectée"}
-        return {"text": text, "success": True}
+        return {"text": text,"language": detected_lang, "success": True}
     except Exception as e:
         print(f"[WHISPER] ERREUR : {e}")
         return {"text": "", "success": False, "error": str(e)}

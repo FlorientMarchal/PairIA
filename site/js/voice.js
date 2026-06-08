@@ -111,6 +111,9 @@ async function startVoice() {
       let data;
       try {
         data = await response.json();
+        if (data.language) {
+          await _mettreAjourLangue(data.language);
+        }
         console.log("[WHISPER] réponse :", data);
       } catch (e) {
         console.error("[VOICE] Réponse non JSON :", e);
