@@ -185,6 +185,8 @@ nav {
 .chat-panel {
   width: var(--chat-w);
   background: var(--white);
+  position: relative;
+  overflow: auto;
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -1279,10 +1281,6 @@ nav {
   transform: translateX(-100%);
   transition: transform 0.25s ease;
   border-radius: inherit;
-}
-.chat-panel {
-  position: relative;
-  overflow: hidden;
 }
 
 .history-panel.open {
