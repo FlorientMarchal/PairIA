@@ -23,3 +23,5 @@ try {
     // En production : message générique (ne pas exposer l'erreur)
     die('Erreur de connexion à la base de données.');
 }
+
+define('GROQ_API_KEY', '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');

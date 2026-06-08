@@ -1,8 +1,4 @@
 # ia/main.py
-# Serveur FastAPI — multi-workers compatible
-# Lancer avec : python -m uvicorn main:app --port 8000 --workers 4
-# Ollama : $env:OLLAMA_HOST="0.0.0.0"; $env:OLLAMA_ORIGINS="*"; $env:OLLAMA_NUM_PARALLEL="2"; ollama serve
-
 import sys
 import os
 os.environ.setdefault("OLLAMA_HOST", "http://localhost:11434")
@@ -43,13 +39,8 @@ print("Chargement du modèle Whisper...")
 whisper_model = whisper.load_model("small")
 print("Whisper prêt ✓")
 
-# ── Stockage temporaire des vecteurs image par session ──────────────────────
-# Utilise des fichiers JSON dans le dossier système temporaire pour être
-# compatible avec le mode multi-workers (chaque worker a sa propre mémoire).
-# Les fichiers sont nommés "pairia_vec_{session_id}.json" et expirent après 1h.
-
 _VEC_PREFIX = "pairia_vec_"
-_VEC_TTL    = 3600  # secondes
+_VEC_TTL    = 3600
 
 def _vec_path(session_id: str) -> str:
     safe = "".join(c for c in session_id if c.isalnum() or c in "-_")
@@ -80,7 +71,6 @@ def _load_vector(session_id: str) -> list | None:
         return None
 
 def _clean_old_vectors() -> None:
-    """Supprime les fichiers vecteurs expirés dans le dossier tmp."""
     tmp = tempfile.gettempdir()
     now = time.time()
     try:
@@ -99,8 +89,6 @@ def _clean_old_vectors() -> None:
     except Exception:
         pass
 
-
-# ── Modèles Pydantic ──
 
 class HistoryMessage(BaseModel):
     role: str
@@ -135,8 +123,6 @@ class TranslateUIRequest(BaseModel):
     texts: dict[str, str]
     langue: str
 
-
-# ── Endpoints ──
 
 @app.get("/")
 def root():
@@ -206,7 +192,6 @@ def chat_stream(request: ChatRequest):
         if not m.internal
     ]
 
-    # Chargement du vecteur image depuis fichier (compatible multi-workers)
     image_vector = _load_vector(request.session_id) if request.session_id else None
 
     def generate():
@@ -299,17 +284,9 @@ async def transcribe(file: UploadFile = File(...)):
     try:
         import subprocess
         subprocess.run(
-            [
-                "ffmpeg", "-y",
-                "-i", webm_path,
-                "-ar", "16000",
-                "-ac", "1",
-                "-c:a", "pcm_s16le",
-                "-af", "loudnorm",
-                wav_path
-            ],
-            check=True,
-            capture_output=True
+            ["ffmpeg", "-y", "-i", webm_path, "-ar", "16000", "-ac", "1",
+             "-c:a", "pcm_s16le", "-af", "loudnorm", wav_path],
+            check=True, capture_output=True
         )
         print(f"[WHISPER] WAV créé : {os.path.getsize(wav_path)} octets")
     except subprocess.CalledProcessError as e:
@@ -318,28 +295,18 @@ async def transcribe(file: UploadFile = File(...)):
 
     try:
         result = whisper_model.transcribe(
-            wav_path,
-            language="fr",
-            fp16=False,
-            temperature=0,
-            condition_on_previous_text=False,
-            no_speech_threshold=0.6,
-            compression_ratio_threshold=1.4,
-            logprob_threshold=-1.0,
+            wav_path, language="fr", fp16=False, temperature=0,
+            condition_on_previous_text=False, no_speech_threshold=0.6,
+            compression_ratio_threshold=1.4, logprob_threshold=-1.0,
         )
-
         text = result["text"].strip()
         print(f"[WHISPER] transcrit : {text!r}")
-
         if len(text) < 2:
             return {"text": "", "success": False, "error": "Aucune parole détectée"}
-
         return {"text": text, "success": True}
-
     except Exception as e:
         print(f"[WHISPER] ERREUR : {e}")
         return {"text": "", "success": False, "error": str(e)}
-
     finally:
         for path in [webm_path, wav_path]:
             try:
@@ -361,11 +328,9 @@ async def reindex(request_body: ReindexRequest, background_tasks: BackgroundTask
 
 def run_reindex_task(article_id: int = None):
     import subprocess
-    # Texte
     cmd_text = ["python", "/app/embeeding.py"]
     if article_id:
         cmd_text.append(str(article_id))
-    # Images
     cmd_img = ["python", "/app/embeeding_images.py"]
     if article_id:
         cmd_img.append(str(article_id))
@@ -399,4 +364,65 @@ async def reindex_delete(request_body: DeleteIndexRequest, request: Request):
         return {"status": "deleted", "article_id": request_body.article_id}
     except Exception as e:
         print(f"[REINDEX] ✗ Erreur suppression Qdrant : {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+# ── RAG Admin — recherche sémantique dans le catalogue ────────────────────────
+
+class AdminSearchRequest(BaseModel):
+    query: str
+    limit: Optional[int] = 5
+
+@app.post("/admin/search-article")
+async def admin_search_article(request_body: AdminSearchRequest, request: Request):
+    """Recherche sémantique d'articles via Qdrant — utilisé par le chatbot admin."""
+    token = request.headers.get("X-Admin-Token", "")
+    if token != os.environ.get("ADMIN_ACTION_TOKEN", ""):
+        return JSONResponse(status_code=403, content={"error": "Non autorisé"})
+
+    try:
+        import ollama as _ol
+        from database import qdrant
+        from db_mysql import fetch_all
+
+        ollama_client = _ol.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+
+        # Vectorise la query avec nomic-embed-text
+        embed = ollama_client.embeddings(model="nomic-embed-text", prompt=request_body.query)
+        vector = embed["embedding"]
+
+        # Recherche dans Qdrant collection produits
+        results = qdrant.query_points(
+            collection_name="produits",
+            query=vector,
+            limit=request_body.limit,
+            score_threshold=0.2,
+        ).points
+
+        if not results:
+            return {"success": True, "message": "0 résultat(s).", "data": []}
+
+        # Enrichit avec le prix réel depuis MySQL (plus fiable que Qdrant)
+        articles = []
+        for r in results:
+            p = r.payload
+            # Récupère le prix MySQL à jour
+            rows = fetch_all(f"SELECT Prix, stock_total FROM articles WHERE id_shoes = {int(r.id)}")
+            prix = float(rows[0]["Prix"]) if rows else float(p.get("prix", 0))
+            stock = int(rows[0]["stock_total"]) if rows else 0
+            articles.append({
+                "id_shoes":    int(r.id),
+                "nom":         p.get("nom", ""),
+                "categorie":   p.get("categorie", ""),
+                "marque":      p.get("marque", ""),
+                "Prix":        prix,
+                "stock_total": stock,
+                "score":       round(r.score, 3),
+            })
+
+        print(f"[ADMIN-RAG] query={request_body.query!r} → {len(articles)} résultat(s)")
+        return {"success": True, "message": f"{len(articles)} résultat(s).", "data": articles}
+
+    except Exception as e:
+        print(f"[ADMIN-RAG] Erreur : {e}")
         return JSONResponse(status_code=500, content={"error": str(e)})

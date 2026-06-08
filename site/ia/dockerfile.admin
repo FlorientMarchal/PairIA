@@ -10,7 +10,8 @@ RUN pip install --no-cache-dir \
     uvicorn==0.46.0 \
     ollama==0.6.2 \
     httpx==0.28.1 \
-    pydantic==2.13.4
+    pydantic==2.13.4 \
+    python-multipart==0.0.28
 
 COPY admin_main.py .
 

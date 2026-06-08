@@ -1,91 +1,156 @@
 // admin/js/admin_chat.js
-// Chatbot ADMIN — totalement indépendant de js/chat.js (chatbot client)
-// Communique avec ia/admin_main.py sur le port 8001
+const ADMIN_API_URL    = "http://localhost:8001";
+const ADMIN_SESSION_ID = crypto.randomUUID();
 
-const ADMIN_API_URL = "http://localhost:8001";
+let adminHistory  = JSON.parse(localStorage.getItem("adminChatHistory") || "[]");
+let adminStreaming = false;
+let pendingImageUrl = null;
 
-let adminHistory   = JSON.parse(sessionStorage.getItem("adminChatHistory") || "[]");
-let adminStreaming  = false;
-
-// ── Initialisation ──────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
-  // Chips de suggestion
   document.querySelectorAll(".achat-chip").forEach(btn => {
     btn.addEventListener("click", () => {
       const msg = btn.dataset.msg;
       if (msg) {
         document.getElementById("achat-input").value = msg;
         adminChatSend();
-        // Cache les chips après utilisation
         document.getElementById("achat-chips-wrap").style.display = "none";
       }
     });
   });
 
-  // Restaurer l'historique de session
   if (adminHistory.length > 0) {
     document.getElementById("achat-chips-wrap").style.display = "none";
     adminHistory.forEach(m => _renderAdminMessage(m.role, m.content, false));
   }
+
+  document.getElementById("admin-image-input")?.addEventListener("change", handleAdminImageUpload);
 });
 
-// ── Envoi d'un message ───────────────────────────────────────────────────────
+// ── Upload image ──────────────────────────────────────────────────────────────
+async function handleAdminImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById("admin-image-preview");
+  const status  = document.getElementById("admin-upload-status");
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    if (preview) {
+      preview.innerHTML = `<img src="${ev.target.result}" style="max-height:60px;border-radius:6px;margin-right:.5rem">`;
+      preview.style.display = "flex";
+    }
+  };
+  reader.readAsDataURL(file);
+
+  if (status) { status.textContent = "Upload…"; status.style.color = "#8a8178"; }
+
+  const form = new FormData();
+  form.append("image", file);
+
+  try {
+    const resp = await fetch(`/admin/ajax/upload_image.php`, { method: "POST", body: form });
+    const data = await resp.json();
+    if (data.success) {
+      pendingImageUrl = data.url_image;
+      if (status) { status.textContent = "✓ Image prête"; status.style.color = "#27ae60"; }
+      document.getElementById("achat-input")?.focus();
+    } else {
+      if (status) { status.textContent = "✗ " + data.message; status.style.color = "#c0392b"; }
+      pendingImageUrl = null;
+    }
+  } catch {
+    if (status) { status.textContent = "✗ Erreur réseau"; status.style.color = "#c0392b"; }
+    pendingImageUrl = null;
+  }
+
+  e.target.value = "";
+}
+
+function clearImagePreview() {
+  const preview = document.getElementById("admin-image-preview");
+  const status  = document.getElementById("admin-upload-status");
+  if (preview) { preview.innerHTML = ""; preview.style.display = "none"; }
+  if (status)  { status.textContent = ""; }
+  pendingImageUrl = null;
+}
+
+// ── Envoi d'un message ────────────────────────────────────────────────────────
 async function adminChatSend() {
   const input = document.getElementById("achat-input");
   const text  = input.value.trim();
-  if (!text || adminStreaming) return;
+  if ((!text && !pendingImageUrl) || adminStreaming) return;
 
   input.value = "";
   input.style.height = "auto";
   document.getElementById("achat-chips-wrap").style.display = "none";
 
-  _renderAdminMessage("user", text);
-  adminHistory.push({ role: "user", content: text });
+  // Affiche le message utilisateur
+  const msgs = document.getElementById("achat-messages");
+  const userWrap = document.createElement("div");
+  userWrap.className = "achat-msg user";
+  let userContent = "";
+  if (pendingImageUrl) {
+    userContent += `<img src="../../${pendingImageUrl}" style="max-height:100px;border-radius:8px;display:block;margin-bottom:.4rem">`;
+  }
+  if (text) userContent += `<span>${_escapeHtml(text)}</span>`;
+  userWrap.innerHTML = `<div class="achat-bubble">${userContent}</div><div class="achat-time">${_now()}</div>`;
+  msgs.appendChild(userWrap);
+  _scrollToBottom();
+
+  const displayText = text || "📷 Image envoyée";
+  adminHistory.push({ role: "user", content: displayText });
   _saveHistory();
 
+  const imageUrlToSend = pendingImageUrl;
+  clearImagePreview();
+
   const typingEl = _showTyping();
-  adminStreaming = true;
+  adminStreaming  = true;
 
   try {
     const resp = await fetch(`${ADMIN_API_URL}/admin/chat/stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        question: text,
-        history: adminHistory.slice(-20),
-        admin_id: window.ADMIN_ID || null,
+        question:   text || "J'ai envoyé une photo pour un nouvel article.",
+        session_id: ADMIN_SESSION_ID,
+        admin_id:   window.ADMIN_ID || null,
+        image_url:  imageUrlToSend || null,
       }),
     });
 
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
     typingEl.remove();
 
-    const botBubble = _createBotBubble();
-    let   botText   = "";
-    const reader    = resp.body.getReader();
-    const decoder   = new TextDecoder();
+    // La bulle est créée au premier événement reçu (action ou chunk)
+    let botBubble = null;
+    let botText   = "";
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
 
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
-
       const lines = decoder.decode(value).split("\n");
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue;
         const raw = line.slice(6).trim();
         if (raw === "[DONE]") break;
-
         try {
           const event = JSON.parse(raw);
-
-          if (event.type === "action_start") {
-            // Affiche un badge "action en cours"
-            _appendActionBadge(botBubble, event.action, "running");
+          if (event.type === "thinking") {
+            if (!botBubble) botBubble = _createBotBubble();
+            botBubble.querySelector(".achat-bubble").innerHTML = 
+                `<span style="color:rgba(255,255,255,.4);font-size:.82rem">Je réfléchis…</span>`;
+          } else if (event.type === "action_start") {
+            if (!botBubble) botBubble = _createBotBubble();
+            _appendActionBadge(botBubble, event.action, "running", event.status_text);
           } else if (event.type === "action_result") {
-            // Met à jour le badge avec le statut
+            if (!botBubble) botBubble = _createBotBubble();
             _updateActionBadge(botBubble, event.action, event.result);
           } else if (event.chunk) {
+            if (!botBubble) botBubble = _createBotBubble();
             botText += event.chunk;
             botBubble.querySelector(".achat-bubble").innerHTML = _formatBotText(botText);
             _scrollToBottom();
@@ -94,30 +159,30 @@ async function adminChatSend() {
       }
     }
 
-    // Sauvegarde la réponse finale
-    adminHistory.push({ role: "assistant", content: botText });
+    // Si aucune bulle créée (cas rare), on en crée une vide
+    if (!botBubble && botText) botBubble = _createBotBubble();
+
+    adminHistory.push({ role: "assistant", content: botText || "✓" });
     _saveHistory();
 
   } catch (err) {
     typingEl?.remove();
-    _renderAdminMessage("bot-error", "Impossible de contacter l'assistant. Vérifiez que le serveur IA admin tourne sur le port 8001.");
+    _renderAdminMessage("bot-error", "Impossible de contacter l'assistant.");
     console.error("[AdminChat]", err);
   } finally {
     adminStreaming = false;
   }
 }
 
-// ── Réinitialiser la conversation ────────────────────────────────────────────
 function adminChatReset() {
   adminHistory = [];
-  sessionStorage.removeItem("adminChatHistory");
+localStorage.removeItem("adminChatHistory");
   const msgs = document.getElementById("achat-messages");
-  // Garde seulement le message d'accueil (premier enfant)
   while (msgs.children.length > 1) msgs.removeChild(msgs.lastChild);
   document.getElementById("achat-chips-wrap").style.display = "";
+  clearImagePreview();
 }
 
-// ── Toggle mobile ────────────────────────────────────────────────────────────
 function toggleChatMobile() {
   const panel   = document.getElementById("achat-panel");
   const overlay = document.getElementById("chat-overlay");
@@ -133,11 +198,10 @@ function closeChatMobile() {
   document.getElementById("chat-fab")?.classList.remove("active");
 }
 
-// ── Helpers d'affichage ──────────────────────────────────────────────────────
+// ── Helpers d'affichage ───────────────────────────────────────────────────────
 function _renderAdminMessage(role, text, scroll = true) {
   const msgs = document.getElementById("achat-messages");
   const wrap = document.createElement("div");
-
   if (role === "user") {
     wrap.className = "achat-msg user";
     wrap.innerHTML = `<div class="achat-bubble">${_escapeHtml(text)}</div><div class="achat-time">${_now()}</div>`;
@@ -148,7 +212,6 @@ function _renderAdminMessage(role, text, scroll = true) {
     wrap.className = "achat-msg bot error";
     wrap.innerHTML = `<div class="achat-bubble achat-error">${_escapeHtml(text)}</div>`;
   }
-
   msgs.appendChild(wrap);
   if (scroll) _scrollToBottom();
   return wrap;
@@ -174,66 +237,67 @@ function _showTyping() {
   return el;
 }
 
-function _appendActionBadge(wrapEl, action, status) {
+function _appendActionBadge(wrapEl, action, status, statusText) {
   const bubble = wrapEl.querySelector(".achat-bubble");
   const badge  = document.createElement("div");
   badge.className = "action-badge action-running";
   badge.dataset.action = action;
-  badge.innerHTML = `<span class="action-spinner">⟳</span> ${_actionLabel(action)}…`;
+  // Utilise le status_text envoyé par Python si disponible, sinon label générique
+  const label = statusText || _actionLabel(action) + "…";
+  badge.innerHTML = `<span class="action-spinner">⟳</span> ${label}`;
   bubble.appendChild(badge);
   _scrollToBottom();
 }
 
 function _updateActionBadge(wrapEl, action, result) {
-    const badge = wrapEl.querySelector(`.action-badge[data-action="${action}"]`);
-    if (!badge) return;
-    badge.classList.remove("action-running");
-    if (result?.success) {
-        badge.classList.add("action-ok");
-        badge.innerHTML = `✓ ${_actionLabel(action)} — ${_escapeHtml(result.message || "OK")}`;
-        
-        // Recharge le tableau concerné automatiquement
-        const section = window.location.hash.replace('#', '') || 'dashboard';
-        if (['modifier_statut_commande','detail_commande','lister_commandes'].includes(action)) {
-            if (section === 'commandes') loadCommandes();
-        }
-        if (['modifier_prix','modifier_stock','lister_articles','rechercher_article'].includes(action)) {
-            if (section === 'catalogue') loadCatalogue();
-        }
-        if (['rechercher_client','commandes_client'].includes(action)) {
-            if (section === 'clients') loadClients();
-        }
-        if (['supprimer_commentaire','lister_commentaires'].includes(action)) {
-            if (section === 'commentaires') loadCommentaires();
-        }
-    } else {
-        badge.classList.add("action-error");
-        badge.innerHTML = `✗ ${_actionLabel(action)} — ${_escapeHtml(result?.message || "Erreur")}`;
-    }
+  const badge = wrapEl.querySelector(`.action-badge[data-action="${action}"]`);
+  if (!badge) return;
+  badge.classList.remove("action-running");
+  if (result?.success) {
+    badge.classList.add("action-ok");
+    badge.innerHTML = `✓ ${_actionLabel(action)} — ${_escapeHtml(result.message || "OK")}`;
+    const section = window.location.hash.replace('#', '') || 'dashboard';
+    if (['modifier_statut_commande','modifier_statut_batch','lister_commandes'].includes(action) && section === 'commandes') loadCommandes();
+    if (['modifier_prix','modifier_stock','modifier_prix_batch','modifier_article','ajouter_article','supprimer_article','lister_articles'].includes(action) && section === 'catalogue') loadCatalogue();
+    if (['rechercher_client','commandes_client','lister_clients'].includes(action) && section === 'clients') loadClients();
+    if (['supprimer_commentaire','supprimer_commentaires_article','lister_commentaires'].includes(action) && section === 'commentaires') loadCommentaires();
+  } else {
+    badge.classList.add("action-error");
+    badge.innerHTML = `✗ ${_actionLabel(action)} — ${_escapeHtml(result?.message || "Erreur")}`;
+  }
 }
 
 function _actionLabel(action) {
   const labels = {
-    lister_commandes:          "Chargement des commandes",
-    detail_commande:           "Récupération commande",
-    modifier_statut_commande:  "Mise à jour statut",
-    lister_articles:           "Chargement catalogue",
-    modifier_prix:             "Modification prix",
-    modifier_stock:            "Modification stock",
-    rechercher_article:        "Recherche article",
-    rechercher_client:         "Recherche client",
-    commandes_client:          "Commandes client",
-    lister_commentaires:       "Chargement commentaires",
-    supprimer_commentaire:     "Suppression commentaire",
-    stats_globales:            "Calcul statistiques",
-    top_articles:              "Top ventes",
-    ca_par_mois:               "CA mensuel",
+    lister_commandes:               "Chargement des commandes",
+    detail_commande:                "Récupération commande",
+    modifier_statut_commande:       "Mise à jour statut",
+    modifier_statut_batch:          "Mise à jour statuts",
+    lister_articles:                "Chargement catalogue",
+    lister_articles_stock_faible:   "Articles stock faible",
+    modifier_prix:                  "Modification prix",
+    modifier_stock:                 "Modification stock",
+    modifier_prix_batch:            "Mise à jour prix en lot",
+    modifier_article:               "Modification article",
+    ajouter_article:                "Ajout article",
+    supprimer_article:              "Suppression article",
+    rechercher_article:             "Recherche article",
+    lister_clients:                 "Chargement clients",
+    rechercher_client:              "Recherche client",
+    commandes_client:               "Commandes client",
+    clients_top:                    "Top clients",
+    lister_commentaires:            "Chargement commentaires",
+    supprimer_commentaire:          "Suppression commentaire",
+    supprimer_commentaires_article: "Suppression commentaires",
+    stats_globales:                 "Calcul statistiques",
+    stats_par_categorie:            "Stats par catégorie",
+    top_articles:                   "Top ventes",
+    ca_par_mois:                    "CA mensuel",
   };
   return labels[action] || action;
 }
 
 function _formatBotText(text) {
-  // Conversion simple markdown → HTML (gras, tirets)
   return text
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
@@ -257,6 +321,6 @@ function _now() {
 }
 
 function _saveHistory() {
-  try { sessionStorage.setItem("adminChatHistory", JSON.stringify(adminHistory.slice(-40))); }
+   try { localStorage.setItem("adminChatHistory", JSON.stringify(adminHistory.slice(-40))); }
   catch (_) {}
 }
