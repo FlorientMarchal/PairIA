@@ -1,11 +1,5 @@
-/* ══════════════════════════════════════════════════════════════════
-   js/comments.js — PairIA
-   • Étoiles + placeholder dynamique
-   • Mots-clés → génération IA (rewrite)
-   • Ghost text sur le textarea final
-══════════════════════════════════════════════════════════════════ */
+const MAX_CHARS = 300;
 
-/* ── Placeholders selon la note ─────────────────────────────────── */
 const PLACEHOLDERS = {
   1: "Décrivez votre déception (confort, taille, qualité, livraison...)",
   2: "Qu'est-ce qui pourrait être amélioré sur ces chaussures ?",
@@ -16,7 +10,33 @@ const PLACEHOLDERS = {
 const PLACEHOLDER_DEFAULT = "Décrivez votre expérience avec ces chaussures...";
 
 /* ══════════════════════════════════════════════════════════════════
-   GHOST TEXT sur #review-text
+   COMPTEUR DE CARACTÈRES
+══════════════════════════════════════════════════════════════════ */
+
+function _updateCounter(textarea) {
+  const counter = document.getElementById("review-char-counter");
+  if (!counter) return;
+
+  const len = textarea.value.length;
+  const left = MAX_CHARS - len;
+
+  counter.textContent = `${len} / ${MAX_CHARS}`;
+
+  // Couleurs progressives
+  counter.className = "review-char-counter";
+  if (left <= 0) counter.classList.add("review-char-counter--over");
+  else if (left <= 30) counter.classList.add("review-char-counter--warn");
+  else if (left <= 60) counter.classList.add("review-char-counter--near");
+
+  // Bloque la saisie au-delà de 300
+  if (len > MAX_CHARS) {
+    textarea.value = textarea.value.slice(0, MAX_CHARS);
+    counter.textContent = `${MAX_CHARS} / ${MAX_CHARS}`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GHOST TEXT
 ══════════════════════════════════════════════════════════════════ */
 
 let _ghostTimer = null;
@@ -89,18 +109,22 @@ async function _fetchGhostSuggestion(texte) {
 }
 
 function _onGhostInput(e) {
-  const text = e.target.value;
+  const ta = e.target;
+  const text = ta.value;
+
+  _updateCounter(ta);
   clearTimeout(_ghostTimer);
   _clearGhost();
-  if (text.trim().length < 3) return;
+
+  if (text.trim().length < 3 || text.length >= MAX_CHARS) return;
 
   _ghostTimer = setTimeout(async () => {
     if (_isLoadingGhost) return;
     _isLoadingGhost = true;
     const cont = await _fetchGhostSuggestion(text.trim());
     _isLoadingGhost = false;
-    const ta = document.getElementById("review-text");
-    if (!ta || ta.value.trim() !== text.trim()) return;
+    const current = document.getElementById("review-text");
+    if (!current || current.value.trim() !== text.trim()) return;
     if (cont) {
       _ghostSuggestion = text.trimEnd() + " " + cont.trimStart();
       _renderGhost(text, cont);
@@ -115,8 +139,11 @@ function _onGhostKeydown(e) {
     if (!ta) return;
     if (e.key === "ArrowRight" && ta.selectionStart !== ta.value.length) return;
     e.preventDefault();
-    ta.value = _ghostSuggestion;
+    // Respecte la limite de 300 lors de l'acceptation
+    const full = _ghostSuggestion.slice(0, MAX_CHARS);
+    ta.value = full;
     ta.setSelectionRange(ta.value.length, ta.value.length);
+    _updateCounter(ta);
     _clearGhost();
     _ghostSuggestion = "";
   } else if (e.key === "Escape") {
@@ -134,6 +161,7 @@ function _initGhost() {
   ta.addEventListener("keydown", _onGhostKeydown);
   new ResizeObserver(_syncGhostStyle).observe(ta);
   _clearGhost();
+  _updateCounter(ta);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -154,7 +182,6 @@ async function generateIA() {
   const btnText = document.getElementById("btn-ia-text");
   const btn = document.getElementById("btn-generate-ia");
 
-  // État chargement
   btn.disabled = true;
   btnIcon.textContent = "⏳";
   btnText.textContent = "Génération en cours...";
@@ -168,20 +195,16 @@ async function generateIA() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ texte: keywords, produit, note, mode: "rewrite" }),
     });
-
     const data = await res.json();
 
     if (data.success && data.rewrite) {
-      // Affiche le bloc suggestion
       document.getElementById("ia-suggestion-text").textContent = data.rewrite;
       document.getElementById("ia-suggestion-block").style.display = "block";
       document
         .getElementById("ia-suggestion-block")
         .scrollIntoView({ behavior: "smooth", block: "nearest" });
     } else {
-      alert(
-        "Impossible de générer une phrase. Essaie d'ajouter plus de mots-clés.",
-      );
+      alert("Impossible de générer une phrase. Ajoute plus de mots-clés.");
     }
   } catch (err) {
     console.error("[IA rewrite]", err);
@@ -197,18 +220,17 @@ function acceptIA() {
   const suggestion =
     document.getElementById("ia-suggestion-text")?.textContent ?? "";
   const ta = document.getElementById("review-text");
-  if (ta && suggestion) {
-    ta.value = suggestion;
-    ta.focus();
-    _clearGhost();
-    // Animation flash sur le textarea
-    ta.classList.add("review-textarea--accepted");
-    setTimeout(() => ta.classList.remove("review-textarea--accepted"), 600);
-  }
+  if (!ta || !suggestion) return;
+  ta.value = suggestion.slice(0, MAX_CHARS);
+  ta.focus();
+  _updateCounter(ta);
+  _clearGhost();
+  ta.classList.add("review-textarea--accepted");
+  setTimeout(() => ta.classList.remove("review-textarea--accepted"), 600);
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   MODAL — open / close
+   MODAL
 ══════════════════════════════════════════════════════════════════ */
 
 window.openReviewModal = function () {
@@ -216,7 +238,6 @@ window.openReviewModal = function () {
   if (!modal) return;
   modal.style.display = "flex";
 
-  // Reset complet
   const kw = document.getElementById("review-keywords");
   const ta = document.getElementById("review-text");
   if (kw) kw.value = "";
@@ -230,11 +251,9 @@ window.openReviewModal = function () {
     .querySelectorAll(".rating-input span")
     .forEach((s) => s.classList.remove("active"));
 
-  // Bind boutons IA
   document.getElementById("btn-generate-ia").onclick = generateIA;
   document.getElementById("btn-accept-ia").onclick = acceptIA;
 
-  // Init ghost
   requestAnimationFrame(() => requestAnimationFrame(() => _initGhost()));
 };
 
@@ -249,7 +268,7 @@ window.closeReviewModal = function () {
   clearTimeout(_ghostTimer);
 };
 
-/* ── Étoiles : couleur + placeholder ───────────────────────────── */
+/* ── Étoiles ────────────────────────────────────────────────────── */
 document.addEventListener("click", function (e) {
   const star = e.target.closest(".rating-input span");
   if (!star) return;
@@ -278,6 +297,17 @@ window.submitReview = async function () {
     alert("Veuillez sélectionner une note et écrire un avis.");
     return;
   }
+  if (contenu.length > MAX_CHARS) {
+    alert(`Votre avis dépasse ${MAX_CHARS} caractères.`);
+    return;
+  }
+
+  // Désactive le bouton pendant l'envoi
+  const btnSubmit = document.querySelector(".btn-submit");
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "Publication...";
+  }
 
   const res = await fetch("commentaires/add.php", {
     method: "POST",
@@ -288,6 +318,11 @@ window.submitReview = async function () {
       contenu,
     }),
   });
+
+  if (btnSubmit) {
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = "Publier";
+  }
 
   const text = await res.text();
   let data;
@@ -310,10 +345,34 @@ window.submitReview = async function () {
       "🛍️ Tu dois avoir acheté cette chaussure pour laisser un avis.",
       "info",
     );
+  } else if (data.error === "contenu_inapproprie") {
+    // Message personnalisé du filtre
+    showModalError(
+      data.message ?? "Votre avis contient des termes non autorisés.",
+    );
+  } else if (data.error === "too_long") {
+    showModalError(`L'avis ne peut pas dépasser ${MAX_CHARS} caractères.`);
   } else {
     alert("Erreur : " + (data.error || "inconnue"));
   }
 };
+
+/* Affiche une erreur dans la modal (sans la fermer) */
+function showModalError(message) {
+  let err = document.getElementById("modal-error-msg");
+  if (!err) {
+    err = document.createElement("div");
+    err.id = "modal-error-msg";
+    err.className = "modal-error-msg";
+    const actions = document.querySelector(".modal-actions");
+    if (actions) actions.insertAdjacentElement("beforebegin", err);
+  }
+  err.textContent = message;
+  err.style.display = "block";
+  setTimeout(() => {
+    if (err) err.style.display = "none";
+  }, 4000);
+}
 
 /* ══════════════════════════════════════════════════════════════════
    LISTE COMMENTAIRES

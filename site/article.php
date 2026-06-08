@@ -226,6 +226,7 @@ function getCouleurCSS($couleur) {
         <textarea id="review-text" class="review-textarea" placeholder="Décrivez votre expérience avec ces chaussures..."></textarea>
         <div id="review-ghost" class="review-ghost" aria-hidden="true"></div>
       </div>
+      <span id="review-char-counter" class="review-char-counter">0 / 300</span>
       <p class="review-hint-key">Tab ou → pour accepter la suggestion</p>
 
       <div class="modal-actions">
