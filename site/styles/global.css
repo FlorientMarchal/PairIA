@@ -2191,107 +2191,337 @@ nav {
 /* ════════════════════════════════════════
   partie ia de suggestion des commentaires 
 ════════════════════════════════════════ */
+/* ── MODAL ── */
+.review-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(3px);
+  padding: 1rem;
+}
+
+.review-modal-content {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  position: relative;
+  scrollbar-width: thin;
+}
+
+.review-modal-content::-webkit-scrollbar {
+  width: 4px;
+}
+.review-modal-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Bouton fermer */
+.review-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: var(--light);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  color: var(--gray);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.review-modal-close:hover {
+  background: var(--border);
+  color: var(--dark);
+}
+
+.review-modal-content h3 {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  margin-bottom: 1.1rem;
+  color: var(--dark);
+  padding-right: 2rem;
+}
+
+/* ── ÉTOILES ── */
+.rating-input {
+  display: flex;
+  gap: 4px;
+  font-size: 2.2rem;
+  color: var(--border);
+  cursor: pointer;
+  margin-bottom: 1.2rem;
+}
+.rating-input span:hover,
+.rating-input span.active {
+  color: var(--accent);
+}
+
+/* ── LABELS ── */
+.review-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dark);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.review-label-opt {
+  font-weight: 400;
+  color: var(--gray);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.72rem;
+}
+.review-label-req {
+  color: var(--accent);
+}
+
+/* ── TEXTAREAS ── */
+.review-textarea {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--cream);
+  font-family: var(--font-main);
+  font-size: 0.9rem;
+  color: var(--dark);
+  resize: vertical;
+  min-height: 72px;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  margin-bottom: 0.75rem;
+}
+.review-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--white);
+}
+
+/* Flash d'acceptation IA */
+.review-textarea--accepted {
+  border-color: #4caf50 !important;
+  background: #f0fdf4 !important;
+  transition:
+    border-color 0.1s,
+    background 0.1s;
+}
+
+/* ── BOUTON GÉNÉRER IA ── */
+.btn-ia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, var(--dark) 0%, #3a2a1e 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 0.9rem;
+  transition:
+    opacity 0.2s,
+    transform 0.15s;
+}
+.btn-ia:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+.btn-ia:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* ── BLOC SUGGESTION IA ── */
+.ia-block {
+  background: linear-gradient(135deg, #fdf6ef 0%, #faf0e6 100%);
+  border: 1.5px solid #e8c9a0;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 0.9rem;
+  animation: ia-fade-in 0.25s ease;
+}
+@keyframes ia-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ia-block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.ia-badge {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #8b5e3c, #c49a6c);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  letter-spacing: 0.04em;
+}
+
+.ia-block-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ia-suggestion {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--dark);
+  font-style: italic;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+.btn-accept {
+  width: 100%;
+  padding: 0.55rem;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-accept:hover {
+  opacity: 0.88;
+}
+
+/* ── GHOST TEXT ── */
 .review-text-wrapper {
   position: relative;
   width: 100%;
+  margin-bottom: 0.4rem;
 }
 
-/* Le textarea reste par-dessus, fond transparent
-   pour laisser voir le ghost en dessous */
-.review-text-wrapper textarea#review-text {
+.review-text-wrapper .review-textarea {
   position: relative;
   z-index: 2;
   background: transparent;
-  caret-color: var(--dark); /* curseur visible */
-  resize: vertical;
-  width: 100%;
-  box-sizing: border-box;
+  caret-color: var(--dark);
+  margin-bottom: 0;
 }
 
-/* Calque ghost : copie exacte du textarea, en dessous */
 .review-ghost {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 1;
-  pointer-events: none; /* ne bloque pas les clics */
+  pointer-events: none;
   white-space: pre-wrap;
   word-break: break-word;
   overflow: hidden;
   box-sizing: border-box;
-  color: transparent; /* cache la partie déjà tapée */
-  /* même style que le textarea — synchronisé par JS */
 }
 
-/* Texte déjà tapé : invisible (juste pour aligner) */
 .ghost-typed {
   color: transparent;
   white-space: pre-wrap;
 }
-
-/* Continuation suggérée : gris clair transparent */
 .ghost-hint {
-  color: var(--gray, #9e9e9e);
-  opacity: 0.55;
+  color: var(--gray);
+  opacity: 0.5;
   white-space: pre-wrap;
 }
 
-/* Petit label "Tab pour accepter" */
-.review-text-wrapper:has(.ghost-hint:not(:empty))::after {
-  content: "Tab ou → pour accepter";
-  position: absolute;
-  bottom: 6px;
-  right: 10px;
+/* Indication Tab */
+.review-hint-key {
   font-size: 0.68rem;
-  color: var(--gray, #9e9e9e);
-  opacity: 0.7;
-  pointer-events: none;
-  z-index: 3;
-}
-
-/* SÉPARATEUR */
-.review-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 1.5rem 0;
-}
-
-/* BLOC CTA */
-.review-cta {
-  text-align: center;
-}
-
-.review-cta-title {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: var(--dark);
-  margin: 0 0 0.3rem;
-}
-
-.review-cta-sub {
-  font-size: 0.82rem;
   color: var(--gray);
-  margin: 0 0 1rem;
+  opacity: 0;
+  text-align: right;
+  margin-bottom: 0.75rem;
+  transition: opacity 0.3s;
 }
 
-.btn-review {
-  width: 100%;
+/* ── ACTIONS ── */
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.btn-cancel {
+  background: var(--light);
+  border: 1px solid var(--border);
+  padding: 0.65rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  color: var(--dark);
+  transition: background 0.15s;
+}
+.btn-cancel:hover {
+  background: var(--border);
+}
+
+.btn-submit {
   background: var(--accent);
   color: white;
   border: none;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  font-size: 0.95rem;
+  padding: 0.65rem 1.5rem;
+  border-radius: 8px;
   font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition:
-    opacity 0.2s,
-    transform 0.15s;
+  transition: opacity 0.2s;
+}
+.btn-submit:hover {
+  opacity: 0.88;
 }
 
-.btn-review:hover {
-  opacity: 0.88;
-  transform: translateY(-1px);
+/* ── RESPONSIVE ── */
+@media (max-width: 520px) {
+  .review-modal-content {
+    padding: 1.5rem 1.2rem;
+  }
+  .rating-input {
+    font-size: 1.9rem;
+  }
 }
 
 /* MESSAGE ACHAT REQUIS */
@@ -2314,91 +2544,4 @@ nav {
   background: #fdecea;
   border: 1px solid #f5c6cb;
   color: #8b1a1a;
-}
-
-/* ── MODAL ── */
-.review-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  backdrop-filter: blur(2px);
-}
-
-.review-modal-content {
-  background: var(--white);
-  padding: 2rem;
-  border-radius: 16px;
-  width: 440px;
-  max-width: 95vw;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
-}
-
-.review-modal-content h3 {
-  font-family: var(--font-serif);
-  font-size: 1.3rem;
-  margin-bottom: 1.2rem;
-  color: var(--dark);
-}
-
-.rating-input {
-  display: flex;
-  gap: 6px;
-  font-size: 2.2rem;
-  color: var(--border);
-  cursor: pointer;
-  margin-bottom: 1.2rem;
-}
-
-.rating-input span:hover,
-.rating-input span.active {
-  color: var(--accent);
-}
-
-#review-text {
-  width: 100%;
-  min-height: 110px;
-  padding: 0.9rem 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--cream);
-  font-size: 0.93rem;
-  resize: vertical;
-  margin-bottom: 1.2rem;
-  box-sizing: border-box;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.8rem;
-}
-
-.btn-cancel {
-  background: var(--light);
-  border: 1px solid var(--border);
-  padding: 0.65rem 1.2rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  color: var(--dark);
-}
-
-.btn-submit {
-  background: var(--accent);
-  color: white;
-  border: none;
-  padding: 0.65rem 1.4rem;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.btn-submit:hover {
-  opacity: 0.88;
 }

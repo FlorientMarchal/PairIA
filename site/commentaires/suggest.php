@@ -4,7 +4,6 @@ session_start();
 
 header('Content-Type: application/json');
 
-// Seuls les clients connectés peuvent utiliser l'autocomplétion
 if (!isset($_SESSION['client_id'])) {
     echo json_encode(['success' => false, 'error' => 'not_logged']);
     exit;
@@ -14,57 +13,71 @@ $data    = json_decode(file_get_contents("php://input"), true);
 $texte   = trim($data['texte']   ?? '');
 $produit = trim($data['produit'] ?? '');
 $note    = (int)($data['note']   ?? 0);
+$mode    = trim($data['mode']    ?? 'ghost'); // "ghost" ou "rewrite"
 
 if (strlen($texte) < 2) {
     echo json_encode(['success' => false, 'error' => 'texte_trop_court']);
     exit;
 }
 
-// ── Clé API Groq ─────────────────────────────────────────────────
-// Ajoute dans includes/bd.php : define('GROQ_API_KEY', 'gsk_...');
 $apiKey = defined('GROQ_API_KEY') ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: '');
-
 if (!$apiKey) {
     echo json_encode(['success' => false, 'error' => 'api_key_manquante']);
     exit;
 }
 
-// ── Contexte selon la note ────────────────────────────────────────
-$tonNote = '';
-if ($note >= 4)      $tonNote = "Le client a donné une note élevée ({$note}/5) : suggestions enthousiastes.";
-elseif ($note === 3) $tonNote = "Note moyenne (3/5) : suggestions nuancées mais constructives.";
-elseif ($note > 0)   $tonNote = "Note basse ({$note}/5) : déception exprimée poliment et factuellement, sans insulte.";
+// ── Ton selon la note ────────────────────────────────────────────
+$ton = "";
+if ($note >= 4)      $ton = "Le client est très satisfait ({$note}/5).";
+elseif ($note === 3) $ton = "Le client est moyennement satisfait (3/5).";
+elseif ($note > 0)   $ton = "Le client est déçu ({$note}/5) mais reste poli.";
 
-// ── Prompt système ────────────────────────────────────────────────
-$systemPrompt = "Tu es un assistant pour PairIA, boutique en ligne de chaussures haut de gamme.
-Propose exactement 3 suggestions de continuation de phrase pour un avis client.
+// ────────────────────────────────────────────────────────────────
+// MODE REWRITE : mots-clés → phrase complète
+// ────────────────────────────────────────────────────────────────
+if ($mode === 'rewrite') {
 
+    $prompt = "Tu es un assistant pour PairIA, boutique de chaussures haut de gamme.
+L'utilisateur a donné des mots-clés. Génère UNE phrase complète, naturelle et fluide en français.
+Règles :
+- La phrase doit parler UNIQUEMENT de chaussures (confort, style, qualité, taille, matière, semelle, etc.)
+- {$ton}
+- Entre 15 et 30 mots
+- Pas de vulgarité, pas d'invention de détails non fournis
+- Phrase directe à la 1ère personne (\"J'ai...\", \"Ces chaussures...\", etc.)
+- Réponds UNIQUEMENT en JSON : {\"rewrite\": \"ta phrase ici\"}
+
+Mots-clés : \"{$texte}\"" . ($produit ? "\nProduit : {$produit}" : "");
+
+    $messages = [['role' => 'user', 'content' => $prompt]];
+
+// ────────────────────────────────────────────────────────────────
+// MODE GHOST : continuation inline
+// ────────────────────────────────────────────────────────────────
+} else {
+
+    $system = "Tu es un assistant pour PairIA, boutique de chaussures haut de gamme.
+Continue naturellement la phrase d'un avis client sur des chaussures.
 Règles ABSOLUES :
-- Suggestions positives, bienveillantes et constructives
-- Aucun mot vulgaire, insultant ou irrespectueux
-- Toujours en lien avec les chaussures (confort, style, qualité, taille, livraison, matière, semelle, design…)
-- Chaque suggestion continue naturellement le texte déjà écrit
-- Entre 8 et 20 mots par suggestion
-- Suggestions variées entre elles
-- Réponds UNIQUEMENT en JSON valide, sans texte avant ou après, sans balises markdown
+- Continuation liée aux chaussures (confort, style, qualité, taille, livraison, semelle, matière…)
+- {$ton}
+- Entre 6 et 18 mots pour la continuation
+- Pas de vulgarité ni d'insulte
+- Variées et originales
+- Réponds UNIQUEMENT en JSON : {\"suggestions\": [\"continuation 1\", \"continuation 2\", \"continuation 3\"]}";
 
-Format attendu (JSON pur) :
-{\"suggestions\": [\"suggestion 1\", \"suggestion 2\", \"suggestion 3\"]}";
+    $messages = [
+        ['role' => 'system', 'content' => $system],
+        ['role' => 'user',   'content' => "Texte : \"{$texte}\"" . ($produit ? "\nProduit : {$produit}" : "")]
+    ];
+}
 
-// ── Message utilisateur ───────────────────────────────────────────
-$userMessage = "Texte déjà écrit par le client : \"{$texte}\"";
-if ($produit) $userMessage .= "\nProduit concerné : {$produit}";
-if ($tonNote) $userMessage .= "\nContexte : {$tonNote}";
-
-// ── Appel API Groq (llama-3.3-70b-versatile) ─────────────────────
+// ── Appel Groq ───────────────────────────────────────────────────
 $payload = json_encode([
     'model'       => 'llama-3.3-70b-versatile',
-    'temperature' => 0.7,
-    'max_tokens'  => 300,
-    'messages'    => [
-        ['role' => 'system', 'content' => $systemPrompt],
-        ['role' => 'user',   'content' => $userMessage]
-    ]
+    'temperature' => $mode === 'rewrite' ? 0.6 : 0.7,
+    'max_tokens'  => $mode === 'rewrite' ? 120 : 300,
+    'messages'    => $messages
 ]);
 
 $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
@@ -76,7 +89,7 @@ curl_setopt_array($ch, [
         'Content-Type: application/json',
         'Authorization: Bearer ' . $apiKey
     ],
-    CURLOPT_TIMEOUT        => 8,
+    CURLOPT_TIMEOUT => 8,
 ]);
 
 $response = curl_exec($ch);
@@ -88,25 +101,26 @@ if (!$response || $httpCode !== 200) {
     exit;
 }
 
-// ── Extraction du texte généré ────────────────────────────────────
 $apiData = json_decode($response, true);
-$rawText = $apiData['choices'][0]['message']['content'] ?? '';
+$raw     = trim($apiData['choices'][0]['message']['content'] ?? '');
+$raw     = preg_replace('/```json|```/i', '', $raw);
+$parsed  = json_decode(trim($raw), true);
 
-// Nettoyage backticks éventuels
-$rawText = preg_replace('/```json|```/i', '', $rawText);
-$rawText = trim($rawText);
-
-$parsed = json_decode($rawText, true);
-
-if (!$parsed || !isset($parsed['suggestions']) || !is_array($parsed['suggestions'])) {
-    echo json_encode(['success' => false, 'error' => 'parse_error', 'raw' => $rawText]);
-    exit;
+// ── Réponse selon le mode ────────────────────────────────────────
+if ($mode === 'rewrite') {
+    if (isset($parsed['rewrite']) && strlen(trim($parsed['rewrite'])) > 3) {
+        echo json_encode(['success' => true, 'rewrite' => trim($parsed['rewrite'])]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'parse_error', 'raw' => $raw]);
+    }
+} else {
+    $suggestions = array_values(array_filter(
+        array_map('trim', $parsed['suggestions'] ?? []),
+        fn($s) => strlen($s) > 3
+    ));
+    if ($suggestions) {
+        echo json_encode(['success' => true, 'suggestions' => $suggestions]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'parse_error', 'raw' => $raw]);
+    }
 }
-
-// Filtrage de sécurité : chaînes non vides uniquement
-$suggestions = array_values(array_filter(
-    array_map('trim', $parsed['suggestions']),
-    fn($s) => strlen($s) > 3
-));
-
-echo json_encode(['success' => true, 'suggestions' => $suggestions]);

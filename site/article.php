@@ -43,6 +43,7 @@ function getCouleurCSS($couleur) {
 <title>PairIA — <?= htmlspecialchars($article['nom']) ?></title>
 <div id="ajax-hero"></div>
 <div id="ajax-content">
+
   <div class="breadcrumb">
     <a href="index.php">Catalogue</a>
     <span class="bc-sep">›</span>
@@ -67,7 +68,7 @@ function getCouleurCSS($couleur) {
       <div class="product-cat"><?= htmlspecialchars($article['categorie']) ?></div>
       <h1 class="product-name"><?= htmlspecialchars($article['nom']) ?></h1>
       <button id="fav-btn" class="fav-btn <?= $isFav ? 'active' : '' ?>" onclick="toggleFavorite()">
-          <?= $isFav ? '❤️ En favoris' : '♡ Ajouter aux favoris' ?>
+        <?= $isFav ? '❤️ En favoris' : '♡ Ajouter aux favoris' ?>
       </button>
       <div class="product-price"><?= number_format($article['Prix'], 2, ',', ' ') ?> €</div>
       <div class="product-divider"></div>
@@ -144,142 +145,145 @@ function getCouleurCSS($couleur) {
   </div>
   <?php endif; ?>
 
-  <!-- ════════════════════════════════════════
-     COMMENTAIRES
-════════════════════════════════════════ -->
-<div class="section-block">
-  <div class="section-block-title">Avis clients</div>
+  <!-- COMMENTAIRES -->
+  <div class="section-block">
+    <div class="section-block-title">Avis clients</div>
+    <div id="comments-premium" class="comments-premium">
 
-  <div id="comments-premium" class="comments-premium">
+      <div class="comments-left">
+        <div class="comments-left-header">
+          <div class="comments-filters">
+            <select id="comments-sort" onchange="filterComments()">
+              <option value="recent">Les plus récents</option>
+              <option value="best">Les mieux notés</option>
+              <option value="worst">Les moins bien notés</option>
+              <option value="useful">Les plus utiles</option>
+            </select>
+          </div>
+        </div>
+        <div id="comments-list"></div>
+      </div>
 
-    <!-- COLONNE GAUCHE : LISTE DES AVIS -->
-    <div class="comments-left">
-      <div class="comments-left-header">
-        <div class="comments-filters">
-          <select id="comments-sort" onchange="filterComments()">
-            <option value="recent">Les plus récents</option>
-            <option value="best">Les mieux notés</option>
-            <option value="worst">Les moins bien notés</option>
-            <option value="useful">Les plus utiles</option>
-          </select>
+      <div class="comments-right">
+        <div id="comments-summary"></div>
+        <div id="comments-histogram"></div>
+        <div class="review-divider"></div>
+        <div class="review-cta">
+          <p class="review-cta-title">Partagez votre expérience</p>
+          <p class="review-cta-sub">Votre avis aide les autres acheteurs</p>
+          <button class="btn-review" onclick="openReviewModal()">✍️ Donner mon avis</button>
         </div>
       </div>
-      <div id="comments-list"></div>
+
     </div>
+  </div>
 
-    <!-- COLONNE DROITE : RÉSUMÉ + HISTOGRAMME -->
-    <div class="comments-right">
-      <div id="comments-summary"></div>
-      <div id="comments-histogram"></div>
-      <div class="review-divider"></div>
-      <div class="review-cta">
-        <p class="review-cta-title">Partagez votre expérience</p>
-        <p class="review-cta-sub">Votre avis aide les autres acheteurs</p>
-        <button class="btn-review" onclick="openReviewModal()">✍️ Donner mon avis</button>
-      </div>
-    </div>
-
-  </div><!-- fin #comments-premium -->
-
-</div><!-- fin .section-block -->
-
-<!-- ════════════════════════════════════════
-     MODAL AJOUT D’AVIS
-════════════════════════════════════════ -->
-<div id="review-modal" class="review-modal" style="display:none;">
+  <!-- ═══════════════════════════════════
+       MODAL — UNE SEULE, PROPRE
+  ════════════════════════════════════ -->
+  <div id="review-modal" class="review-modal" style="display:none;">
     <div class="review-modal-content">
 
-        <h3>Laisser un avis</h3>
+      <button class="review-modal-close" onclick="closeReviewModal()">✕</button>
+      <h3>Laisser un avis</h3>
 
-        <!-- Étoiles interactives -->
-        <div class="rating-input">
-            <span data-value="5">★</span>
-            <span data-value="4">★</span>
-            <span data-value="3">★</span>
-            <span data-value="2">★</span>
-            <span data-value="1">★</span>
+      <!-- Étoiles -->
+      <div class="rating-input">
+        <span data-value="5">★</span>
+        <span data-value="4">★</span>
+        <span data-value="3">★</span>
+        <span data-value="2">★</span>
+        <span data-value="1">★</span>
+      </div>
+
+      <!-- Mots-clés optionnels -->
+      <label class="review-label">
+        Mots-clés <span class="review-label-opt">(optionnel — ex : confortable, belle, légère…)</span>
+      </label>
+      <textarea id="review-keywords" class="review-textarea" placeholder="Ex : belle, confortable, raffinée..."></textarea>
+
+      <!-- Bouton génération IA -->
+      <button id="btn-generate-ia" class="btn-ia">
+        <span id="btn-ia-icon">✨</span>
+        <span id="btn-ia-text">Générer un avis avec l'IA</span>
+      </button>
+
+      <!-- Suggestion IA (cachée par défaut) -->
+      <div id="ia-suggestion-block" class="ia-block" style="display:none;">
+        <div class="ia-block-header">
+          <span class="ia-badge">✨ IA</span>
+          <span class="ia-block-title">Suggestion générée</span>
         </div>
+        <div id="ia-suggestion-text" class="ia-suggestion"></div>
+        <button id="btn-accept-ia" class="btn-accept">↓ Utiliser cette phrase</button>
+      </div>
 
-        <textarea id="review-text" placeholder="Votre avis..."></textarea>
+      <!-- Avis final avec ghost text -->
+      <label class="review-label">
+        Votre avis <span class="review-label-req">*</span>
+      </label>
+      <div class="review-text-wrapper">
+        <textarea id="review-text" class="review-textarea" placeholder="Décrivez votre expérience avec ces chaussures..."></textarea>
+        <div id="review-ghost" class="review-ghost" aria-hidden="true"></div>
+      </div>
+      <p class="review-hint-key">Tab ou → pour accepter la suggestion</p>
 
-        <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeReviewModal()">Annuler</button>
-            <button class="btn-submit" onclick="submitReview()">Publier</button>
-        </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeReviewModal()">Annuler</button>
+        <button class="btn-submit" onclick="submitReview()">Publier</button>
+      </div>
+
     </div>
-</div>
+  </div>
 
-
-</div>
+</div><!-- fin #ajax-content -->
 
 <script>
-var variants = <?= json_encode($variants) ?>;
-
+var variants   = <?= json_encode($variants) ?>;
 var PRODUCT_ID = <?= $id ?>;
 var qty = 1, selectedSize = null, selectedColor = null;
 
-window.selectSize = function selectSize(btn) {
-  console.log("SIZE CLICK", btn.dataset.size);
+window.selectSize = function(btn) {
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedSize = btn.dataset.size;
-}
-window.selectColor = function selectColor(btn) {
-  console.log("COLOR CLICK", btn.dataset.color);
+};
+window.selectColor = function(btn) {
   document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedColor = btn.dataset.color;
-}
+};
 function changeQty(delta) {
   qty = Math.max(1, Math.min(10, qty + delta));
   document.getElementById('qty').textContent = qty;
 }
 async function addToCartPage() {
   const btn = document.getElementById('add-cart-btn');
-
-  //  Vérification taille
   if (document.querySelectorAll('.size-btn').length > 0 && !selectedSize) {
     shakeElement(document.getElementById('size-btns'));
     showSelectionError('Veuillez sélectionner une pointure');
     return;
   }
-
-  //  Vérification couleur
   if (document.querySelectorAll('.color-btn').length > 0 && !selectedColor) {
     shakeElement(document.getElementById('color-btns'));
     showSelectionError('Veuillez sélectionner une couleur');
     return;
   }
-
-  //  TROUVER LE BON VARIANT
-  const variant = variants.find(v =>
-    v.taille == selectedSize && v.couleur == selectedColor
-  );
-
-  if (!variant) {
-    showSelectionError("Combinaison indisponible");
-    return;
-  }
-
-  //  Appel API (on garde ton système existant)
+  const variant = variants.find(v => v.taille == selectedSize && v.couleur == selectedColor);
+  if (!variant) { showSelectionError("Combinaison indisponible"); return; }
   const result = await addToCart(PRODUCT_ID, qty, selectedSize, selectedColor);
-
-  //  Animation succès
   if (result && result.success) {
     btn.textContent = '✓ Ajouté !';
     btn.style.background = '#4CAF50';
-
-    setTimeout(() => {
-      btn.textContent = 'Ajouter au panier';
-      btn.style.background = '';
-    }, 1500);
+    setTimeout(() => { btn.textContent = 'Ajouter au panier'; btn.style.background = ''; }, 1500);
   }
 }
 function showSelectionError(message) {
   let existing = document.querySelector('.selection-error');
   if (existing) existing.remove();
   const error = document.createElement('div');
-  error.className = 'selection-error'; error.textContent = message;
+  error.className = 'selection-error';
+  error.textContent = message;
   const actions = document.querySelector('.product-actions');
   actions.parentNode.insertBefore(error, actions);
   setTimeout(() => error.remove(), 2500);
@@ -288,85 +292,39 @@ function shakeElement(el) {
   el.classList.add('shake');
   setTimeout(() => el.classList.remove('shake'), 400);
 }
-
 async function addToCart(product_id, quantity, taille, couleur) {
   try {
     const res = await fetch('cart/add.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        product_id: product_id,
-        quantity: quantity,
-        taille: taille,
-        couleur: couleur
-      })
+      body: JSON.stringify({ product_id, quantity, taille, couleur })
     });
-
     const data = await res.json();
-
-    if (!data.success) {
-      showSelectionError(data.error || "Erreur lors de l'ajout");
-      return null;
-    }
-
-    // 🔽 MAJ compteur panier (IMPORTANT)
-    if (document.getElementById('cart-count')) {
-      document.getElementById('cart-count').textContent = data.count;
-    }
-
+    if (!data.success) { showSelectionError(data.error || "Erreur lors de l'ajout"); return null; }
+    if (document.getElementById('cart-count')) document.getElementById('cart-count').textContent = data.count;
     return data;
-
-  } catch (e) {
-    console.error(e);
-    showSelectionError("Erreur serveur");
-    return null;
-  }
+  } catch(e) { console.error(e); showSelectionError("Erreur serveur"); return null; }
 }
-
-// REMPLACE l'ancienne toggleFavorite par :
 async function toggleFavorite(productId = null, btn = null) {
   try {
     if (!btn) btn = document.getElementById('fav-btn');
     if (!productId && typeof PRODUCT_ID !== "undefined") productId = PRODUCT_ID;
     if (!productId) return;
-
     const res = await fetch('favorites/toggle.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product_id: productId })
     });
-
     const data = await res.json();
-
-    if (!data.success) {
-      // Pas connecté
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.textContent = 'Connecte-toi pour ajouter aux favoris';
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2500);
-      return;
-    }
-
     const toast = document.createElement('div');
     toast.className = 'toast';
-
-    if (data.action === 'added') {
-      if (btn) { btn.classList.add('active'); btn.textContent = '❤️ En favoris'; }
-      toast.textContent = 'Ajouté aux favoris ❤️';
-    } else if (data.action === 'removed') {
-      if (btn) { btn.classList.remove('active'); btn.textContent = '♡ Ajouter aux favoris'; }
-      toast.textContent = 'Retiré des favoris';
-    }
-
+    if (!data.success) { toast.textContent = 'Connecte-toi pour ajouter aux favoris'; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2500); return; }
+    if (data.action === 'added') { if (btn) { btn.classList.add('active'); btn.textContent = '❤️ En favoris'; } toast.textContent = 'Ajouté aux favoris ❤️'; }
+    else if (data.action === 'removed') { if (btn) { btn.classList.remove('active'); btn.textContent = '♡ Ajouter aux favoris'; } toast.textContent = 'Retiré des favoris'; }
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
-
-  } catch (e) {
-    console.error(e);
-  }
+  } catch(e) { console.error(e); }
 }
-
 initProductContext({
   id:          <?= $id ?>,
   name:        "<?= htmlspecialchars($article['nom'], ENT_QUOTES) ?>",
@@ -379,8 +337,5 @@ initProductContext({
   couleurs:    <?= json_encode($couleurs) ?>,
   emoji:       "👟"
 });
-
-// CHARGEMENT AUTOMATIQUE AU RENDU SPA
-
 loadCommentsPremium();
 </script>
