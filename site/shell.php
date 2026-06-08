@@ -42,6 +42,7 @@ require_once 'includes/bd.php';
 <script src="js/image_search.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/spa.js"></script>
-<script src="js/comments.js"></script>
+<script src="js/comments.js" defer></script>
+
 </body>
 </html>

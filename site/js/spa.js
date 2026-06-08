@@ -46,6 +46,15 @@ async function navigateTo(url, pushState = true) {
     if (content)
       document.getElementById("spa-content").innerHTML = content.innerHTML;
 
+    // Si on charge une page article, relancer les commentaires
+    if (targetPage === "article.php") {
+      setTimeout(() => {
+        if (window.loadCommentsPremium) {
+          loadCommentsPremium();
+        }
+      }, 50);
+    }
+
     // Hero
     const hero = doc.getElementById("ajax-hero");
     document.getElementById("spa-hero").innerHTML = hero ? hero.innerHTML : "";

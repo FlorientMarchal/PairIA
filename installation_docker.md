@@ -18,6 +18,7 @@ cd site
 Créer un fichier `.env` dans le dossier `site/` avec le contenu suivant :
 ```
 MYSQL_ROOT_PASSWORD=tonmotdepasse
+ADMIN_ACTION_TOKEN=pairia_admin_secret_change_me
 ```
 
 ### 3. Copier la base de données
@@ -35,6 +36,7 @@ docker compose up -d
 ```powershell
 docker exec pairia-ollama ollama pull llama3.1
 docker exec pairia-ollama ollama pull nomic-embed-text
+docker exec pairia-ollama ollama pull qwen2.5:14b
 ```
 
 ### 6. Indexer les produits
