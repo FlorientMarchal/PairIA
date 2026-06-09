@@ -43,6 +43,7 @@ require_once 'includes/bd.php';
 <script src="js/voice.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/comments.js" defer></script>
+<script src="js/chat-review.js"></script>
 
 </body>
 </html>
