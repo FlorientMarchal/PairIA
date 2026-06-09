@@ -1,22 +1,66 @@
-//js/review.js
+/* ══════════════════════════════════════════════════════════════════
+   js/chat-review.js
+══════════════════════════════════════════════════════════════════ */
+
+// ── Mots-clés qui déclenchent le flux d'avis ────────────────────
 const _REVIEW_TRIGGERS = [
+  // Avis / note
   "laisser un avis",
   "donner un avis",
-  "noter",
   "mettre un avis",
   "déposer un avis",
   "écrire un avis",
   "publier un avis",
+  "noter",
   "je veux noter",
   "je voudrais noter",
   "donner mon avis",
   "laisser mon avis",
   "mon avis",
   "ma note",
+  // Expérience / achat
+  "partager mon expérience",
+  "partager mon achat",
+  "parler de mon achat",
+  "parler de mon expérience",
+  "raconter mon expérience",
+  // Commentaire
+  "faire un commentaire",
+  "laisser un commentaire",
+  "écrire un commentaire",
+  "poster un commentaire",
+  "ajouter un commentaire",
+  // Point de vue / opinion
+  "donner mon point de vue",
+  "donner mon avis",
+  "donner mon opinion",
+  "partager mon opinion",
+  "mon point de vue",
+  "mon opinion",
+  // Aider les autres
+  "aider les autres",
+  "aider d'autres acheteurs",
+  "partager pour les autres",
+  "conseiller les autres",
+  "recommander",
+  "je recommande",
+  // Satisfaction / retour
+  "donner mon retour",
+  "faire un retour",
+  "partager mon retour",
+  "mon retour",
+  "donner un feedback",
+  "laisser un feedback",
+  // Anglais
   "leave a review",
   "write a review",
   "rate this",
   "give a review",
+  "share my experience",
+  "post a review",
+  "give feedback",
+  "leave feedback",
+  "my review",
 ];
 
 // ── État du flux avis ────────────────────────────────────────────
@@ -52,7 +96,7 @@ function _parseNote(text) {
   return null;
 }
 
-// ── Affiche une carte de saisie d'avis dans le chat ─────────────
+// ── Affiche la carte de saisie dans le chat ──────────────────────
 function _showReviewCard(productId, note, suggestion) {
   const container = document.getElementById("messages");
   if (!container) return;
@@ -70,7 +114,7 @@ function _showReviewCard(productId, note, suggestion) {
         <span class="ia-badge">✍️ Avis</span>
         <span class="chat-review-stars">${stars}</span>
       </div>
- 
+
       ${
         suggestion
           ? `
@@ -89,7 +133,7 @@ function _showReviewCard(productId, note, suggestion) {
       </div>`
           : ""
       }
- 
+
       <div style="position:relative">
         <textarea id="chat-review-text"
           class="review-textarea"
@@ -99,9 +143,9 @@ function _showReviewCard(productId, note, suggestion) {
           style="min-height:80px;margin-bottom:0.3rem"></textarea>
         <span id="chat-review-counter" class="review-char-counter">0 / 300</span>
       </div>
- 
+
       <div id="chat-review-error" class="modal-error-msg" style="display:none;margin-bottom:0.5rem"></div>
- 
+
       <div style="display:flex;gap:0.6rem;margin-top:0.4rem">
         <button class="chat-cart-btn" style="flex:1;background:var(--accent)"
           onclick="_submitChatReview(${productId}, ${note}, this)">
@@ -157,7 +201,7 @@ window._cancelChatReview = function () {
   );
 };
 
-// ── Soumission — appelle add.php (même endpoint que la modal) ────
+// ── Soumission ───────────────────────────────────────────────────
 window._submitChatReview = async function (productId, note, btn) {
   const ta = document.getElementById("chat-review-text");
   const errEl = document.getElementById("chat-review-error");
@@ -186,10 +230,16 @@ window._submitChatReview = async function (productId, note, btn) {
     if (data.success) {
       window._pendingReview = null;
       document.getElementById("chat-review-card")?.remove();
+
       const stars = "★".repeat(note) + "☆".repeat(5 - note);
       appendBotMessageText(
         `Merci pour ton avis ${stars} ! Il a bien été publié. 🎉`,
       );
+
+      // ── Rafraîchit la section commentaires sans recharger la page ──
+      if (typeof loadCommentsPremium === "function") {
+        loadCommentsPremium();
+      }
     } else if (data.error === "not_purchased") {
       document.getElementById("chat-review-card")?.remove();
       window._pendingReview = null;
@@ -269,10 +319,10 @@ async function _generateChatReviewSuggestion(note, productId) {
   }
 }
 
-// ── Patch sendMessage pour intercepter l'intention avis ─────────
+// ── Patch sendMessage ────────────────────────────────────────────
 const _originalSendMessage = window.sendMessage;
 window.sendMessage = async function (text) {
-  // Étape 2 : flux en cours, on attend la note
+  // Étape 2 : on attend la note
   if (window._pendingReview?.step === "note") {
     const note = _parseNote(text);
     if (!note) {
@@ -293,21 +343,14 @@ window.sendMessage = async function (text) {
     );
     typingEl.remove();
 
-    const stars = "★".repeat(note) + "☆".repeat(5 - note);
-    appendBotMessageText(
-      `${stars} — Super ! Voici une suggestion de phrase, ou écris directement ton avis :`,
-    );
     _showReviewCard(window._pendingReview.productId, note, suggestion);
     return;
   }
 
-  // Étape 1 : détection de l'intention avis
+  // Étape 1 : détection intention avis
   if (_isReviewIntent(text)) {
     const productId = _getCurrentProductId();
-    if (!productId) {
-      // Aucun produit identifié → comportement normal du bot
-      return _originalSendMessage(text);
-    }
+    if (!productId) return _originalSendMessage(text);
     appendUserMessage(text);
     window._pendingReview = {
       step: "note",
@@ -321,6 +364,6 @@ window.sendMessage = async function (text) {
     return;
   }
 
-  // Aucune intention avis → comportement normal
+  // Comportement normal
   return _originalSendMessage(text);
 };

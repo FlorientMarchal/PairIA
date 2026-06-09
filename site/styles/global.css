@@ -2190,8 +2190,6 @@ nav {
   partie ia de suggestion des commentaires 
 ════════════════════════════════════════ */
 /* ── MODAL ── */
-
-/* ── MODAL ── */
 .review-modal {
   position: fixed;
   inset: 0;
@@ -2602,4 +2600,40 @@ nav {
   background: #fdecea;
   border: 1px solid #f5c6cb;
   color: #8b1a1a;
+}
+
+/* ════════════════════════════════════════
+   CARTE AVIS DANS LE CHAT
+════════════════════════════════════════ */
+
+.chat-review-form {
+  padding: 1rem 1.1rem;
+}
+
+.chat-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.chat-review-stars {
+  font-size: 1.2rem;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.chat-review-suggestion {
+  margin-bottom: 0.5rem;
+}
+
+/* Textarea de la carte chat — hérite du style review-textarea */
+.chat-review-form .review-textarea {
+  min-height: 80px;
+  margin-bottom: 0.3rem;
+  /* Fond non transparent ici (pas de ghost text) */
+  background: var(--cream) !important;
+}
+.chat-review-form .review-textarea:focus {
+  background: var(--white) !important;
 }
