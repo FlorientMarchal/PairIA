@@ -82,6 +82,7 @@ Règles de refus :
 - Menaces ou incitations à la violence
 - Contenu sexuel explicite
 - Spam ou publicité
+- Tout ce qui n'a rien à avoir avec les chaussures, les livraisons ou le service client
 
 Si le commentaire respecte les règles → {\"ok\": true}
 Sinon → {\"ok\": false, \"raison\": \"explication courte en français\"}
