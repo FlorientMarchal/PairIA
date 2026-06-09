@@ -38,6 +38,7 @@ require_once 'includes/bd.php';
 </div>
 
 <script src="js/global.js"></script>
+<script src="js/resizer.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/image_search.js"></script>
 <script src="js/voice.js"></script>
