@@ -44,3 +44,15 @@ includes/bd.phpdocker-compose.yml
 ia/dockerfile
 .env
 init.sql
+site/
+docker-compose.yml
+ia/dockerfile
+.env
+init.sql
+modele_intention/
+site/
+docker-compose.yml
+ia/dockerfile
+.env
+init.sql
+modele_intention/
