@@ -2713,3 +2713,125 @@ nav {
     display: none;
   }
 }
+
+/* ════════════════════════════════════════
+   ÉDITION DE MESSAGE — après stop
+════════════════════════════════════════ */
+/* Bouton ✏️ sous le message utilisateur */
+.msg-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 20px;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+  line-height: 1;
+}
+.msg-edit-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+}
+.msg-edit-btn::before {
+  content: "✏️";
+}
+
+/* Wrapper éditeur — aligne à droite comme les messages user */
+.msg-edit-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  align-items: flex-end;
+}
+
+/* Textarea édition — même style que la bulle user */
+.msg-edit-textarea {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: 2px solid var(--accent);
+  border-radius: 8px 2px 8px 8px;
+  background: white;
+  font-family: var(--font-main);
+  font-size: 0.8375rem;
+  line-height: 1.55;
+  color: var(--dark);
+  resize: none;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(212, 133, 74, 0.12);
+  transition: box-shadow 0.2s;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+.msg-edit-textarea:focus {
+  box-shadow: 0 0 0 4px rgba(212, 133, 74, 0.22);
+}
+
+/* Ligne boutons */
+.msg-edit-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Raccourci clavier hint */
+.msg-edit-hint {
+  font-size: 0.68rem;
+  color: var(--gray);
+  margin-right: auto;
+}
+
+/* Bouton Envoyer */
+.msg-edit-confirm {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
+}
+.msg-edit-confirm:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+.msg-edit-confirm:active {
+  transform: translateY(0);
+}
+
+/* Bouton Annuler */
+.msg-edit-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--light);
+  color: var(--gray);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.msg-edit-cancel:hover {
+  background: var(--border);
+  color: var(--dark);
+}
