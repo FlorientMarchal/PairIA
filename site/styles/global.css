@@ -2639,16 +2639,17 @@ nav {
 }
 
 /* ── Barre séparatrice ── */
+
 .chat-resizer {
-  width: 6px;
+  width: 8px;
   background: var(--border);
   cursor: col-resize;
   flex-shrink: 0;
   position: relative;
-  transition: background 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s;
   z-index: 10;
 }
 
@@ -2657,57 +2658,43 @@ nav {
   background: var(--accent);
 }
 
-/* ── Bouton central toggle ── */
-.chat-resizer-btn {
+/* Poignée visuelle centrale */
+.chat-resizer-handle {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 22px;
-  height: 44px;
+  width: 20px;
+  height: 40px;
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: 99px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.9rem;
   color: var(--gray);
-  cursor: pointer;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  letter-spacing: -1px;
   transition:
     background 0.15s,
     color 0.15s,
-    border-color 0.15s,
-    box-shadow 0.15s;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  z-index: 11;
-  user-select: none;
-  line-height: 1;
+    border-color 0.15s;
 }
 
-.chat-resizer-btn:hover {
+.chat-resizer:hover .chat-resizer-handle,
+.chat-resizer.dragging .chat-resizer-handle {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
-  box-shadow: 0 3px 10px rgba(212, 133, 74, 0.35);
 }
 
-/* ── Transition douce lors du toggle (pas pendant le drag) ── */
+/* Transition douce sur double-clic reset */
 .chat-panel.transitioning {
   transition: width 0.3s ease;
 }
-.page-content.transitioning {
-  transition: flex 0.3s ease;
-}
 
-/* ── Chat réduit ── */
-.chat-panel.collapsed {
-  width: 0 !important;
-  overflow: hidden;
-  border-left: none;
-}
-
-/* ── Cacher le séparateur sur mobile ── */
 @media (max-width: 768px) {
   .chat-resizer {
     display: none;
