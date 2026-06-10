@@ -6,6 +6,7 @@ import json
 import os
 import numpy as np
 import torch
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from transformers import (

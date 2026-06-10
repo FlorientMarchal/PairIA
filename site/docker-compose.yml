@@ -1,5 +1,4 @@
 services:
-  # ── 1. MySQL ────────────────────────────────────────────────────────────────
   db:
     image: mysql:8.0
     container_name: pairia-mysql
@@ -13,25 +12,18 @@ services:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-p${MYSQL_ROOT_PASSWORD}",
-        ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ── 2. PHP / Apache ─────────────────────────────────────────────────────────
   web:
     build:
       context: .
+      args:
+        HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+        HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+        NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
     container_name: pairia-web
     restart: unless-stopped
     ports:
@@ -45,14 +37,20 @@ services:
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: e_commmerce
       ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+      NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
     depends_on:
       db:
         condition: service_healthy
 
-  # ── 3. Python / FastAPI — chatbot CLIENT ────────────────────────────────────
   api:
     build:
       context: ./ia
+      args:
+        HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+        HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+        NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
     container_name: pairia-api
     restart: unless-stopped
     ports:
@@ -62,6 +60,7 @@ services:
       - qdrant_data:/app/qdrant_db
       - ./images:/app/images
       - ./ia/modele_intention:/modele_intention
+      - huggingface_cache:/root/.cache/huggingface
     environment:
       MYSQL_HOST: db
       MYSQL_USER: root
@@ -72,6 +71,20 @@ services:
       OLLAMA_HOST: http://ollama:11434
       MODEL_DIR: /modele_intention
       ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+      NO_PROXY: localhost,127.0.0.1,ollama,qdrant,db,172.16.0.0/12,172.27.*,192.168.0.0/16
+      no_proxy: localhost,127.0.0.1,ollama,qdrant,db,172.16.0.0/12,172.27.*,192.168.0.0/16
+      REQUESTS_CA_BUNDLE: ""
+      CURL_CA_BUNDLE: ""
+      PYTHONHTTPSVERIFY: "0"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     depends_on:
       db:
         condition: service_healthy
@@ -80,13 +93,14 @@ services:
       ollama:
         condition: service_started
 
-  # ── 4. Python / FastAPI — chatbot ADMIN ─────────────────────────────────────
-  # Dockerfile dédié et léger : pas de torch, pas de CLIP, pas de Whisper
-  # Seulement fastapi + uvicorn + ollama + httpx
   admin-api:
     build:
       context: ./ia
       dockerfile: dockerfile.admin
+      args:
+        HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+        HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+        NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
     container_name: pairia-admin-api
     restart: unless-stopped
     ports:
@@ -98,13 +112,16 @@ services:
       ADMIN_ACTIONS_URL: http://web/admin/includes/admin_actions.php
       ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
       CLIENT_API_URL: http://api:8000
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+      NO_PROXY: localhost,127.0.0.1,ollama,qdrant,db,web,172.16.0.0/12,172.27.*,192.168.0.0/16
+      no_proxy: localhost,127.0.0.1,ollama,qdrant,db,web,172.16.0.0/12,172.27.*,192.168.0.0/16
     depends_on:
       ollama:
         condition: service_started
       web:
         condition: service_started
 
-  # ── 5. Qdrant ───────────────────────────────────────────────────────────────
   qdrant:
     image: qdrant/qdrant:latest
     container_name: pairia-qdrant
@@ -114,17 +131,28 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-  # ── 6. Ollama (LLM) ─────────────────────────────────────────────────────────
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.3.14
     container_name: pairia-ollama
     restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
+    environment:
+      OLLAMA_DEBUG: "true"
+      OLLAMA_INSECURE: "true"
+      https_proxy: http://proxy.mtp.supportlabs.dell:80
+      http_proxy: http://proxy.mtp.supportlabs.dell:80
+      no_proxy: localhost,127.0.0.1,172.27.*,192.*
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
-  # ── 7. phpMyAdmin ────────────────────────────────────────────────────────────
   phpmyadmin:
     image: phpmyadmin:latest
     container_name: pairia-phpmyadmin
@@ -145,3 +173,4 @@ volumes:
   ollama_models:
   modele_intention:
   vendor:
+  huggingface_cache:

@@ -120,7 +120,7 @@ def indexer_images(article_id: int = None):
                         "marque":     str(produit.get("marque")      or ""),
                         "description":str(produit.get("description") or ""),
                         "tailles":    str(produit.get("tailles")     or ""),
-                        "couleurs":   str(produit.get("couleurs")    or ""),
+                        "couleurs":   [c.strip() for c in str(produit.get("couleurs") or "").split(",") if c.strip()],
                         "url_image":  "images/" + filename,
                     }
                 )]

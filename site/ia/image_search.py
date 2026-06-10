@@ -1,3 +1,5 @@
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 from sentence_transformers import SentenceTransformer
 from database import qdrant
 from image_preprocessing import preprocess_image
