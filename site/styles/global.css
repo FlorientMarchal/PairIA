@@ -2617,6 +2617,18 @@ nav {
   margin-bottom: 0.85rem;
 }
 
+.chat-review-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  width: 100%;
+}
+
+.chat-review-actions button {
+  flex: 1;
+  min-width: 0;
+}
+
 .chat-review-stars {
   font-size: 1.2rem;
   color: var(--accent);
