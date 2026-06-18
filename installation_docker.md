@@ -37,6 +37,7 @@ docker compose up -d
 docker exec pairia-ollama ollama pull llama3.1
 docker exec pairia-ollama ollama pull nomic-embed-text
 docker exec pairia-ollama ollama pull qwen2.5:7b
+docker exec pairia-ollama ollama pull llava:7b
 ```
 
 ### 6. Indexer les produits
