@@ -1,6 +1,6 @@
 // admin/js/admin_chat.js
-const ADMIN_API_URL    = "http://localhost:8001";
-const ADMIN_SESSION_ID = crypto.randomUUID();
+const ADMIN_API_URL    = "http://172.27.30.30:8001";
+const ADMIN_SESSION_ID = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
 
 let adminHistory  = JSON.parse(localStorage.getItem("adminChatHistory") || "[]");
 let adminStreaming = false;

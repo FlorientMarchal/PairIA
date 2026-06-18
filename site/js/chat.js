@@ -1,10 +1,10 @@
 // js/chat.js
-const API_URL = "http://localhost:8000";
+const API_URL = "http://172.27.30.30:8000";
 
 let conversationHistory = JSON.parse(
   sessionStorage.getItem("chatHistory") || "[]",
 );
-let sessionId = sessionStorage.getItem("chatSessionId") || crypto.randomUUID();
+let sessionId = sessionStorage.getItem("chatSessionId") || ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
 sessionStorage.setItem("chatSessionId", sessionId);
 
 // ID de session BDD (null si non connecté ou pas encore créée)
@@ -936,7 +936,7 @@ async function sendImageWithText(file, text) {
 
 function resetConversation() {
   conversationHistory = [];
-  sessionId = crypto.randomUUID();
+  sessionId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
   dbSessionId = null;
   currentLangue = "fr";
   sessionStorage.removeItem("chatHistory");
@@ -2339,7 +2339,7 @@ function newConversation() {
   sessionStorage.removeItem("chatLangue");
   sessionStorage.removeItem("dbSessionId");
   conversationHistory = [];
-  sessionId = crypto.randomUUID();
+  sessionId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
   sessionStorage.removeItem("chatHistory");
   sessionStorage.setItem("chatSessionId", sessionId);
   document.getElementById("messages").innerHTML = "";

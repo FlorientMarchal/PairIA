@@ -1,23 +1,38 @@
-FROM python:3.11-slim
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ENV HTTP_PROXY=$HTTP_PROXY
+ENV HTTPS_PROXY=$HTTPS_PROXY
+ENV NO_PROXY=$NO_PROXY
+ENV REQUESTS_CA_BUNDLE=""
+ENV CURL_CA_BUNDLE=""
+ENV PYTHONHTTPSVERIFY=0
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Europe/Paris
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    tzdata \
     ffmpeg \
     build-essential \
     git \
+    curl \
+ && add-apt-repository ppa:deadsnakes/ppa \
+ && apt-get update \
+ && apt-get install -y python3.12 python3.12-dev \
  && rm -rf /var/lib/apt/lists/*
 
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12
+RUN ln -sf /usr/bin/python3.12 /usr/bin/python
+RUN ln -sf /usr/bin/python3.12 /usr/bin/python3
+
 WORKDIR /app
-
 COPY requirements.txt .
-
-RUN pip install --no-cache-dir torch
-
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu124
 RUN pip install --no-cache-dir -r requirements.txt
-
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('clip-ViT-B-32')"
-
+RUN python -c "import ssl; ssl._create_default_https_context = ssl._create_unverified_context; from sentence_transformers import SentenceTransformer; SentenceTransformer('clip-ViT-B-32')"
 COPY . .
-
 EXPOSE 8000
-
 CMD ["python", "-u", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

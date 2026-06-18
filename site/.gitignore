@@ -40,4 +40,19 @@ ia/qdrant-server/qdrant.exe
 init.sql
 
 #db.php à cause de la clé de groq
-includes/bd.php
+includes/bd.phpdocker-compose.yml
+ia/dockerfile
+.env
+init.sql
+site/
+docker-compose.yml
+ia/dockerfile
+.env
+init.sql
+modele_intention/
+site/
+docker-compose.yml
+ia/dockerfile
+.env
+init.sql
+modele_intention/
