@@ -263,6 +263,7 @@ function admin_ajouter_article(
 
 function admin_supprimer_article(int $id_shoes): array {
     global $pdo;
+    $pdo->prepare("DELETE FROM panier WHERE id_variant IN (SELECT id_variant FROM size_color WHERE id_shoes = ?)")->execute([$id_shoes]);
     $pdo->prepare("DELETE FROM size_color WHERE id_shoes = ?")->execute([$id_shoes]);
     $stmt = $pdo->prepare("DELETE FROM articles WHERE id_shoes = ?");
     $stmt->execute([$id_shoes]);

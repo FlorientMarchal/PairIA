@@ -69,6 +69,7 @@ services:
       QDRANT_HOST: qdrant
       QDRANT_PORT: 6333
       OLLAMA_HOST: http://ollama:11434
+      ADMIN_OLLAMA_MODEL: llama3.1:latest
       MODEL_DIR: /modele_intention
       ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
       HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
@@ -109,6 +110,7 @@ services:
       - ./ia:/app
     environment:
       OLLAMA_HOST: http://ollama:11434
+      ADMIN_OLLAMA_MODEL: llama3.1:latest
       ADMIN_ACTIONS_URL: http://web/admin/includes/admin_actions.php
       ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
       CLIENT_API_URL: http://api:8000
@@ -143,7 +145,9 @@ services:
       OLLAMA_DEBUG: "true"
       OLLAMA_INSECURE: "true"
       https_proxy: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
       http_proxy: http://proxy.mtp.supportlabs.dell:80
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
       no_proxy: localhost,127.0.0.1,172.27.*,192.*
     deploy:
       resources:
