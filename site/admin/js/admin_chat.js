@@ -1,6 +1,9 @@
 // admin/js/admin_chat.js
 const ADMIN_API_URL    = "http://172.27.30.30:8001";
-const ADMIN_SESSION_ID = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+function _generateSessionId() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+}
+let ADMIN_SESSION_ID = _generateSessionId();
 
 let adminHistory  = JSON.parse(localStorage.getItem("adminChatHistory") || "[]");
 let _pendingArticleData = null;
@@ -185,7 +188,8 @@ async function adminChatSend() {
 
 function adminChatReset() {
   adminHistory = [];
-localStorage.removeItem("adminChatHistory");
+  localStorage.removeItem("adminChatHistory");
+  ADMIN_SESSION_ID = _generateSessionId();
   const msgs = document.getElementById("achat-messages");
   while (msgs.children.length > 1) msgs.removeChild(msgs.lastChild);
   document.getElementById("achat-chips-wrap").style.display = "";

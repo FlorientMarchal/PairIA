@@ -1,4 +1,5 @@
 # ia/admin_main.py
+import re
 import os
 import json
 import uuid
@@ -38,6 +39,15 @@ ACTION_STATUS_TEXTS = {
 }
 
 TOOLS = [
+    {"type":"function","function":{"name":"lister_commandes","description":"Lister les commandes avec filtre optionnel sur le statut","parameters":{"type":"object","properties":{"statut":{"type":"string","description":"en_attente, payée, expédiée, livrée, annulée"},"limit":{"type":"integer"},"depuis":{"type":"string"}}}}},
+    {"type":"function","function":{"name":"detail_commande","description":"Obtenir le detail complet d'une commande par son ID. Le resultat contient un champ lignes avec les articles. Exemple de bonne reponse apres cet appel : La commande #5 contient 1 article : Nova Air Lifestyle, taille 39, couleur Blanc, quantite 1, prix 89.99 euros. Statut : expediee, livree a 456 allees des broussiers. Cite TOUJOURS les articles de lignes par leur nom_article, taille et couleur.","parameters":{"type":"object","properties":{"id_commande":{"type":"integer"}},"required":["id_commande"]}}},
+    {"type":"function","function":{"name":"detail_article","description":"Obtenir le detail d'un article par son ID exact","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"}},"required":["id_shoes"]}}},
+    {"type":"function","function":{"name":"rechercher_article","description":"Rechercher un article par nom, marque ou categorie","parameters":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}}},
+    {"type":"function","function":{"name":"rechercher_client","description":"Rechercher un client par nom ou email","parameters":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}}},
+    {"type":"function","function":{"name":"commandes_client","description":"Voir les commandes d'un client","parameters":{"type":"object","properties":{"id_client":{"type":"integer"}},"required":["id_client"]}}},
+    {"type":"function","function":{"name":"top_articles","description":"Top des articles les plus vendus","parameters":{"type":"object","properties":{"limit":{"type":"integer"}}}}},
+    {"type":"function","function":{"name":"stats_globales","description":"Statistiques globales de la boutique (CA, nb commandes, nb clients, etc.)","parameters":{"type":"object","properties":{}}}},
+    {"type":"function","function":{"name":"ca_par_mois","description":"Chiffre d'affaires par mois sur 12 mois","parameters":{"type":"object","properties":{}}}},
     {"type":"function","function":{"name":"modifier_statut_commande","description":"Modifier le statut d'UNE commande","parameters":{"type":"object","properties":{"id_commande":{"type":"integer"},"nouveau_statut":{"type":"string","description":"en_attente, payée, expédiée, livrée, annulée"}},"required":["id_commande","nouveau_statut"]}}},
     {"type":"function","function":{"name":"modifier_statut_batch","description":"Modifier le statut de PLUSIEURS commandes en une fois","parameters":{"type":"object","properties":{"ids":{"type":"array","items":{"type":"integer"},"description":"Liste des IDs de commandes"},"nouveau_statut":{"type":"string"}},"required":["ids","nouveau_statut"]}}},
     {"type":"function","function":{"name":"modifier_prix","description":"Modifier le prix d'UN article. nouveau_prix est le NOUVEAU prix FINAL en euros, pas une différence.","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"},"nouveau_prix":{"type":"number","description":"Le nouveau prix FINAL de l'article en euros. Exemple: si prix actuel=120€ et hausse de 5€, envoyer 125."}},"required":["id_shoes","nouveau_prix"]}}},
@@ -99,7 +109,7 @@ async def fetch_context_data() -> str:
 
     lines.append("TOP ARTICLES VENDUS :")
     for a in top_articles:
-        lines.append(f"  {a.get('nom')} ({a.get('marque')}) vendus={a.get('quantite_vendue','?')} ca={a.get('ca','?')}€")
+        lines.append(f"  {a.get('nom_article')} vendus={a.get('total_vendu','?')} ca={a.get('ca','?')}€")
 
     lines.append("CA PAR MOIS :")
     for m in ca_mois:
@@ -257,10 +267,49 @@ async def admin_chat_stream(request: AdminChatRequest):
                     print(f"[SUPPRESSION] ID trouve automatiquement: {parts.get('id')}")
                     break
 
+    # Court-circuit : creation directe d'article depuis le formulaire JS (evite les hallucinations du LLM sur cette etape critique)
+    if question.startswith("Cree l'article avec ces donnees :"):
+        try:
+            import re as _re
+            m1 = _re.search(r"donnees : (\{.*?\}) et ces variantes : (\[.*\])", question)
+            if m1:
+                article_payload = json.loads(m1.group(1))
+                variants_payload = json.loads(m1.group(2))
+                article_payload["variants"] = variants_payload
+                yield_events = []
+                async def _direct_create():
+                    status_text = ACTION_STATUS_TEXTS.get("ajouter_article", "J'ajoute l'article…")
+                    out = []
+                    out.append(f"data: {json.dumps({'type': 'thinking'})}\n\n")
+                    out.append(f"data: {json.dumps({'type': 'action_start', 'action': 'ajouter_article', 'status_text': status_text})}\n\n")
+                    result = await call_php_action("ajouter_article", article_payload)
+                    out.append(f"data: {json.dumps({'type': 'action_result', 'action': 'ajouter_article', 'result': result})}\n\n")
+                    if result.get("success"):
+                        article_id = result.get('data', {}).get('id_shoes') if result.get('data') else None
+                        run_reindex(article_id)
+                        content = f"L'article \"{article_payload.get('nom')}\" a ete cree avec succes."
+                    else:
+                        content = f"Erreur lors de la creation : {result.get('message', 'inconnue')}"
+                    _session_messages[session_id].append({"role": "user", "content": "Article cree."})
+                    _session_messages[session_id].append({"role": "assistant", "content": content})
+                    for char in content:
+                        out.append(f"data: {json.dumps({'chunk': char})}\n\n")
+                    out.append("data: [DONE]\n\n")
+                    return out
+                events = await _direct_create()
+                async def _stream_direct():
+                    for e in events:
+                        yield e
+                return StreamingResponse(_stream_direct(), media_type="text/event-stream")
+        except Exception as e:
+            print(f"[ADMIN] erreur creation directe: {e}")
+
     messages.append({"role": "user", "content": question})
 
     if session_id not in _session_messages:
         _session_messages[session_id] = []
+    if len(_session_messages[session_id]) > 12:
+        _session_messages[session_id] = _session_messages[session_id][-12:]
     _session_messages[session_id].append({"role": "user", "content": question})
 
     async def generate():
@@ -273,9 +322,32 @@ async def admin_chat_stream(request: AdminChatRequest):
             last_tool_call = None
             same_tool_count = 0
 
+            # Detection question de suivi
+            mots_suivi = ['elle ', 'il ', 'lui ', ' ca ', 'ca ', 'cet article', 'cette commande', 'celui', 'celle']
+            historique_recent = _session_messages.get(session_id, [])
+            est_suivi = (any(w in (' ' + question.lower() + ' ') for w in mots_suivi) and len(historique_recent) >= 2 and len(question) < 80)
+            if est_suivi:
+                try:
+                    contexte_recent = historique_recent[-6:]
+                    sys_msg_suivi = {'role': 'system', 'content': 'Tu es un assistant admin. Reponds en francais en une ou deux phrases naturelles, jamais de liste a puces, en te basant sur la conversation precedente.'}
+                    msgs_followup = [sys_msg_suivi] + contexte_recent
+                    reponse_suivi = ollama_client.chat(
+                        model=OLLAMA_MODEL,
+                        messages=msgs_followup,
+                        options={'temperature': 0.2, 'num_predict': 500},
+                    )
+                    content = reponse_suivi['message']['content'].strip()
+                    messages.append({'role': 'assistant', 'content': content})
+                    _session_messages[session_id].append({'role': 'assistant', 'content': content})
+                    for char in content:
+                        yield f"data: {json.dumps({'chunk': char})}\n\n"
+                    return
+                except Exception as e:
+                    print(f'[ADMIN] erreur suivi: {e}')
+
+
             while iteration < max_iterations:
                 iteration += 1
-
                 response = ollama_client.chat(
                     model=OLLAMA_MODEL,
                     messages=messages,
@@ -300,7 +372,12 @@ async def admin_chat_stream(request: AdminChatRequest):
                         break
 
 
-                    is_fake_tool_call = ('"name"' in content[:100] and ('"arguments"' in content[:200] or '"parameters"' in content[:200] or '"type":"function"' in content[:50] or content.strip().startswith('{')))
+                    noms_outils = [t["function"]["name"] for t in TOOLS]
+                    content_stripped = content.strip()
+                    is_fake_tool_call = (
+                        ('"name"' in content[:100] and ('"arguments"' in content[:200] or '"parameters"' in content[:200] or '"type":"function"' in content[:50] or content_stripped.startswith('{')))
+                        or any(content_stripped.startswith(n + "(") for n in noms_outils)
+                    )
                     if is_fake_tool_call and not had_tool_calls and iteration < max_iterations:
                         print(f"[ADMIN] faux tool call detecte, retry: {content[:100]!r}")
                         messages.append({"role": "user", "content": f"Tu as ecrit le JSON en texte au lieu d'utiliser le mecanisme d'appel d'outil. Refais exactement la meme action que tu viens de tenter, mais via le mecanisme natif d'appel d'outil (tool call), sans rien ecrire en texte."})
@@ -340,6 +417,7 @@ async def admin_chat_stream(request: AdminChatRequest):
                 last_tool_call = current_tool
 
                 messages.append({"role": "assistant", "content": "", "tool_calls": tool_calls})
+                _session_messages[session_id].append({"role": "assistant", "content": "", "tool_calls": tool_calls})
 
                 for tool_call in tool_calls:
                     fn_name = tool_call["function"]["name"]
@@ -366,22 +444,45 @@ async def admin_chat_stream(request: AdminChatRequest):
                         yield f"data: {json.dumps({'type': 'variant_form', 'article': article_data})}\n\n"
                         return
 
+                    # Validation statut commande - bloque les hallucinations
+                    STATUTS_VALIDES = ["en_attente", "payée", "expédiée", "livrée", "annulée"]
+                    if fn_name in ("modifier_statut_commande", "modifier_statut_batch"):
+                        statut_demande = fn_args.get("nouveau_statut", "")
+                        if statut_demande not in STATUTS_VALIDES:
+                            print(f"[ADMIN] statut invalide detecte: {statut_demande!r}, action bloquee")
+                            messages.append({"role": "tool", "content": f"ERREUR : '{statut_demande}' n'est pas un statut valide. Cette action n'a pas ete executee. Si la question d'origine ne concernait pas un changement de statut de commande, reponds directement en texte avec les donnees deja fournies dans le contexte, sans appeler aucun outil.", "name": fn_name})
+                            continue
+
                     # Blocage suppression non demandee
                     if fn_name == "supprimer_article" and not any(w in " ".join([m.get("content","") for m in messages if m["role"]=="user"]).lower() for w in ["supprim", "efface", "enleve", "retire", "delete"]):
                         messages.append({"role": "tool", "content": "INTERDIT : supprimer_article ne peut pas etre appele automatiquement. Stop.", "name": fn_name})
                         continue
 
-                    # Correction automatique prix
+                    # Correction automatique prix - on recalcule TOUJOURS nous-memes depuis la question d'origine
                     if fn_name == "modifier_prix" and "nouveau_prix" in fn_args:
-                        nouveau_prix = fn_args["nouveau_prix"]
-                        print(f"[DEBUG] nouveau_prix={nouveau_prix}, test < 30 = {nouveau_prix < 30}")
-                        if nouveau_prix < 30:
-                            id_shoes = fn_args.get("id_shoes")
+                        id_shoes = fn_args.get("id_shoes")
+                        q_lower = question.lower()
+                        match_montant = re.search(r"(\d+[.,]?\d*)\s*(?:€|euros?)", q_lower)
+                        montant = float(match_montant.group(1).replace(",", ".")) if match_montant else None
+
+                        mots_hausse = ["augment", "monte", "hausse"]
+                        mots_baisse = ["baisse", "diminu", "reduit", "réduit"]
+                        mots_fixe = ["passe", "mets", "met le prix", "fixe le prix", "change le prix a", "change le prix à"]
+
+                        is_hausse = any(w in q_lower for w in mots_hausse)
+                        is_baisse = any(w in q_lower for w in mots_baisse)
+                        is_fixe = any(w in q_lower for w in mots_fixe)
+
+                        if montant is not None and (is_hausse or is_baisse):
                             detail = await call_php_action("detail_article", {"id_shoes": id_shoes})
                             if detail.get("success") and detail.get("data"):
                                 prix_actuel = float(detail["data"].get("Prix", 0))
-                                fn_args["nouveau_prix"] = round(prix_actuel + nouveau_prix, 2)
-                                print(f"[PRIX] Correction: {nouveau_prix} + {prix_actuel} = {fn_args['nouveau_prix']}")
+                                delta = montant if is_hausse else -montant
+                                fn_args["nouveau_prix"] = round(prix_actuel + delta, 2)
+                                print(f"[PRIX] Recalcul depuis question: {prix_actuel} {'+' if is_hausse else '-'} {montant} = {fn_args['nouveau_prix']}")
+                        elif montant is not None and is_fixe:
+                            fn_args["nouveau_prix"] = montant
+                            print(f"[PRIX] Prix fixe depuis question: {montant}")
 
                     status_text = ACTION_STATUS_TEXTS.get(fn_name, "Je traite la demande…")
                     yield f"data: {json.dumps({'type': 'action_start', 'action': fn_name, 'status_text': status_text})}\n\n"
@@ -390,6 +491,30 @@ async def admin_chat_stream(request: AdminChatRequest):
                     formatted = format_result_for_llm(fn_name, result)
 
                     yield f"data: {json.dumps({'type': 'action_result', 'action': fn_name, 'result': result})}\n\n"
+
+                    # Pour les outils de detail/lecture precise, formulation dediee sans le system prompt complet
+                    ACTIONS_FORMULATION_DEDIEE = ["detail_commande", "detail_article", "rechercher_article", "rechercher_client", "commandes_client"]
+                    if fn_name in ACTIONS_FORMULATION_DEDIEE and result.get("success"):
+                        try:
+                            reponse_dediee = ollama_client.chat(
+                                model=OLLAMA_MODEL,
+                                messages=[
+                                    {"role": "system", "content": "Tu es un assistant admin. Reponds en francais en UNE OU DEUX PHRASES NATURELLES (jamais de liste a puces, jamais de markdown), en te basant UNIQUEMENT sur les donnees fournies. Cite les details specifiques demandes (articles, noms, tailles, couleurs, etc.) directement dans la phrase."},
+                                    {"role": "user", "content": question},
+                                    {"role": "tool", "content": formatted, "name": fn_name},
+                                ],
+                                options={"temperature": 0.2, "num_predict": 500},
+                            )
+                            content = reponse_dediee["message"]["content"].strip()
+                            messages.append({"role": "assistant", "content": content})
+                            _session_messages[session_id].append({"role": "tool", "content": formatted, "name": fn_name})
+                            _session_messages[session_id].append({"role": "assistant", "content": content})
+                            for char in content:
+                                yield f"data: {json.dumps({'chunk': char})}\n\n"
+                            return
+                        except Exception as e:
+                            print(f"[ADMIN] erreur formulation dediee: {e}")
+
 
                     # Stop apres toute action de modification reussie
                     ACTIONS_STOP_APRES_SUCCES = ["modifier_prix", "modifier_prix_batch", "modifier_stock", "modifier_article", "modifier_statut_commande", "modifier_statut_batch", "supprimer_article", "supprimer_commentaire", "supprimer_commentaires_article", "ajouter_article", "arrondir_prix"]
@@ -403,6 +528,7 @@ async def admin_chat_stream(request: AdminChatRequest):
 
 
                     messages.append({"role": "tool", "content": formatted, "name": fn_name})
+                    _session_messages[session_id].append({"role": "tool", "content": formatted, "name": fn_name})
 
                     if fn_name in ['ajouter_article', 'modifier_article', 'supprimer_article']:
                         article_id = result.get('data', {}).get('id_shoes') if result.get('data') else None
