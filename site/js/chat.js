@@ -1,10 +1,17 @@
 // js/chat.js
-const API_URL = "http://172.27.30.30:8000";
+const API_URL = "http://localhost:8000";
 
 let conversationHistory = JSON.parse(
   sessionStorage.getItem("chatHistory") || "[]",
 );
-let sessionId = sessionStorage.getItem("chatSessionId") || ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+let sessionId =
+  sessionStorage.getItem("chatSessionId") ||
+  ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+    (
+      c ^
+      (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+    ).toString(16),
+  );
 sessionStorage.setItem("chatSessionId", sessionId);
 
 // ID de session BDD (null si non connecté ou pas encore créée)
@@ -608,6 +615,17 @@ async function _sendMessageImpl(text) {
       if (!typingRemoved) typing.remove();
       return;
     }
+    if (bubble && message) {
+      const ttsRow = document.createElement("div");
+      ttsRow.className = "chat-tts-row";
+      ttsRow.appendChild(createTTSButton(message));
+      bubble
+        .closest(".chat-msg")
+        ?.insertBefore(
+          ttsRow,
+          bubble.closest(".chat-msg").querySelector(".chat-time"),
+        );
+    }
 
     // ✅ Appliquer la langue AVANT d'afficher les cartes — les traductions sont prêtes
     if (langueRecue) await _mettreAjourLangue(langueRecue);
@@ -873,6 +891,18 @@ async function sendImageWithText(file, text) {
       return;
     }
 
+    if (bubble && message) {
+      const ttsRow = document.createElement("div");
+      ttsRow.className = "chat-tts-row";
+      ttsRow.appendChild(createTTSButton(message));
+      bubble
+        .closest(".chat-msg")
+        ?.insertBefore(
+          ttsRow,
+          bubble.closest(".chat-msg").querySelector(".chat-time"),
+        );
+    }
+
     // ✅ Appliquer la langue AVANT d'afficher les cartes
     if (langueRecue) await _mettreAjourLangue(langueRecue);
 
@@ -936,7 +966,12 @@ async function sendImageWithText(file, text) {
 
 function resetConversation() {
   conversationHistory = [];
-  sessionId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+  sessionId = ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+    (
+      c ^
+      (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+    ).toString(16),
+  );
   dbSessionId = null;
   currentLangue = "fr";
   sessionStorage.removeItem("chatHistory");
@@ -988,9 +1023,23 @@ function appendBotMessageText(text) {
   const container = document.getElementById("messages");
   const div = document.createElement("div");
   div.className = "chat-msg bot";
-  div.innerHTML = `
-    <div class="chat-bubble">${escapeHtml(text)}</div>
-    <div class="chat-time" data-ts="${Date.now()}">${_formatTime(Date.now())}</div>`;
+
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+  bubble.textContent = text; // escapeHtml non nécessaire, textContent est safe
+
+  const time = document.createElement("div");
+  time.className = "chat-time";
+  time.dataset.ts = Date.now();
+  time.textContent = _formatTime(Date.now());
+
+  const ttsRow = document.createElement("div");
+  ttsRow.className = "chat-tts-row";
+  ttsRow.appendChild(createTTSButton(text));
+
+  div.appendChild(bubble);
+  div.appendChild(ttsRow);
+  div.appendChild(time);
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
@@ -2339,7 +2388,12 @@ function newConversation() {
   sessionStorage.removeItem("chatLangue");
   sessionStorage.removeItem("dbSessionId");
   conversationHistory = [];
-  sessionId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+  sessionId = ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+    (
+      c ^
+      (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+    ).toString(16),
+  );
   sessionStorage.removeItem("chatHistory");
   sessionStorage.setItem("chatSessionId", sessionId);
   document.getElementById("messages").innerHTML = "";

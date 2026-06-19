@@ -2834,3 +2834,50 @@ nav {
   background: var(--border);
   color: var(--dark);
 }
+
+/* ══════════════════════════════════════
+   BOUTON TTS (Text-to-Speech)
+══════════════════════════════════════ */
+.chat-tts-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 4px;
+  margin-bottom: 1px;
+}
+
+.chat-tts-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  opacity: 0.45;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+  line-height: 1;
+  color: inherit;
+}
+
+.chat-tts-btn:hover {
+  opacity: 1;
+  background: var(--border);
+}
+
+.chat-tts-btn.tts-playing {
+  opacity: 1;
+  background: #fdf3ec;
+  color: var(--accent);
+  animation: tts-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tts-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}

@@ -7,6 +7,9 @@ let isListening = false;
 let recordingStream = null;
 let isCancelled = false; // ✅ Flag d'annulation
 
+let _ttsUtterance = null; // utterance en cours
+let _ttsSpeakingBtn = null; // bouton actif
+
 function voiceSupported() {
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
@@ -304,3 +307,86 @@ document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("voice-btn");
   if (btn && voiceSupported()) btn.style.display = "flex";
 });
+
+/**
+ * Lance ou stoppe la lecture TTS d'un texte.
+ * @param {string} text   - Texte à lire
+ * @param {HTMLElement} btn - Bouton qui a déclenché l'action
+ */
+function toggleTTS(text, btn) {
+  // Si on clique sur le bouton déjà actif → stop
+  if (_ttsSpeakingBtn === btn && speechSynthesis.speaking) {
+    stopTTS();
+    return;
+  }
+
+  // Stopper toute lecture précédente
+  stopTTS();
+
+  _ttsUtterance = new SpeechSynthesisUtterance(text);
+  _ttsUtterance.lang = _ttsLangCode(currentLangue);
+  _ttsUtterance.rate = 1;
+  _ttsUtterance.pitch = 1;
+
+  // État "en lecture"
+  _ttsSpeakingBtn = btn;
+  btn.textContent = "⏹️";
+  btn.title = "Arrêter la lecture";
+  btn.classList.add("tts-playing");
+
+  _ttsUtterance.onend = () => _resetTTSBtn(btn);
+  _ttsUtterance.onerror = () => _resetTTSBtn(btn);
+
+  speechSynthesis.speak(_ttsUtterance);
+}
+
+function stopTTS() {
+  if (speechSynthesis.speaking) speechSynthesis.cancel();
+  if (_ttsSpeakingBtn) _resetTTSBtn(_ttsSpeakingBtn);
+  _ttsUtterance = null;
+  _ttsSpeakingBtn = null;
+}
+
+function _resetTTSBtn(btn) {
+  if (!btn) return;
+  btn.textContent = "🔊";
+  btn.title = "Lire à voix haute";
+  btn.classList.remove("tts-playing");
+  if (_ttsSpeakingBtn === btn) {
+    _ttsSpeakingBtn = null;
+    _ttsUtterance = null;
+  }
+}
+
+/** Convertit la langue interne (ex: "fr", "en", "es") en BCP-47 */
+function _ttsLangCode(langue) {
+  const lang =
+    langue || (typeof currentLangue !== "undefined" ? currentLangue : "fr");
+  const map = {
+    fr: "fr-FR",
+    en: "en-US",
+    es: "es-ES",
+    de: "de-DE",
+    it: "it-IT",
+    pt: "pt-PT",
+    nl: "nl-NL",
+    ar: "ar-SA",
+    zh: "zh-CN",
+    ja: "ja-JP",
+    ko: "ko-KR",
+    ru: "ru-RU",
+  };
+  return map[lang] || "fr-FR";
+}
+
+/** Crée et retourne le bouton TTS à injecter dans une bulle bot */
+function createTTSButton(text) {
+  const btn = document.createElement("button");
+  btn.className = "chat-tts-btn";
+  btn.textContent = "🔊";
+  btn.title = "Lire à voix haute";
+  btn.type = "button";
+  btn.setAttribute("aria-label", "Lire ce message à voix haute");
+  btn.onclick = () => toggleTTS(text, btn);
+  return btn;
+}
