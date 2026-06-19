@@ -1,0 +1,180 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: pairia-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: e_commmerce
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      args:
+        HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+        HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+        NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
+    container_name: pairia-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+      - vendor:/var/www/html/vendor
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: e_commmerce
+      ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+      NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./ia
+      args:
+        HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+        HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+        NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
+    container_name: pairia-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ia:/app
+      - qdrant_data:/app/qdrant_db
+      - ./images:/app/images
+      - ./ia/modele_intention:/modele_intention
+      - huggingface_cache:/root/.cache/huggingface
+    environment:
+      MYSQL_HOST: db
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: e_commmerce
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      OLLAMA_HOST: http://ollama:11434
+      ADMIN_OLLAMA_MODEL: llama3.1:latest
+      MODEL_DIR: /modele_intention
+      ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+      NO_PROXY: localhost,127.0.0.1,ollama,qdrant,db,172.16.0.0/12,172.27.*,192.168.0.0/16
+      no_proxy: localhost,127.0.0.1,ollama,qdrant,db,172.16.0.0/12,172.27.*,192.168.0.0/16
+      REQUESTS_CA_BUNDLE: ""
+      CURL_CA_BUNDLE: ""
+      PYTHONHTTPSVERIFY: "0"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    depends_on:
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      ollama:
+        condition: service_started
+
+  admin-api:
+    build:
+      context: ./ia
+      dockerfile: dockerfile.admin
+      args:
+        HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+        HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+        NO_PROXY: localhost,127.0.0.1,172.27.*,192.*
+    container_name: pairia-admin-api
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ia:/app
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      ADMIN_OLLAMA_MODEL: llama3.1:latest
+      ADMIN_ACTIONS_URL: http://web/admin/includes/admin_actions.php
+      ADMIN_ACTION_TOKEN: ${ADMIN_ACTION_TOKEN}
+      CLIENT_API_URL: http://api:8000
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+      NO_PROXY: localhost,127.0.0.1,ollama,qdrant,db,web,172.16.0.0/12,172.27.*,192.168.0.0/16
+      no_proxy: localhost,127.0.0.1,ollama,qdrant,db,web,172.16.0.0/12,172.27.*,192.168.0.0/16
+    depends_on:
+      ollama:
+        condition: service_started
+      web:
+        condition: service_started
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: pairia-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  ollama:
+    image: ollama/ollama:0.3.14
+    container_name: pairia-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      OLLAMA_DEBUG: "true"
+      OLLAMA_INSECURE: "true"
+      https_proxy: http://proxy.mtp.supportlabs.dell:80
+      HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
+      http_proxy: http://proxy.mtp.supportlabs.dell:80
+      HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
+      no_proxy: localhost,127.0.0.1,172.27.*,192.*
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: pairia-phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+  qdrant_data:
+  ollama_models:
+  modele_intention:
+  vendor:
+  huggingface_cache:

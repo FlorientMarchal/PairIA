@@ -39,13 +39,12 @@ require_once 'includes/bd.php';
 
 <script src="js/global.js"></script>
 <script src="js/resizer.js"></script>
+<script src="js/voice.js"></script>  
 <script src="js/chat.js"></script>
-<script src="js/message-edit.js"></script> 
+<script src="js/message-edit.js"></script>
 <script src="js/image_search.js"></script>
-<script src="js/voice.js"></script>
 <script src="js/spa.js"></script>
 <script src="js/comments.js" defer></script>
 <script src="js/chat-review.js"></script>
-
 </body>
 </html>

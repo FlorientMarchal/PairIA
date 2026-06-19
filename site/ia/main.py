@@ -36,7 +36,7 @@ app.add_middleware(
 )
 
 print("Chargement du modèle Whisper...")
-whisper_model = whisper.load_model("small")
+whisper_model = whisper.load_model("small", download_root="/app/models/whisper")
 print("Whisper prêt ✓")
 
 _VEC_PREFIX = "pairia_vec_"

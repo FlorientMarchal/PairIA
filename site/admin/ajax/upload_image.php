@@ -11,7 +11,7 @@ if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
 
 $file     = $_FILES['image'];
 $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-$allowed  = ['jpg', 'jpeg', 'png', 'webp', 'avif'];
+$allowed  = ['jpg', 'jpeg', 'jfif', 'png', 'webp', 'avif'];
 
 if (!in_array($ext, $allowed)) {
     echo json_encode(['success' => false, 'message' => 'Format non autorisé. Utilisez JPG, PNG, WEBP ou AVIF.']);
