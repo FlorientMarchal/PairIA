@@ -56,3 +56,5 @@ ia/dockerfile
 .env
 init.sql
 modele_intention/
+
+ia/models/
