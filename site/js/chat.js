@@ -618,7 +618,9 @@ async function _sendMessageImpl(text) {
     if (bubble && message) {
       const ttsRow = document.createElement("div");
       ttsRow.className = "chat-tts-row";
-      ttsRow.appendChild(createTTSButton(message));
+      ttsRow.appendChild(
+        createTTSButton(message, langueRecue || currentLangue),
+      );
       bubble
         .closest(".chat-msg")
         ?.insertBefore(
@@ -894,7 +896,9 @@ async function sendImageWithText(file, text) {
     if (bubble && message) {
       const ttsRow = document.createElement("div");
       ttsRow.className = "chat-tts-row";
-      ttsRow.appendChild(createTTSButton(message));
+      ttsRow.appendChild(
+        createTTSButton(message, langueRecue || currentLangue),
+      );
       bubble
         .closest(".chat-msg")
         ?.insertBefore(
@@ -1035,7 +1039,7 @@ function appendBotMessageText(text) {
 
   const ttsRow = document.createElement("div");
   ttsRow.className = "chat-tts-row";
-  ttsRow.appendChild(createTTSButton(text));
+  ttsRow.appendChild(createTTSButton(text, currentLangue));
 
   div.appendChild(bubble);
   div.appendChild(ttsRow);

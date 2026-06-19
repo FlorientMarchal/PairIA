@@ -313,22 +313,20 @@ document.addEventListener("DOMContentLoaded", () => {
  * @param {string} text   - Texte à lire
  * @param {HTMLElement} btn - Bouton qui a déclenché l'action
  */
+
 function toggleTTS(text, btn) {
-  // Si on clique sur le bouton déjà actif → stop
   if (_ttsSpeakingBtn === btn && speechSynthesis.speaking) {
     stopTTS();
     return;
   }
-
-  // Stopper toute lecture précédente
   stopTTS();
 
   _ttsUtterance = new SpeechSynthesisUtterance(text);
-  _ttsUtterance.lang = _ttsLangCode(currentLangue);
+  // ← Lit la langue stockée sur le bouton, pas currentLangue global
+  _ttsUtterance.lang = _ttsLangCode(btn.dataset.langue || currentLangue);
   _ttsUtterance.rate = 1;
   _ttsUtterance.pitch = 1;
 
-  // État "en lecture"
   _ttsSpeakingBtn = btn;
   btn.textContent = "⏹️";
   btn.title = "Arrêter la lecture";
@@ -380,13 +378,15 @@ function _ttsLangCode(langue) {
 }
 
 /** Crée et retourne le bouton TTS à injecter dans une bulle bot */
-function createTTSButton(text) {
+function createTTSButton(text, langue) {
   const btn = document.createElement("button");
   btn.className = "chat-tts-btn";
   btn.textContent = "🔊";
   btn.title = "Lire à voix haute";
   btn.type = "button";
   btn.setAttribute("aria-label", "Lire ce message à voix haute");
+  // Stocker la langue détectée au moment de la création du bouton
+  btn.dataset.langue = langue || currentLangue || "fr";
   btn.onclick = () => toggleTTS(text, btn);
   return btn;
 }
