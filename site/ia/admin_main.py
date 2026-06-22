@@ -52,7 +52,7 @@ TOOLS = [
     {"type":"function","function":{"name":"modifier_statut_commande","description":"Modifier le statut d'UNE SEULE commande identifiee par son ID. Utilise CET outil (pas modifier_statut_batch) quand il s'agit d'une seule commande.","parameters":{"type":"object","properties":{"id_commande":{"type":"integer"},"nouveau_statut":{"type":"string","description":"en_attente, payée, expédiée, livrée, annulée"}},"required":["id_commande","nouveau_statut"]}}},
     {"type":"function","function":{"name":"modifier_statut_batch","description":"Modifier le statut de PLUSIEURS commandes en une fois","parameters":{"type":"object","properties":{"ids":{"type":"array","items":{"type":"integer"},"description":"Liste des IDs de commandes"},"nouveau_statut":{"type":"string"}},"required":["ids","nouveau_statut"]}}},
     {"type":"function","function":{"name":"modifier_prix","description":"Modifier le prix d'UN article. nouveau_prix est le NOUVEAU prix FINAL en euros, pas une différence.","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"},"nouveau_prix":{"type":"number","description":"Le nouveau prix FINAL de l'article en euros. Exemple: si prix actuel=120€ et hausse de 5€, envoyer 125."}},"required":["id_shoes","nouveau_prix"]}}},
-    {"type":"function","function":{"name":"modifier_stock","description":"Modifier le stock d'un article","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"},"nouveau_stock":{"type":"integer"}},"required":["id_shoes","nouveau_stock"]}}},
+    {"type":"function","function":{"name":"lister_variantes","description":"OBLIGATOIRE pour toute demande concernant le STOCK d'un article (voir, modifier, gerer le stock). Affiche les variantes (taille, couleur, stock) dans une carte interactive. N'utilise JAMAIS modifier_article ou un autre outil pour le stock - utilise TOUJOURS lister_variantes.","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"}},"required":["id_shoes"]}}},
     {"type":"function","function":{"name":"modifier_prix_batch","description":"Modifier les prix d'un groupe d'articles","parameters":{"type":"object","properties":{"filtre_type":{"type":"string","description":"categorie, marque, genre, ou tous"},"filtre_valeur":{"type":"string","description":"Valeur du filtre (ignoré si tous)"},"type_modif":{"type":"string","description":"pourcentage, fixe, ou nouveau_prix"},"valeur":{"type":"number","description":"Valeur: pourcentage (+10 = +10%), montant fixe (+5 = +5€, -5 = -5€), ou nouveau prix"}},"required":["filtre_type","type_modif","valeur"]}}},
     {"type":"function","function":{"name":"modifier_article","description":"Modifier un ou plusieurs champs d'un article","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"},"nom":{"type":"string"},"categorie":{"type":"string"},"marque":{"type":"string"},"genre":{"type":"string"},"Prix":{"type":"number"},"description":{"type":"string"},"caracteristiques":{"type":"string"},"materiaux":{"type":"string"},"usage":{"type":"string"},"mots_cles":{"type":"string"},"url_image":{"type":"string"}},"required":["id_shoes"]}}},
     {"type":"function","function":{"name":"ajouter_article","description":"Ajouter un nouvel article au catalogue","parameters":{"type":"object","properties":{"nom":{"type":"string"},"categorie":{"type":"string"},"marque":{"type":"string"},"genre":{"type":"string","description":"Mixte, Homme, ou Femme"},"prix":{"type":"number"},"description":{"type":"string"},"caracteristiques":{"type":"string"},"materiaux":{"type":"string"},"usage":{"type":"string"},"mots_cles":{"type":"string"},"url_image":{"type":"string"},"variants":{"type":"array","items":{"type":"object","properties":{"taille":{"type":"integer"},"couleur":{"type":"string"},"stock":{"type":"integer"}}}}},"required":["nom","categorie","marque","prix"]}}},
@@ -320,6 +320,45 @@ async def admin_chat_stream(request: AdminChatRequest):
         except Exception as e:
             print(f"[ADMIN] erreur creation directe: {e}")
 
+
+    # Court-circuit : modification directe du stock des variantes depuis le formulaire JS
+    if question.startswith("Modifie le stock des variantes :"):
+        try:
+            import re as _re_stock
+            m2 = _re_stock.search(r"variantes : (\[.*\])", question)
+            if m2:
+                variantes_payload = json.loads(m2.group(1))
+                async def _direct_stock():
+                    status_text = "Je mets a jour le stock…"
+                    out = []
+                    out.append(f"data: {json.dumps({'type': 'thinking'})}\n\n")
+                    out.append(f"data: {json.dumps({'type': 'action_start', 'action': 'modifier_stock_variantes', 'status_text': status_text})}\n\n")
+                    result = await call_php_action("modifier_stock_variantes", {"variantes": variantes_payload})
+                    out.append(f"data: {json.dumps({'type': 'action_result', 'action': 'modifier_stock_variantes', 'result': result})}\n\n")
+                    if result.get("success"):
+                        article_id = result.get('data', {}).get('id_shoes') if result.get('data') else None
+                        if article_id:
+                            run_reindex(article_id)
+                        content = "Le stock des variantes a ete mis a jour."
+                    else:
+                        content = f"Erreur lors de la mise a jour du stock : {result.get('message', 'inconnue')}"
+                    _session_messages[session_id].append({"role": "user", "content": "Stock mis a jour."})
+                    _session_messages[session_id].append({"role": "assistant", "content": content})
+                    for char in content:
+                        out.append(f"data: {json.dumps({'chunk': char})}\n\n")
+                    out.append("data: [DONE]\n\n")
+                    return out
+                events2 = await _direct_stock()
+                async def _stream_direct2():
+                    for e in events2:
+                        yield e
+                return StreamingResponse(_stream_direct2(), media_type="text/event-stream")
+        except Exception as e:
+            print(f"[ADMIN] erreur modification stock directe: {e}")
+
+        except Exception as e:
+            print(f"[ADMIN] erreur creation directe: {e}")
+
     messages.append({"role": "user", "content": question})
 
     if session_id not in _session_messages:
@@ -555,6 +594,16 @@ async def admin_chat_stream(request: AdminChatRequest):
                     formatted = format_result_for_llm(fn_name, result)
 
                     yield f"data: {json.dumps({'type': 'action_result', 'action': fn_name, 'result': result})}\n\n"
+                    # Outil lister_variantes -> carte interactive de gestion du stock
+                    if fn_name == "lister_variantes" and result.get("success"):
+                        data_variantes = result.get("data", {})
+                        yield f"data: {json.dumps({'type': 'stock_form', 'nom': data_variantes.get('nom'), 'id_shoes': fn_args.get('id_shoes'), 'variantes': data_variantes.get('variantes', [])})}\n\n"
+                        content = f"Voici les variantes de {data_variantes.get('nom', 'cet article')}."
+                        messages.append({"role": "assistant", "content": content})
+                        _session_messages[session_id].append({"role": "assistant", "content": content})
+                        for char in content:
+                            yield f"data: {json.dumps({'chunk': char})}\n\n"
+                        return
 
                     # Pour les outils de detail/lecture precise, formulation dediee sans le system prompt complet
                     ACTIONS_FORMULATION_DEDIEE = ["detail_commande", "detail_article", "rechercher_article", "rechercher_client", "commandes_client"]

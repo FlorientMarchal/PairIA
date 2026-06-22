@@ -455,6 +455,8 @@ function dispatch_action(string $action, array $params = []): string {
         'modifier_statut_batch'         => 'admin_modifier_statut_batch',
         'lister_articles'               => 'admin_lister_articles',
         'lister_articles_stock_faible'  => 'admin_lister_articles_stock_faible',
+        'lister_variantes'              => 'admin_lister_variantes',
+        'modifier_stock_variantes'      => 'admin_modifier_stock_variantes',
         'rechercher_article'            => 'admin_rechercher_article',
         'modifier_prix'                 => 'admin_modifier_prix',
         'modifier_stock'                => 'admin_modifier_stock',
@@ -554,4 +556,40 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
     header('Content-Type: application/json; charset=utf-8');
     echo dispatch_action($action, $params);
     exit;
+}
+function admin_lister_variantes(int $id_shoes): array {
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT id_variant, taille, couleur, stock FROM size_color WHERE id_shoes = ? ORDER BY taille, couleur");
+    $stmt->execute([$id_shoes]);
+    $rows = $stmt->fetchAll();
+    $nom_stmt = $pdo->prepare("SELECT nom FROM articles WHERE id_shoes = ?");
+    $nom_stmt->execute([$id_shoes]);
+    $nom = $nom_stmt->fetchColumn();
+    if ($nom === false) return ["success" => false, "message" => "Article #$id_shoes introuvable.", "data" => null];
+    return ["success" => true, "message" => "Variantes de $nom recuperees.", "data" => ["nom" => $nom, "variantes" => $rows]];
+}
+
+function admin_modifier_stock_variantes(array $variantes): array {
+    global $pdo;
+    if (empty($variantes)) return ["success" => false, "message" => "Aucune variante fournie.", "data" => null];
+    $id_shoes = null;
+    foreach ($variantes as $v) {
+        $id_variant = (int)($v["id_variant"] ?? 0);
+        $nouveau_stock = (int)($v["stock"] ?? -1);
+        if ($id_variant <= 0 || $nouveau_stock < 0) continue;
+        $stmt = $pdo->prepare("UPDATE size_color SET stock = ? WHERE id_variant = ?");
+        $stmt->execute([$nouveau_stock, $id_variant]);
+        if ($id_shoes === null) {
+            $s = $pdo->prepare("SELECT id_shoes FROM size_color WHERE id_variant = ?");
+            $s->execute([$id_variant]);
+            $id_shoes = $s->fetchColumn();
+        }
+    }
+    if ($id_shoes) {
+        $total = $pdo->prepare("SELECT COALESCE(SUM(stock),0) FROM size_color WHERE id_shoes = ?");
+        $total->execute([$id_shoes]);
+        $nouveau_total = $total->fetchColumn();
+        $pdo->prepare("UPDATE articles SET stock_total = ? WHERE id_shoes = ?")->execute([$nouveau_total, $id_shoes]);
+    }
+    return ["success" => true, "message" => count($variantes) . " variante(s) mise(s) a jour.", "data" => ["id_shoes" => $id_shoes]];
 }

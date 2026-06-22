@@ -116,8 +116,8 @@ services:
       CLIENT_API_URL: http://api:8000
       HTTP_PROXY: http://proxy.mtp.supportlabs.dell:80
       HTTPS_PROXY: http://proxy.mtp.supportlabs.dell:80
-      NO_PROXY: localhost,127.0.0.1,ollama,qdrant,db,web,172.16.0.0/12,172.27.*,192.168.0.0/16
-      no_proxy: localhost,127.0.0.1,ollama,qdrant,db,web,172.16.0.0/12,172.27.*,192.168.0.0/16
+      NO_PROXY: localhost,127.0.0.1,ollama,qdrant,db,web,api,172.16.0.0/12,172.27.*,192.168.0.0/16
+      no_proxy: localhost,127.0.0.1,ollama,qdrant,db,web,api,172.16.0.0/12,172.27.*,192.168.0.0/16
     depends_on:
       ollama:
         condition: service_started
