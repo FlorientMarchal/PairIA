@@ -58,3 +58,7 @@ init.sql
 modele_intention/
 
 ia/models/
+images/*.jfif
+images/*.jpg
+images/*.png
+images/*.webp
