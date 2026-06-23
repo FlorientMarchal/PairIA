@@ -65,7 +65,8 @@ def indexer_produits(article_id: int = None):
                 a.description, a.mots_cles, a.usage, a.caracteristiques,
                 a.materiaux, a.url_image,
                 GROUP_CONCAT(DISTINCT sc.taille  ORDER BY sc.taille  SEPARATOR ', ') AS tailles,
-                GROUP_CONCAT(DISTINCT sc.couleur ORDER BY sc.couleur SEPARATOR ', ') AS couleurs
+                GROUP_CONCAT(DISTINCT sc.couleur ORDER BY sc.couleur SEPARATOR ', ') AS couleurs,
+                COALESCE(SUM(sc.stock), 0) AS stock_total
             FROM articles a
             LEFT JOIN size_color sc ON sc.id_shoes = a.id_shoes
             WHERE a.id_shoes = %s
@@ -78,7 +79,8 @@ def indexer_produits(article_id: int = None):
                 a.description, a.mots_cles, a.usage, a.caracteristiques,
                 a.materiaux, a.url_image,
                 GROUP_CONCAT(DISTINCT sc.taille  ORDER BY sc.taille  SEPARATOR ', ') AS tailles,
-                GROUP_CONCAT(DISTINCT sc.couleur ORDER BY sc.couleur SEPARATOR ', ') AS couleurs
+                GROUP_CONCAT(DISTINCT sc.couleur ORDER BY sc.couleur SEPARATOR ', ') AS couleurs,
+                COALESCE(SUM(sc.stock), 0) AS stock_total
             FROM articles a
             LEFT JOIN size_color sc ON sc.id_shoes = a.id_shoes
             GROUP BY a.id_shoes
@@ -115,6 +117,8 @@ def indexer_produits(article_id: int = None):
             "caracteristiques": str(produit.get("caracteristiques") or ""),
             "materiaux":        str(produit.get("materiaux")   or ""),
             "mots_cles":        str(produit.get("mots_cles")   or ""),
+            "stock_total":      int(produit.get("stock_total") or 0),
+            "en_stock":         bool(int(produit.get("stock_total") or 0) > 0),
         }
 
         texte = (
@@ -128,7 +132,8 @@ def indexer_produits(article_id: int = None):
             f"{produit.get('description', '')} "
             f"Mots clés : {produit.get('mots_cles', '')}. "
             f"Tailles disponibles : {', '.join(tailles_list) or 'non précisé'}. "
-            f"Couleurs disponibles : {', '.join(couleurs_list) or 'non précisé'}."
+            f"Couleurs disponibles : {', '.join(couleurs_list) or 'non précisé'}. "
+            f"{'En stock' if int(produit.get('stock_total') or 0) > 0 else 'Rupture de stock'} ({produit.get('stock_total', 0)} unites disponibles)."
         )
 
         try:

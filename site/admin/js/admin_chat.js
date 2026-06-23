@@ -161,6 +161,10 @@ async function adminChatSend() {
             botBubble.querySelector(".achat-bubble").innerHTML = "Remplissez les informations de l'article :";
             console.log("[VARIANT_FORM] article reçu:", event.article);
             _showArticleForm(event.article);
+          } else if (event.type === "stock_form") {
+            if (!botBubble) botBubble = _createBotBubble();
+            botBubble.querySelector(".achat-bubble").innerHTML = "Gerez le stock par variante :";
+            _showStockForm(event.nom, event.id_shoes, event.variantes);
           } else if (event.chunk) {
             if (!botBubble) botBubble = _createBotBubble();
             botText += event.chunk;
@@ -272,7 +276,7 @@ function _updateActionBadge(wrapEl, action, result) {
     const section = window.location.hash.replace('#', '') || 'dashboard';
     if (['modifier_statut_commande','modifier_statut_batch','lister_commandes'].includes(action) && section === 'commandes') loadCommandes();
     console.log('[REFRESH] action:', action, 'section:', section);
-    if (['modifier_prix','modifier_stock','modifier_prix_batch','modifier_article','ajouter_article','supprimer_article','lister_articles','arrondir_prix'].includes(action) && section === 'catalogue') { console.log('[REFRESH] appel loadCatalogue'); loadCatalogue(); }
+    if (['modifier_prix','modifier_stock','modifier_stock_variantes','modifier_prix_batch','modifier_article','ajouter_article','supprimer_article','lister_articles','arrondir_prix'].includes(action) && section === 'catalogue') { console.log('[REFRESH] appel loadCatalogue'); loadCatalogue(); }
     if (['rechercher_client','commandes_client','lister_clients'].includes(action) && section === 'clients') loadClients();
     if (['supprimer_commentaire','supprimer_commentaires_article','lister_commentaires'].includes(action) && section === 'commentaires') loadCommentaires();
   } else {
@@ -629,4 +633,131 @@ function _validateArticleForm() {
   const varBubble = _createBotBubble();
   varBubble.querySelector(".achat-bubble").innerHTML = "Ajoutez les variantes (taille, couleur, stock) :";
   _showVariantForm(varBubble, articleData);
+}
+
+// ── Widget stock par variante ──────────────────────────────────────────────────
+function _showStockForm(nom, idShoes, variantes) {
+  const msgs = document.getElementById("achat-messages");
+  const wrap = document.createElement("div");
+  wrap.className = "achat-msg bot";
+
+  const rows = variantes.map((v, i) => `
+    <div class="variant-row" data-id-variant="${v.id_variant}">
+      <span style="flex:1;font-size:.8rem">Taille ${v.taille} — ${v.couleur}</span>
+      <input type="number" class="sf-stock" value="${v.stock}" min="0" style="flex:0 0 80px">
+    </div>
+  `).join('');
+
+  wrap.innerHTML = `<div class="achat-bubble">
+    <div class="variant-form" id="stock-form-${idShoes}">
+      <div class="variant-form-title">Stock — ${nom}</div>
+      <div class="variant-rows">
+        ${rows || '<div style="font-size:.8rem;opacity:.6">Aucune variante trouvée.</div>'}
+      </div>
+      <div class="variant-actions" style="margin-top:.8rem">
+        <button class="v-cancel" onclick="this.closest('.achat-msg').remove()">Annuler</button>
+        <button class="v-submit" onclick="_submitStockForm(${idShoes})">Enregistrer</button>
+      </div>
+    </div>
+  </div><div class="achat-time">${_now()}</div>`;
+  msgs.appendChild(wrap);
+  _scrollToBottom();
+}
+
+function _submitStockForm(idShoes) {
+  const form = document.getElementById(`stock-form-${idShoes}`);
+  const rows = form.querySelectorAll(".variant-row");
+  const variantes = [];
+  rows.forEach(row => {
+    const idVariant = parseInt(row.dataset.idVariant);
+    const stock = parseInt(row.querySelector(".sf-stock").value);
+    if (!isNaN(idVariant) && !isNaN(stock)) {
+      variantes.push({ id_variant: idVariant, stock: stock });
+    }
+  });
+
+  form.closest(".achat-msg").remove();
+
+  const msg = `Modifie le stock des variantes : ${JSON.stringify(variantes)}`;
+  _sendHiddenMessage(msg, `Mise a jour du stock pour ${variantes.length} variante(s)...`);
+}
+
+// ── Envoi d'un message technique avec affichage utilisateur different ─────────
+async function _sendHiddenMessage(technicalMsg, displayMsg) {
+  if (adminStreaming) return;
+  document.getElementById("achat-chips-wrap").style.display = "none";
+
+  const msgs = document.getElementById("achat-messages");
+  const userWrap = document.createElement("div");
+  userWrap.className = "achat-msg user";
+  userWrap.innerHTML = `<div class="achat-bubble"><span>${_escapeHtml(displayMsg)}</span></div><div class="achat-time">${_now()}</div>`;
+  msgs.appendChild(userWrap);
+  _scrollToBottom();
+
+  adminHistory.push({ role: "user", content: displayMsg });
+  _saveHistory();
+
+  const typingEl = _showTyping();
+  adminStreaming = true;
+
+  try {
+    const resp = await fetch(`${ADMIN_API_URL}/admin/chat/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question: technicalMsg,
+        session_id: ADMIN_SESSION_ID,
+        admin_id: window.ADMIN_ID || null,
+      }),
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    typingEl.remove();
+
+    let botBubble = null;
+    let botText = "";
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value).split("\n");
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (raw === "[DONE]") break;
+        try {
+          const event = JSON.parse(raw);
+          if (event.type === "thinking") {
+            if (!botBubble) botBubble = _createBotBubble();
+            botBubble.querySelector(".achat-bubble").innerHTML =
+                `<span style="color:rgba(255,255,255,.4);font-size:.82rem">Je réfléchis…</span>`;
+          } else if (event.type === "action_start") {
+            if (!botBubble) botBubble = _createBotBubble();
+            _appendActionBadge(botBubble, event.action, "running", event.status_text);
+          } else if (event.type === "action_result") {
+            if (!botBubble) botBubble = _createBotBubble();
+            _updateActionBadge(botBubble, event.action, event.result);
+          } else if (event.chunk) {
+            if (!botBubble) botBubble = _createBotBubble();
+            botText += event.chunk;
+            botBubble.querySelector(".achat-bubble").innerHTML = _formatBotText(botText);
+            _scrollToBottom();
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!botBubble && botText) botBubble = _createBotBubble();
+    adminHistory.push({ role: "assistant", content: botText || "✓" });
+    _saveHistory();
+
+  } catch (err) {
+    typingEl?.remove();
+    _renderAdminMessage("bot-error", "Impossible de contacter l'assistant.");
+    console.error("[AdminChat]", err);
+  } finally {
+    adminStreaming = false;
+  }
 }

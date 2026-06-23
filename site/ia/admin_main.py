@@ -46,12 +46,13 @@ TOOLS = [
     {"type":"function","function":{"name":"rechercher_client","description":"Rechercher un client par nom ou email","parameters":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}}},
     {"type":"function","function":{"name":"commandes_client","description":"Voir les commandes d'un client","parameters":{"type":"object","properties":{"id_client":{"type":"integer"}},"required":["id_client"]}}},
     {"type":"function","function":{"name":"top_articles","description":"Top des articles les plus vendus","parameters":{"type":"object","properties":{"limit":{"type":"integer"}}}}},
+    {"type":"function","function":{"name":"lister_articles_stock_faible","description":"Lister les articles avec un stock faible (sous le seuil)","parameters":{"type":"object","properties":{"seuil":{"type":"integer","description":"Seuil de stock, defaut 20"}}}}},
     {"type":"function","function":{"name":"stats_globales","description":"Statistiques globales de la boutique (CA, nb commandes, nb clients, etc.)","parameters":{"type":"object","properties":{}}}},
     {"type":"function","function":{"name":"ca_par_mois","description":"Chiffre d'affaires par mois sur 12 mois","parameters":{"type":"object","properties":{}}}},
-    {"type":"function","function":{"name":"modifier_statut_commande","description":"Modifier le statut d'UNE commande","parameters":{"type":"object","properties":{"id_commande":{"type":"integer"},"nouveau_statut":{"type":"string","description":"en_attente, payée, expédiée, livrée, annulée"}},"required":["id_commande","nouveau_statut"]}}},
+    {"type":"function","function":{"name":"modifier_statut_commande","description":"Modifier le statut d'UNE SEULE commande identifiee par son ID. Utilise CET outil (pas modifier_statut_batch) quand il s'agit d'une seule commande.","parameters":{"type":"object","properties":{"id_commande":{"type":"integer"},"nouveau_statut":{"type":"string","description":"en_attente, payée, expédiée, livrée, annulée"}},"required":["id_commande","nouveau_statut"]}}},
     {"type":"function","function":{"name":"modifier_statut_batch","description":"Modifier le statut de PLUSIEURS commandes en une fois","parameters":{"type":"object","properties":{"ids":{"type":"array","items":{"type":"integer"},"description":"Liste des IDs de commandes"},"nouveau_statut":{"type":"string"}},"required":["ids","nouveau_statut"]}}},
     {"type":"function","function":{"name":"modifier_prix","description":"Modifier le prix d'UN article. nouveau_prix est le NOUVEAU prix FINAL en euros, pas une différence.","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"},"nouveau_prix":{"type":"number","description":"Le nouveau prix FINAL de l'article en euros. Exemple: si prix actuel=120€ et hausse de 5€, envoyer 125."}},"required":["id_shoes","nouveau_prix"]}}},
-    {"type":"function","function":{"name":"modifier_stock","description":"Modifier le stock d'un article","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"},"nouveau_stock":{"type":"integer"}},"required":["id_shoes","nouveau_stock"]}}},
+    {"type":"function","function":{"name":"lister_variantes","description":"OBLIGATOIRE pour toute demande concernant le STOCK d'un article (voir, modifier, gerer le stock). Affiche les variantes (taille, couleur, stock) dans une carte interactive. N'utilise JAMAIS modifier_article ou un autre outil pour le stock - utilise TOUJOURS lister_variantes.","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"}},"required":["id_shoes"]}}},
     {"type":"function","function":{"name":"modifier_prix_batch","description":"Modifier les prix d'un groupe d'articles","parameters":{"type":"object","properties":{"filtre_type":{"type":"string","description":"categorie, marque, genre, ou tous"},"filtre_valeur":{"type":"string","description":"Valeur du filtre (ignoré si tous)"},"type_modif":{"type":"string","description":"pourcentage, fixe, ou nouveau_prix"},"valeur":{"type":"number","description":"Valeur: pourcentage (+10 = +10%), montant fixe (+5 = +5€, -5 = -5€), ou nouveau prix"}},"required":["filtre_type","type_modif","valeur"]}}},
     {"type":"function","function":{"name":"modifier_article","description":"Modifier un ou plusieurs champs d'un article","parameters":{"type":"object","properties":{"id_shoes":{"type":"integer"},"nom":{"type":"string"},"categorie":{"type":"string"},"marque":{"type":"string"},"genre":{"type":"string"},"Prix":{"type":"number"},"description":{"type":"string"},"caracteristiques":{"type":"string"},"materiaux":{"type":"string"},"usage":{"type":"string"},"mots_cles":{"type":"string"},"url_image":{"type":"string"}},"required":["id_shoes"]}}},
     {"type":"function","function":{"name":"ajouter_article","description":"Ajouter un nouvel article au catalogue","parameters":{"type":"object","properties":{"nom":{"type":"string"},"categorie":{"type":"string"},"marque":{"type":"string"},"genre":{"type":"string","description":"Mixte, Homme, ou Femme"},"prix":{"type":"number"},"description":{"type":"string"},"caracteristiques":{"type":"string"},"materiaux":{"type":"string"},"usage":{"type":"string"},"mots_cles":{"type":"string"},"url_image":{"type":"string"},"variants":{"type":"array","items":{"type":"object","properties":{"taille":{"type":"integer"},"couleur":{"type":"string"},"stock":{"type":"integer"}}}}},"required":["nom","categorie","marque","prix"]}}},
@@ -195,7 +196,7 @@ def format_result_for_llm(action: str, result: dict) -> str:
         return f"{msg}. ACTION TERMINEE AVEC SUCCES. Ne rappelle pas cet outil."
     if isinstance(data, list):
         if not data:
-            return "Aucun resultat."
+            return "Aucun resultat trouve pour cette recherche. Dis-le clairement a l'admin, par exemple : 'Il n'y a aucune commande en attente actuellement.'"
         lines = [f"{msg} ({len(data)} elements) :"]
         for item in data[:30]:
             lines.append("- " + " | ".join(f"{k}: {v}" for k, v in item.items()))
@@ -256,6 +257,21 @@ async def admin_chat_stream(request: AdminChatRequest):
         question = request.question
 
     # Si la question contient un nom d'article, injecte l'ID dans la question
+    # Si la question fait reference a "cette commande/cet article" sans ID, cherche le dernier ID mentionne dans l'historique
+    if any(w in question.lower() for w in ["cette commande", "cet article", "cette article"]) and "ID=" not in question:
+        import re as _re2
+        hist_pour_recherche = _session_messages.get(session_id, [])
+        for m in reversed(hist_pour_recherche):
+            txt = m.get("content", "")
+            match_id = _re2.search(r"commande\s*(?:n[uo°]*m?[eé]ro\s*|#\s*)?(\d+)", txt, _re2.IGNORECASE) if "commande" in question.lower() else _re2.search(r"article\s*(?:#|id\s*)?(\d+)", txt, _re2.IGNORECASE)
+            if match_id:
+                if "commande" in question.lower():
+                    question = question + f" (id_commande={match_id.group(1)})"
+                else:
+                    question = question + f" (id_shoes={match_id.group(1)})"
+                print(f"[REF] ID trouve dans historique: {match_id.group(1)}")
+                break
+
     mots_action_nom = ["supprim", "efface", "enleve", "retire", "delete", "augment", "diminu", "baisse", "monte", "passe", "modifi", "change", "stock"]
     if any(w in question.lower() for w in mots_action_nom):
         for line in context_data.split("\n"):
@@ -304,6 +320,45 @@ async def admin_chat_stream(request: AdminChatRequest):
         except Exception as e:
             print(f"[ADMIN] erreur creation directe: {e}")
 
+
+    # Court-circuit : modification directe du stock des variantes depuis le formulaire JS
+    if question.startswith("Modifie le stock des variantes :"):
+        try:
+            import re as _re_stock
+            m2 = _re_stock.search(r"variantes : (\[.*\])", question)
+            if m2:
+                variantes_payload = json.loads(m2.group(1))
+                async def _direct_stock():
+                    status_text = "Je mets a jour le stock…"
+                    out = []
+                    out.append(f"data: {json.dumps({'type': 'thinking'})}\n\n")
+                    out.append(f"data: {json.dumps({'type': 'action_start', 'action': 'modifier_stock_variantes', 'status_text': status_text})}\n\n")
+                    result = await call_php_action("modifier_stock_variantes", {"variantes": variantes_payload})
+                    out.append(f"data: {json.dumps({'type': 'action_result', 'action': 'modifier_stock_variantes', 'result': result})}\n\n")
+                    if result.get("success"):
+                        article_id = result.get('data', {}).get('id_shoes') if result.get('data') else None
+                        if article_id:
+                            run_reindex(article_id)
+                        content = "Le stock des variantes a ete mis a jour."
+                    else:
+                        content = f"Erreur lors de la mise a jour du stock : {result.get('message', 'inconnue')}"
+                    _session_messages[session_id].append({"role": "user", "content": "Stock mis a jour."})
+                    _session_messages[session_id].append({"role": "assistant", "content": content})
+                    for char in content:
+                        out.append(f"data: {json.dumps({'chunk': char})}\n\n")
+                    out.append("data: [DONE]\n\n")
+                    return out
+                events2 = await _direct_stock()
+                async def _stream_direct2():
+                    for e in events2:
+                        yield e
+                return StreamingResponse(_stream_direct2(), media_type="text/event-stream")
+        except Exception as e:
+            print(f"[ADMIN] erreur modification stock directe: {e}")
+
+        except Exception as e:
+            print(f"[ADMIN] erreur creation directe: {e}")
+
     messages.append({"role": "user", "content": question})
 
     if session_id not in _session_messages:
@@ -325,7 +380,9 @@ async def admin_chat_stream(request: AdminChatRequest):
             # Detection question de suivi
             mots_suivi = ['elle ', 'il ', 'lui ', ' ca ', 'ca ', 'cet article', 'cette commande', 'celui', 'celle']
             historique_recent = _session_messages.get(session_id, [])
-            est_suivi = (any(w in (' ' + question.lower() + ' ') for w in mots_suivi) and len(historique_recent) >= 2 and len(question) < 80)
+            mots_action_followup = ["passe", "modifi", "supprim", "ajout", "change", "augment", "diminu", "baisse", "monte", "efface", "enleve", "retire", "delete", "arrondi", "cree", "crée", "stock"]
+            est_question_action = any(w in question.lower() for w in mots_action_followup)
+            est_suivi = (any(w in (' ' + question.lower() + ' ') for w in mots_suivi) and len(historique_recent) >= 2 and len(question) < 80 and not est_question_action)
             if est_suivi:
                 try:
                     contexte_recent = historique_recent[-6:]
@@ -335,6 +392,7 @@ async def admin_chat_stream(request: AdminChatRequest):
                         model=OLLAMA_MODEL,
                         messages=msgs_followup,
                         options={'temperature': 0.2, 'num_predict': 500},
+                        keep_alive="30m",
                     )
                     content = reponse_suivi['message']['content'].strip()
                     messages.append({'role': 'assistant', 'content': content})
@@ -354,6 +412,7 @@ async def admin_chat_stream(request: AdminChatRequest):
                     tools=TOOLS,
                     stream=False,
                     options={"temperature": 0.1, "num_predict": 4096},
+                    keep_alive="30m",
                 )
 
                 msg = response["message"]
@@ -378,10 +437,36 @@ async def admin_chat_stream(request: AdminChatRequest):
                         ('"name"' in content[:100] and ('"arguments"' in content[:200] or '"parameters"' in content[:200] or '"type":"function"' in content[:50] or content_stripped.startswith('{')))
                         or any(content_stripped.startswith(n + "(") for n in noms_outils)
                     )
-                    if is_fake_tool_call and not had_tool_calls and iteration < max_iterations:
-                        print(f"[ADMIN] faux tool call detecte, retry: {content[:100]!r}")
-                        messages.append({"role": "user", "content": f"Tu as ecrit le JSON en texte au lieu d'utiliser le mecanisme d'appel d'outil. Refais exactement la meme action que tu viens de tenter, mais via le mecanisme natif d'appel d'outil (tool call), sans rien ecrire en texte."})
+                    if is_fake_tool_call:
+                        print(f"[ADMIN] contenu complet faux tool call: {content!r}")
+                        import re as _re3
+                        looks_like_statut_action = "modifier_statut" in content.lower()
+                        m_id_q = _re3.search(r'id_commande=(\d+)', question)
+                        m_statut_q = _re3.search(r'\b(en_attente|pay[eé]e|exp[eé]di[eé]e|livr[eé]e|annul[eé]e)\b', question, _re3.IGNORECASE)
+                        if looks_like_statut_action and m_id_q and m_statut_q:
+                            id_extrait = int(m_id_q.group(1))
+                            statut_brut = m_statut_q.group(1).lower()
+                            mapping_statuts = {"en_attente": "en_attente", "payee": "payée", "payée": "payée", "expediee": "expédiée", "expédiée": "expédiée", "livree": "livrée", "livrée": "livrée", "annulee": "annulée", "annulée": "annulée"}
+                            statut_extrait = mapping_statuts.get(statut_brut, statut_brut)
+                            print(f"[ADMIN] extraction directe depuis faux tool call: id={id_extrait}, statut={statut_extrait}")
+                            yield f"data: {json.dumps({'type': 'action_start', 'action': 'modifier_statut_commande', 'status_text': 'Je mets a jour le statut...'})}\n\n"
+                            result = await call_php_action("modifier_statut_commande", {"id_commande": id_extrait, "nouveau_statut": statut_extrait})
+                            yield f"data: {json.dumps({'type': 'action_result', 'action': 'modifier_statut_commande', 'result': result})}\n\n"
+                            if result.get("success"):
+                                content = f"Le statut de la commande #{id_extrait} a ete mis a jour : {statut_extrait}."
+                            else:
+                                content = f"Erreur : {result.get('message', 'inconnue')}"
+                            messages.append({"role": "assistant", "content": content})
+                            _session_messages[session_id].append({"role": "assistant", "content": content})
+                            for char in content:
+                                yield f"data: {json.dumps({'chunk': char})}\n\n"
+                            return
+                    if is_fake_tool_call and not had_tool_calls and iteration == 1:
+                        print(f"[ADMIN] faux tool call detecte, retry unique: {content[:100]!r}")
+                        messages.append({"role": "user", "content": f"Tu as ecrit le JSON en texte au lieu d'utiliser le mecanisme d'appel d'outil. Refais EXACTEMENT la meme action avec les memes parametres, via le mecanisme natif d'appel d'outil (tool call)."})
                         continue
+                    if is_fake_tool_call and iteration > 1:
+                        content = "Je n'ai pas pu executer cette action correctement. Pouvez-vous reformuler votre demande avec plus de precision (par exemple en donnant l'ID exact) ?"
                     if is_fake_tool_call:
                         content = ""
                     if not content and had_tool_calls:
@@ -435,6 +520,15 @@ async def admin_chat_stream(request: AdminChatRequest):
                             try: fn_args[k] = int(v)
                             except (ValueError, TypeError): pass
                         if k in float_params: fn_args[k] = float(v)
+                    # Cast special pour 'ids' (liste d'entiers, parfois envoyee comme string par le LLM)
+                    if "ids" in fn_args and not isinstance(fn_args["ids"], list):
+                        ids_val = fn_args["ids"]
+                        if isinstance(ids_val, str):
+                            try:
+                                ids_val = json.loads(ids_val)
+                            except Exception:
+                                ids_val = [int(x.strip()) for x in ids_val.strip("[]").split(",") if x.strip().isdigit()]
+                        fn_args["ids"] = [int(x) for x in ids_val] if isinstance(ids_val, list) else [int(ids_val)]
 
                     print(f"[DEBUG] fn_args avant interception: {fn_args}")
                     # Interception ajouter_article sans variantes
@@ -444,11 +538,22 @@ async def admin_chat_stream(request: AdminChatRequest):
                         yield f"data: {json.dumps({'type': 'variant_form', 'article': article_data})}\n\n"
                         return
 
-                    # Validation statut commande - bloque les hallucinations
+                    # Validation statut commande - normalise les variantes d'accord, bloque seulement le reste
                     STATUTS_VALIDES = ["en_attente", "payée", "expédiée", "livrée", "annulée"]
+                    NORMALISATION_STATUTS = {
+                        "en_attente": "en_attente", "attente": "en_attente",
+                        "payee": "payée", "payé": "payée", "paye": "payée", "payée": "payée",
+                        "expedie": "expédiée", "expédié": "expédiée", "expedié": "expédiée", "expediee": "expédiée", "expédiée": "expédiée",
+                        "livre": "livrée", "livré": "livrée", "livree": "livrée", "livrée": "livrée",
+                        "annule": "annulée", "annulé": "annulée", "annulee": "annulée", "annulée": "annulée",
+                    }
                     if fn_name in ("modifier_statut_commande", "modifier_statut_batch"):
                         statut_demande = fn_args.get("nouveau_statut", "")
-                        if statut_demande not in STATUTS_VALIDES:
+                        statut_normalise = NORMALISATION_STATUTS.get(statut_demande.lower().strip(), None)
+                        if statut_normalise:
+                            fn_args["nouveau_statut"] = statut_normalise
+                            print(f"[ADMIN] statut normalise: {statut_demande!r} -> {statut_normalise!r}")
+                        elif statut_demande not in STATUTS_VALIDES:
                             print(f"[ADMIN] statut invalide detecte: {statut_demande!r}, action bloquee")
                             messages.append({"role": "tool", "content": f"ERREUR : '{statut_demande}' n'est pas un statut valide. Cette action n'a pas ete executee. Si la question d'origine ne concernait pas un changement de statut de commande, reponds directement en texte avec les donnees deja fournies dans le contexte, sans appeler aucun outil.", "name": fn_name})
                             continue
@@ -491,6 +596,16 @@ async def admin_chat_stream(request: AdminChatRequest):
                     formatted = format_result_for_llm(fn_name, result)
 
                     yield f"data: {json.dumps({'type': 'action_result', 'action': fn_name, 'result': result})}\n\n"
+                    # Outil lister_variantes -> carte interactive de gestion du stock
+                    if fn_name == "lister_variantes" and result.get("success"):
+                        data_variantes = result.get("data", {})
+                        yield f"data: {json.dumps({'type': 'stock_form', 'nom': data_variantes.get('nom'), 'id_shoes': fn_args.get('id_shoes'), 'variantes': data_variantes.get('variantes', [])})}\n\n"
+                        content = f"Voici les variantes de {data_variantes.get('nom', 'cet article')}."
+                        messages.append({"role": "assistant", "content": content})
+                        _session_messages[session_id].append({"role": "assistant", "content": content})
+                        for char in content:
+                            yield f"data: {json.dumps({'chunk': char})}\n\n"
+                        return
 
                     # Pour les outils de detail/lecture precise, formulation dediee sans le system prompt complet
                     ACTIONS_FORMULATION_DEDIEE = ["detail_commande", "detail_article", "rechercher_article", "rechercher_client", "commandes_client"]
@@ -504,6 +619,7 @@ async def admin_chat_stream(request: AdminChatRequest):
                                     {"role": "tool", "content": formatted, "name": fn_name},
                                 ],
                                 options={"temperature": 0.2, "num_predict": 500},
+                                keep_alive="30m",
                             )
                             content = reponse_dediee["message"]["content"].strip()
                             messages.append({"role": "assistant", "content": content})

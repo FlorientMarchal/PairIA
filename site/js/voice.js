@@ -99,7 +99,10 @@ async function startVoice() {
     formData.append("file", audioBlob, "audio.webm");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/transcribe", {
+      const _voiceApiUrl = window.location.protocol === "https:"
+        ? `${window.location.protocol}//${window.location.host}/api`
+        : `http://${window.location.hostname}:8000`;
+      const response = await fetch(`${_voiceApiUrl}/transcribe`, {
         method: "POST",
         body: formData,
       });
