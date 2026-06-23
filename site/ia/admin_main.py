@@ -392,6 +392,7 @@ async def admin_chat_stream(request: AdminChatRequest):
                         model=OLLAMA_MODEL,
                         messages=msgs_followup,
                         options={'temperature': 0.2, 'num_predict': 500},
+                        keep_alive="30m",
                     )
                     content = reponse_suivi['message']['content'].strip()
                     messages.append({'role': 'assistant', 'content': content})
@@ -411,6 +412,7 @@ async def admin_chat_stream(request: AdminChatRequest):
                     tools=TOOLS,
                     stream=False,
                     options={"temperature": 0.1, "num_predict": 4096},
+                    keep_alive="30m",
                 )
 
                 msg = response["message"]
@@ -617,6 +619,7 @@ async def admin_chat_stream(request: AdminChatRequest):
                                     {"role": "tool", "content": formatted, "name": fn_name},
                                 ],
                                 options={"temperature": 0.2, "num_predict": 500},
+                                keep_alive="30m",
                             )
                             content = reponse_dediee["message"]["content"].strip()
                             messages.append({"role": "assistant", "content": content})
