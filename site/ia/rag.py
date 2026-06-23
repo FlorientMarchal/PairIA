@@ -1110,30 +1110,118 @@ def get_response_stream(
     if intention == "livraison":
         print("[CAS] 2 — livraison")
         yield {"products": [], "action": None, "product_id": None, "quantity": 1}
+ 
+        # ── 1. Détection du type de question ─────────────────────────────────
+        from delivery_db import (
+            detecter_type_question_livraison,
+            get_delivery_info, format_delivery_context,
+            get_client_orders, format_orders_context,
+        )
+ 
+        type_question = detecter_type_question_livraison(question)
+        print(f"[LIVRAISON] type détecté : {type_question}")
+ 
+        # ── 2. Récupération des données selon le type ─────────────────────────
+        contexte_generique   = ""
+        contexte_commandes   = ""
+        client_non_connecte  = False
+ 
+        # Infos génériques (toujours utiles)
+        if type_question in ("generique", "mixte"):
+            try:
+                delivery_info = get_delivery_info()
+                contexte_generique = format_delivery_context(delivery_info)
+                print(f"[LIVRAISON] infos génériques : {len(delivery_info)} règles")
+            except Exception as e:
+                print(f"[LIVRAISON] erreur infos génériques : {e}")
+ 
+        # Commandes personnelles (seulement si connecté)
+        if type_question in ("personnelle", "mixte"):
+            # Récupérer l'id_client depuis l'historique (injecté par chat.php via system)
+            id_client = None
+            for msg in history:
+                if msg.get("role") == "system":
+                    import re
+                    m = re.search(r"id_client\s*[:=]\s*(\d+)", msg.get("content", ""))
+                    if m:
+                        id_client = int(m.group(1))
+                        break
+ 
+            if id_client:
+                try:
+                    commandes = get_client_orders(id_client)
+                    contexte_commandes = format_orders_context(commandes)
+                    print(f"[LIVRAISON] commandes client #{id_client} : {len(commandes)} commande(s)")
+                except Exception as e:
+                    print(f"[LIVRAISON] erreur commandes client : {e}")
+                    contexte_commandes = "Impossible de récupérer les commandes pour le moment."
+            else:
+                client_non_connecte = True
+                print("[LIVRAISON] client non connecté → pas d'accès aux commandes")
+ 
+        # ── 3. Construction du prompt LLM ─────────────────────────────────────
+        blocs = []
+ 
+        if contexte_generique:
+            blocs.append(contexte_generique)
+ 
+        if contexte_commandes:
+            blocs.append(contexte_commandes)
+ 
+        if client_non_connecte and type_question in ("personnelle", "mixte"):
+            blocs.append(
+                "IMPORTANT : le client demande des infos sur SA commande mais il n'est pas connecté. "
+                "Dis-lui de se connecter à son espace client pour consulter l'état de sa commande."
+            )
+ 
+        if not blocs:
+            # Aucune donnée disponible — fallback honnête
+            blocs.append(
+                "Aucune information de livraison n'est disponible en ce moment. "
+                "Invite le client à contacter le support via support@pairia.fr."
+            )
+ 
+        contexte_complet = "\n\n".join(blocs)
+ 
+        user_content = (
+            f"{contexte_complet}\n\n"
+            f"L'utilisateur demande : « {question} »\n"
+            f"Réponds précisément en te basant UNIQUEMENT sur les informations ci-dessus. "
+            f"Ne mentionne aucune information absente du contexte. "
+            f"Si tu parles du statut d'une commande, cite le numéro de commande. "
+            f"{_LIMITES['livraison']['consigne']}"
+        )
+ 
         messages = [
             {"role": "system", "content": get_system_prompt(tutoiement)},
             *[{"role": m["role"], "content": m["content"]} for m in history[-6:]],
-            {"role": "user", "content": (
-                f"L'utilisateur demande : « {question} »\n"
-                "Tu n'as pas accès aux infos livraison/retours/stock. "
-                f"Dis-le honnêtement et propose de l'aider à trouver des chaussures. "
-                f"{_LIMITES['livraison']['consigne']}"
-            )},
+            {"role": "user", "content": user_content},
         ]
+ 
         try:
             stream = client.chat(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options={
                     "num_ctx":     _calculer_ctx(history, 1024),
                     "num_predict": _LIMITES["livraison"]["num_predict"],
-                    "temperature": 0.5,
+                    "temperature": 0.4,   # plus factuel que générique
                 },
             )
             yield _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
-        yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client,"question_fr": question,}
+ 
+        yield {
+            "type":       "products_final",
+            "products":   [],
+            "action":     None,
+            "product_id": None,
+            "quantity":   1,
+            "langue":     langue_client,
+            "question_fr": question,
+        }
         return
+ 
 
     # ════════════════════════════════════════════
     # CAS 3 — PANIER

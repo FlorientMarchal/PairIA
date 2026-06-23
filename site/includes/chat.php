@@ -38,6 +38,7 @@ if ($page === 'article' && $product_name) {
     $welcome = "Bonjour ! 👋 Je suis votre conseiller personnel. Décrivez-moi le style, l'usage ou le budget que vous recherchez et je trouve la paire parfaite pour vous.";
 }
 
+// ── Contexte produit (page article) ──────────────────────────────────────
 $product_context_js = "";
 if ($page === 'article' && $product_name && isset($article)) {
     $product_json = json_encode([
@@ -53,6 +54,7 @@ if ($page === 'article' && $product_name && isset($article)) {
     ], JSON_HEX_APOS | JSON_HEX_QUOT);
     $product_context_js = "initProductContext({$product_json});";
 }
+
 
 /* SUGGESTIONS */
 if ($page === 'article' && $product_name) {
@@ -113,6 +115,25 @@ if ($page === 'article' && $product_name) {
   <?php if ($product_context_js): ?>
   <script><?= $product_context_js ?></script>
   <?php endif; ?>
+
+  <?php if (isset($_SESSION['client_id'])): ?>
+<script>
+setTimeout(function() {
+    if (!Array.isArray(window.conversationHistory)) return;
+    var already = window.conversationHistory.some(function(m) {
+        return m.role === "system" && m.content && m.content.startsWith("id_client:");
+    });
+    if (!already) {
+        window.conversationHistory.unshift({
+            role: "system",
+            internal: true,
+            content: "id_client:<?= (int) $_SESSION['client_id'] ?>"
+        });
+        sessionStorage.setItem("chatHistory", JSON.stringify(window.conversationHistory));
+    }
+}, 0);
+</script>
+<?php endif; ?>
 
   <!-- INPUT -->
   <div class="chat-input-area">
