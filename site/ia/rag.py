@@ -719,24 +719,31 @@ _last_reponse_fr: str = ""
 
 def _stream_and_translate(ollama_stream, langue_client: str):
     """
-    Accumule le texte du stream Ollama, le traduit si nécessaire,
-    puis le yield en un seul bloc.
-    Stocke le texte FR brut dans _last_reponse_fr avant traduction,
-    pour les détections post-génération (ex: add_to_cart) indépendantes de la langue.
+    Si langue_client == "fr" : streame chaque morceau au fur et a mesure
+    (pas de traduction necessaire, donc pas besoin d'attendre la fin).
+    Sinon : comportement INCHANGE - accumule tout le texte, traduit
+    le bloc complet, puis yield le resultat final en une fois.
+    Stocke toujours le texte FR brut dans _last_reponse_fr avant traduction,
+    pour les detections post-generation (ex: add_to_cart) independantes de la langue.
     """
     global _last_reponse_fr
     texte = ""
-    for chunk in ollama_stream:
-        texte += chunk["message"]["content"]
-    # Nettoyer le markdown
-    texte = texte.replace("**", "").replace("*", "").strip()
-    # Sauvegarder le FR avant traduction
-    _last_reponse_fr = texte
-    # Traduction post-génération : une seule fois, texte complet
-    if langue_client != "fr" and texte:
-        texte = traduire_reponse(texte, langue_client)
-        print(f"[RAG] réponse traduite → {langue_client}")
-    return texte
+    if langue_client == "fr":
+        for chunk in ollama_stream:
+            morceau = chunk["message"]["content"]
+            texte += morceau
+            yield morceau
+        texte = texte.replace("**", "").replace("*", "").strip()
+        _last_reponse_fr = texte
+    else:
+        for chunk in ollama_stream:
+            texte += chunk["message"]["content"]
+        texte = texte.replace("**", "").replace("*", "").strip()
+        _last_reponse_fr = texte
+        if texte:
+            texte = traduire_reponse(texte, langue_client)
+            print(f"[RAG] réponse traduite → {langue_client}")
+        yield texte
 
 def _detecter_nom_produit_original(question: str) -> dict | None:
     """
@@ -1055,7 +1062,7 @@ def get_response_stream(
                     "temperature": 0.7,
                 },
             )
-            yield _stream_and_translate(stream, langue_client)
+            yield from _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
         yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client, "question_fr": question,}
@@ -1097,7 +1104,7 @@ def get_response_stream(
                 model=LLM_MODEL, messages=messages, stream=True,
                 options=gen_options,
             )
-            yield _stream_and_translate(stream, langue_client)
+            yield from _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield "Je suis votre conseiller PairIA, posez-moi vos questions 👟"
 
@@ -1207,7 +1214,7 @@ def get_response_stream(
                     "temperature": 0.4,   # plus factuel que générique
                 },
             )
-            yield _stream_and_translate(stream, langue_client)
+            yield from _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
  
@@ -1623,7 +1630,7 @@ def get_response_stream(
                         "temperature": 0.5,
                     },
                 )
-                yield _stream_and_translate(stream, langue_client)
+                yield from _stream_and_translate(stream, langue_client)
             except Exception as e:
                 yield f"Erreur Mistral : {str(e)}"
 
@@ -1764,7 +1771,7 @@ def get_response_stream(
                     "temperature": 0.7,
                 },
             )
-            yield _stream_and_translate(stream, langue_client)
+            yield from _stream_and_translate(stream, langue_client)
         except Exception as e:
             yield f"Erreur Mistral : {str(e)}"
         yield {"type": "products_final", "products": [], "action": None, "product_id": None, "quantity": 1, "langue": langue_client,"question_fr": question,}
@@ -1865,20 +1872,22 @@ def get_response_stream(
                 elif buffer[0] == "*" and buffer[1] != "*":
                     buffer = buffer[1:]
                 else:
-                    texte_complet += buffer[0]
+                    char_propre = buffer[0]
+                    texte_complet += char_propre
                     buffer = buffer[1:]
+                    if langue_client == "fr":
+                        yield char_propre
         clean = buffer.replace("**", "").replace("*", "")
         texte_complet += clean
-
+        if langue_client == "fr" and clean:
+            yield clean
     except Exception as e:
         yield f"Erreur Mistral : {str(e)}"
         return
-
     if langue_client != "fr" and texte_complet.strip():
         texte_complet = traduire_reponse(texte_complet, langue_client)
         print(f"[RAG] réponse traduite → {langue_client}")
-
-    yield texte_complet
+        yield texte_complet
 
     produits_affiches = _produits_mentionnes(texte_complet, produits_trouves)
     action = "add_to_cart" if user_wants_cart(question, history) and produits_affiches else None
