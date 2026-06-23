@@ -18,7 +18,7 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader
 
-RUN a2enmod ssl
+RUN a2enmod ssl proxy proxy_http proxy_wstunnel
 RUN echo '<VirtualHost *:443>\n\
     DocumentRoot /var/www/html\n\
     SSLEngine on\n\
@@ -29,6 +29,11 @@ RUN echo '<VirtualHost *:443>\n\
         AllowOverride All\n\
         Require all granted\n\
     </Directory>\n\
+    ProxyPreserveHost On\n\
+    ProxyPass /api/ http://api:8000/\n\
+    ProxyPassReverse /api/ http://api:8000/\n\
+    ProxyPass /admin-api/ http://admin-api:8001/\n\
+    ProxyPassReverse /admin-api/ http://admin-api:8001/\n\
 </VirtualHost>' > /etc/apache2/sites-available/default-ssl.conf \
  && a2ensite default-ssl
 EXPOSE 443
