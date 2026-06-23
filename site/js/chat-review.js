@@ -116,23 +116,33 @@ function _showReviewCard(productId, note, suggestion) {
       </div>
 
       ${
-        suggestion
+        suggestion && suggestion.length
           ? `
-      <div class="chat-review-suggestion">
-        <div class="ia-block-header" style="margin-bottom:0.4rem">
-          <span class="ia-badge">✨ IA</span>
-          <span class="ia-block-title">Suggestion</span>
-        </div>
-        <div class="ia-suggestion" id="chat-review-suggestion-text"
-             style="margin-bottom:0.5rem;cursor:pointer"
-             title="Cliquer pour utiliser"
-             onclick="_useChatReviewSuggestion()">${escapeHtml(suggestion)}</div>
-        <button class="btn-accept" onclick="_useChatReviewSuggestion()" style="margin-bottom:0.75rem">
-          ↓ Utiliser cette phrase
-        </button>
-      </div>`
+<div class="ia-block chat-review-suggestion">
+  <div class="ia-block-header">
+    <span class="ia-badge">✨ IA</span>
+    <span class="ia-block-title">Suggestions</span>
+  </div>
+
+  ${suggestion
+    .map(
+      (s, i) => `
+      <div class="ia-suggestion"
+           onclick="_useChatReviewSuggestion(${i})"
+           style="cursor:pointer"
+           title="Cliquer pour utiliser">
+        ${escapeHtml(s)}
+      </div>
+    `,
+    )
+    .join("")}
+
+</div>
+`
           : ""
       }
+
+      
 
       <div style="position:relative">
         <textarea id="chat-review-text"
@@ -146,17 +156,19 @@ function _showReviewCard(productId, note, suggestion) {
 
       <div id="chat-review-error" class="modal-error-msg" style="display:none;margin-bottom:0.5rem"></div>
 
-      <div style="display:flex;gap:0.6rem;margin-top:0.4rem">
+      <div class="chat-review-actions">
         <button class="chat-cart-btn" style="flex:1;background:var(--accent)"
           onclick="_submitChatReview(${productId}, ${note}, this)">
           Publier mon avis
         </button>
-        <button class="chat-cart-btn" style="flex:0 0 auto;background:var(--light);color:var(--dark)"
+        <button class="chat-cart-btn" style="background:var(--light);color:var(--dark)"
           onclick="_cancelChatReview()">
           Annuler
         </button>
       </div>
     </div>`;
+
+  window._lastChatSuggestions = suggestion;
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
@@ -177,18 +189,17 @@ window._updateChatReviewCounter = function (ta) {
 };
 
 // ── Utilise la suggestion IA ─────────────────────────────────────
-window._useChatReviewSuggestion = function () {
-  const suggestion =
-    document.getElementById("chat-review-suggestion-text")?.textContent ?? "";
+window._useChatReviewSuggestion = function (index) {
+  const suggestions = window._lastChatSuggestions ?? [];
+  const s = suggestions[index] ?? "";
   const ta = document.getElementById("chat-review-text");
-  if (ta && suggestion) {
-    ta.value = suggestion.slice(0, 300);
+
+  if (ta && s) {
+    ta.value = s.slice(0, 300);
     _updateChatReviewCounter(ta);
     ta.focus();
     ta.style.borderColor = "#4caf50";
-    setTimeout(() => {
-      ta.style.borderColor = "";
-    }, 600);
+    setTimeout(() => (ta.style.borderColor = ""), 600);
   }
 };
 
@@ -297,25 +308,44 @@ async function _generateChatReviewSuggestion(note, productId) {
   try {
     const produit =
       document.querySelector(".product-name")?.textContent?.trim() ?? "";
+
     const res = await fetch("commentaires/suggest.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         texte:
           note >= 4
-            ? "très bien qualité confort"
+            ? "confort qualité agréable"
             : note === 3
               ? "correct moyen"
               : "déçu problème",
         produit,
         note,
-        mode: "rewrite",
+        mode: "ghost",
       }),
     });
+
     const data = await res.json();
-    return data.success && data.rewrite ? data.rewrite : null;
+
+    if (
+      data.success &&
+      Array.isArray(data.suggestions) &&
+      data.suggestions.length > 0
+    ) {
+      return data.suggestions;
+    }
+
+    return [
+      "Chaussures confortables et agréables à porter.",
+      "Bon maintien et qualité correcte pour un usage quotidien.",
+      "Style sympa et sensation agréable lors de la marche.",
+    ];
   } catch {
-    return null;
+    return [
+      "Chaussures confortables et agréables à porter.",
+      "Bon maintien et qualité correcte pour un usage quotidien.",
+      "Style sympa et sensation agréable lors de la marche.",
+    ];
   }
 }
 

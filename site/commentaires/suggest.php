@@ -42,7 +42,8 @@ L'utilisateur a donné des mots-clés. Génère UNE phrase complète, naturelle 
 Règles :
 - La phrase doit parler UNIQUEMENT de chaussures (confort, style, qualité, taille, matière, semelle, etc.)
 - {$ton}
-- Entre 15 et 30 mots
+- Entre 8 et 25 mots
+- Si l'utilisateur donne très peu de mots (moins de 4), génère quand même une phrase simple et naturelle.
 - Pas de vulgarité, pas d'invention de détails non fournis
 - Phrase directe à la 1ère personne (\"J'ai...\", \"Ces chaussures...\", etc.)
 - Réponds UNIQUEMENT en JSON : {\"rewrite\": \"ta phrase ici\"}
