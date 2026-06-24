@@ -590,7 +590,7 @@ async function _sendMessageImpl(text) {
             ) {
               // Metadata initiale vide — on ignore
             } else if (data.chunk !== undefined) {
-              // Token texte — streaming normal
+              // Token texte — streaming normal (affichage lisse via requestAnimationFrame)
               if (!typingRemoved) {
                 typing.remove();
                 typingRemoved = true;
@@ -607,8 +607,13 @@ async function _sendMessageImpl(text) {
                 container.appendChild(bubbleDiv);
               }
               message += data.chunk;
-              bubble.textContent = message;
-              container.scrollTop = container.scrollHeight;
+              if (!window._streamRAF) {
+                window._streamRAF = requestAnimationFrame(() => {
+                  bubble.textContent = message;
+                  _smoothScroll(container);
+                  window._streamRAF = null;
+                });
+              }
             }
           } catch (e) {}
         }
@@ -696,7 +701,7 @@ async function _sendMessageImpl(text) {
       }
     }
 
-    container.scrollTop = container.scrollHeight;
+    _smoothScroll(container);
   } catch (error) {
     typing.remove();
     appendBotMessageText(t("unavailable"));
@@ -759,7 +764,7 @@ async function sendImageWithText(file, text) {
     </div>
     <div class="chat-time" data-ts="${Date.now()}">${_formatTime(Date.now())}</div>`;
   container.appendChild(userDiv);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 
   const typing = appendTyping();
 
@@ -868,7 +873,7 @@ async function sendImageWithText(file, text) {
             ) {
               // Metadata initiale vide — on ignore
             } else if (data.chunk !== undefined) {
-              // Token texte — streaming normal
+              // Token texte — streaming normal (affichage lisse via requestAnimationFrame)
               if (!typingRemoved) {
                 typing.remove();
                 typingRemoved = true;
@@ -885,8 +890,13 @@ async function sendImageWithText(file, text) {
                 container.appendChild(bubbleDiv);
               }
               message += data.chunk;
-              bubble.textContent = message;
-              container.scrollTop = container.scrollHeight;
+              if (!window._streamRAF) {
+                window._streamRAF = requestAnimationFrame(() => {
+                  bubble.textContent = message;
+                  _smoothScroll(container);
+                  window._streamRAF = null;
+                });
+              }
             }
           } catch (e) {}
         }
@@ -958,7 +968,7 @@ async function sendImageWithText(file, text) {
       if (produit) showCartSelector(produit);
     }
 
-    container.scrollTop = container.scrollHeight;
+    _smoothScroll(container);
   } catch (error) {
     typing.remove();
     appendBotMessageText(t("unavailableImg"));
@@ -1004,7 +1014,7 @@ function appendUserMessage(text) {
     <div class="chat-bubble">${escapeHtml(text)}</div>
     <div class="chat-time" data-ts="${Date.now()}">${_formatTime(Date.now())}</div>`;
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 }
 
 function appendBotMessage(data) {
@@ -1025,7 +1035,7 @@ function appendBotMessage(data) {
     showProductPicker(products, container);
   }
 
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 }
 
 function appendBotMessageText(text) {
@@ -1050,7 +1060,7 @@ function appendBotMessageText(text) {
   div.appendChild(ttsRow);
   div.appendChild(time);
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 }
 
 function appendTyping() {
@@ -1070,7 +1080,7 @@ function appendTyping() {
     </div>`;
 
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 
   setTimeout(() => {
     const msg = document.getElementById("typing-msg");
@@ -1160,7 +1170,7 @@ function _appendCardsSkeleton(container, n = 3, layout = "list") {
 
   if (container) {
     container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    _smoothScroll(container);
   }
   return div;
 }
@@ -1300,7 +1310,7 @@ async function showProductPicker(produits, container) {
     </div>`;
 
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 }
 
 function selectProductFromPicker(btn) {
@@ -1315,7 +1325,7 @@ function selectProductFromPicker(btn) {
   msgDiv.remove();
 
   showCartSelector(produit, container);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 }
 
 function chatToggleSelector(btn) {
@@ -1435,7 +1445,7 @@ async function showCartConfirm(produit, taille, couleur, container) {
     </div>`;
 
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 }
 
 async function confirmCartDirect(productId, taille, couleur, btn) {
@@ -1577,7 +1587,7 @@ async function showCartSelector(produit, container) {
     </div>`;
 
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 
   if (!hasTailles && !hasCouleurs) {
     confirmChatCart(produit.id, div.querySelector(".chat-cart-btn"));
@@ -1770,7 +1780,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
     }
-    container.scrollTop = container.scrollHeight;
+    _smoothScroll(container);
   }
 
   document.addEventListener("click", (e) => {
@@ -1908,7 +1918,7 @@ async function showComparisonView(p1, p2, container) {
       cols.forEach((col) => (col.style.height = maxH + "px"));
     });
   });
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 }
 
 function initProductContext(produit) {
@@ -2195,7 +2205,7 @@ async function _genererMessageAccueil(
   msgDiv.appendChild(bubble);
   msgDiv.appendChild(time);
   container.appendChild(msgDiv);
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
 
   try {
     const body = {
@@ -2370,7 +2380,7 @@ async function loadSession(sessionDbId) {
       }
     }
   }
-  container.scrollTop = container.scrollHeight;
+  _smoothScroll(container);
   closeHistoryPanel();
 }
 
@@ -2438,4 +2448,15 @@ async function traduireValeursDynamiques(valeurs, langue) {
   }
 
   return _uiTranslationsCache[langue] || {};
+}
+
+// ── Scroll intelligent : ne force le scroll que si l'utilisateur etait deja en bas ──
+function _smoothScroll(container) {
+  if (!container) return;
+  const seuil = 80; // px de tolerance
+  const etaitEnBas =
+    container.scrollHeight - container.scrollTop - container.clientHeight < seuil;
+  if (etaitEnBas) {
+    container.scrollTop = container.scrollHeight;
+  }
 }

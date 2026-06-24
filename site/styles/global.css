@@ -2895,3 +2895,12 @@ nav {
     opacity: 1;
   }
 }
+
+/* Fade-in doux pour les nouvelles bulles et cartes du chat */
+.chat-msg {
+  animation: chatFadeIn 0.28s ease-out;
+}
+@keyframes chatFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
