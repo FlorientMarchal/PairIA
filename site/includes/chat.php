@@ -55,6 +55,10 @@ if ($page === 'article' && $product_name && isset($article)) {
     $product_context_js = "initProductContext({$product_json});";
 }
 
+// ── id_client injecté comme variable JS globale (lu par chat.js) ──────────
+$client_id_js = isset($_SESSION['client_id'])
+    ? 'window.PAIRIA_CLIENT_ID = ' . (int) $_SESSION['client_id'] . ';'
+    : 'window.PAIRIA_CLIENT_ID = null;';
 
 /* SUGGESTIONS */
 if ($page === 'article' && $product_name) {
@@ -65,6 +69,9 @@ if ($page === 'article' && $product_name) {
     $chips = ['Chaussures imperméables', 'Moins de 80€', 'Pour le running', 'Style casual', 'Pointure 42'];
 }
 ?>
+
+<!-- Variable globale id_client — doit être AVANT chat.js -->
+<script><?= $client_id_js ?></script>
 
 <div class="chat-panel" id="chat-panel">
 
@@ -115,25 +122,6 @@ if ($page === 'article' && $product_name) {
   <?php if ($product_context_js): ?>
   <script><?= $product_context_js ?></script>
   <?php endif; ?>
-
-  <?php if (isset($_SESSION['client_id'])): ?>
-<script>
-setTimeout(function() {
-    if (!Array.isArray(window.conversationHistory)) return;
-    var already = window.conversationHistory.some(function(m) {
-        return m.role === "system" && m.content && m.content.startsWith("id_client:");
-    });
-    if (!already) {
-        window.conversationHistory.unshift({
-            role: "system",
-            internal: true,
-            content: "id_client:<?= (int) $_SESSION['client_id'] ?>"
-        });
-        sessionStorage.setItem("chatHistory", JSON.stringify(window.conversationHistory));
-    }
-}, 0);
-</script>
-<?php endif; ?>
 
   <!-- INPUT -->
   <div class="chat-input-area">

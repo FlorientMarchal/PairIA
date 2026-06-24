@@ -102,6 +102,7 @@ class ChatRequest(BaseModel):
     history: list[HistoryMessage] = []
     session_id: str | None = None
     langue_session: str = "fr"
+    client_id: int | None = None
 
 class Product(BaseModel):
     id: int
@@ -202,6 +203,7 @@ def chat_stream(request: ChatRequest):
                 history=history,
                 image_vector=image_vector,
                 langue_session=request.langue_session,
+                client_id=request.client_id,
             )
             for chunk in generator:
                 if isinstance(chunk, dict):

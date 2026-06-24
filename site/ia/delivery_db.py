@@ -4,7 +4,7 @@ Gestion des données livraison pour le chatbot PairIA.
 
 Deux cas :
   A) Question générique (délais, retours, zones)  → constante statique
-  B) Question sur UNE commande précise du client  → table commandes + lignes_commande
+  B) Question sur UNE commande précise du client  → tables commandes + lignes_commande
 """
 
 from db_mysql import fetch_all
@@ -13,8 +13,6 @@ from db_mysql import fetch_all
 # ══════════════════════════════════════════════
 # A) INFOS GÉNÉRIQUES — PROMPT STATIQUE
 # ══════════════════════════════════════════════
-# Pour modifier les délais ou tarifs : éditer directement ce texte
-# et redémarrer le container Docker (docker compose restart ia)
 
 _LIVRAISON_STATIQUE = """Informations livraison & retours PairIA :
 
@@ -39,12 +37,10 @@ Retours :
 
 
 def get_delivery_info() -> str:
-    """Retourne les infos génériques livraison sous forme de texte."""
     return _LIVRAISON_STATIQUE
 
 
 def format_delivery_context(info: str) -> str:
-    """Compatibilité avec l'appel depuis rag.py — retourne directement le texte."""
     return info if isinstance(info, str) else _LIVRAISON_STATIQUE
 
 
@@ -52,7 +48,6 @@ def format_delivery_context(info: str) -> str:
 # B) COMMANDES PERSONNALISÉES DU CLIENT
 # ══════════════════════════════════════════════
 
-# Mapping statut DB → label lisible pour le LLM
 _STATUT_LABELS = {
     "en_attente": "en attente de traitement",
     "payée":      "payée et en cours de préparation",
@@ -63,9 +58,7 @@ _STATUT_LABELS = {
 
 
 def get_client_orders(id_client: int) -> list[dict]:
-    """
-    Récupère les 5 dernières commandes d'un client avec leurs lignes.
-    """
+    """Récupère les 10 dernières commandes d'un client avec leurs lignes."""
     if not id_client:
         return []
 
@@ -77,7 +70,7 @@ def get_client_orders(id_client: int) -> list[dict]:
             FROM commandes
             WHERE id_client = {int(id_client)}
             ORDER BY date_commande DESC
-            LIMIT 5
+            LIMIT 10
         """)
     except Exception as e:
         print(f"[DELIVERY] Erreur récupération commandes client {id_client} : {e}")
@@ -87,7 +80,7 @@ def get_client_orders(id_client: int) -> list[dict]:
         return []
 
     result = []
-    for cmd in commandes:
+    for idx, cmd in enumerate(commandes):
         id_cmd = cmd["id_commande"]
 
         try:
@@ -102,6 +95,7 @@ def get_client_orders(id_client: int) -> list[dict]:
 
         result.append({
             "id_commande":       id_cmd,
+            "position":          idx + 1,   # 1 = la plus récente
             "date":              str(cmd["date_commande"])[:10],
             "statut_raw":        cmd["statut"],
             "statut_label":      _STATUT_LABELS.get(cmd["statut"], cmd["statut"]),
@@ -125,12 +119,19 @@ def get_client_orders(id_client: int) -> list[dict]:
 
 def format_orders_context(commandes: list[dict]) -> str:
     """
-    Formate les commandes d'un client en texte lisible pour le LLM.
+    Formate les commandes en contexte pour le LLM.
+    Inclut la position (1ère = plus récente, dernière = la plus ancienne)
+    pour que le LLM comprenne "ma première commande", "ma dernière commande", etc.
     """
     if not commandes:
         return "Le client n'a aucune commande enregistrée."
 
-    lignes = [f"Commandes du client ({len(commandes)} commande(s) récente(s)) :"]
+    nb = len(commandes)
+    lignes = [
+        f"Le client a {nb} commande(s) au total.",
+        f"La commande n°1 est la PLUS RÉCENTE, la commande n°{nb} est la PLUS ANCIENNE.",
+        ""
+    ]
 
     for cmd in commandes:
         articles_str = ", ".join(
@@ -139,13 +140,24 @@ def format_orders_context(commandes: list[dict]) -> str:
         ) or "—"
 
         lignes.append(
-            f"\n• Commande #{cmd['id_commande']} du {cmd['date']}"
+            f"• Commande n°{cmd['position']} | ID #{cmd['id_commande']} | Date : {cmd['date']}"
             f" | Statut : {cmd['statut_label'].upper()}"
             f" | Total : {cmd['total']:.2f} euros"
             f" | Articles : {articles_str}"
         )
         if cmd["adresse_livraison"]:
             lignes.append(f"  Adresse : {cmd['adresse_livraison']}")
+
+    lignes.append("")
+    lignes.append(
+        "INSTRUCTIONS pour répondre :"
+        "\n- Si le client dit 'ma dernière commande' → il parle de la commande n°1 (la plus récente)."
+        "\n- Si le client dit 'ma première commande' → il parle de la commande avec la date la plus ancienne."
+        "\n- Si le client cite un numéro (#X) → cherche l'ID correspondant."
+        "\n- Si le client dit 'deuxième commande' → commande n°2 dans la liste ci-dessus."
+        "\n- Si la commande demandée n'existe pas → dis-le clairement."
+        "\n- Cite toujours le numéro de commande (#ID) dans ta réponse."
+    )
 
     return "\n".join(lignes)
 
@@ -161,10 +173,12 @@ _MOTS_COMMANDE_PERSONNELLE = [
     "où est", "où en est", "statut de", "suivi de",
     "quand vais-je recevoir", "quand arrivera", "quand est-ce que",
     "été livré", "été expédié", "pas encore reçu", "toujours pas reçu",
-    "commande #", "commande n°",
+    "commande #", "commande n°", "première commande", "dernière commande",
+    "deuxième commande", "troisième commande", "mes commandes",
     # Anglais
     "my order", "my package", "my delivery",
     "where is my", "when will i receive", "order #",
+    "my last order", "my first order",
 ]
 
 _MOTS_GENERIQUES = [

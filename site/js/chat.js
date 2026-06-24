@@ -1,7 +1,8 @@
 // js/chat.js
-const API_URL = window.location.protocol === "https:"
-  ? `${window.location.protocol}//${window.location.host}/api`
-  : `http://${window.location.hostname}:8000`;
+const API_URL =
+  window.location.protocol === "https:"
+    ? `${window.location.protocol}//${window.location.host}/api`
+    : `http://${window.location.hostname}:8000`;
 
 let conversationHistory = JSON.parse(
   sessionStorage.getItem("chatHistory") || "[]",
@@ -495,6 +496,7 @@ async function _sendMessageImpl(text) {
       session_id: sessionId,
       langue_session:
         sessionStorage.getItem("chatLangue") || currentLangue || "fr",
+      client_id: window.PAIRIA_CLIENT_ID || null,
     };
     if (typeof PRODUCT_ID !== "undefined") body.product_id = PRODUCT_ID;
 
@@ -782,6 +784,7 @@ async function sendImageWithText(file, text) {
       "langue_session",
       sessionStorage.getItem("chatLangue") || currentLangue || "fr",
     );
+    formData.append("client_id", window.PAIRIA_CLIENT_ID || "");
 
     _currentAbortController = new AbortController();
     _setGenerating(true);

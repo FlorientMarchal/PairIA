@@ -783,6 +783,7 @@ def get_response_stream(
     image_path: str = None,
     image_vector: list = None,
     langue_session: str = "fr",
+    client_id: int = None, 
 ):
     question = question or ""
     if history is None:
@@ -1138,15 +1139,9 @@ def get_response_stream(
         # Commandes personnelles (seulement si connecté)
         if type_question in ("personnelle", "mixte"):
             # Récupérer l'id_client depuis l'historique (injecté par chat.php via system)
-            id_client = None
-            for msg in history:
-                if msg.get("role") == "system":
-                    import re
-                    m = re.search(r"id_client\s*[:=]\s*(\d+)", msg.get("content", ""))
-                    if m:
-                        id_client = int(m.group(1))
-                        break
- 
+            id_client = client_id
+            print(f"[LIVRAISON] client_id reçu : {id_client}")
+        
             if id_client:
                 try:
                     commandes = get_client_orders(id_client)
