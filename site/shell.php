@@ -2,7 +2,6 @@
 session_start();
 // shell.php — coquille SPA permanente
 require_once 'includes/bd.php';
-
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -17,29 +16,26 @@ require_once 'includes/bd.php';
   <link rel="stylesheet" href="styles/index.css">
   <link rel="stylesheet" href="styles/article.css">
   <link rel="stylesheet" href="styles/panier.css">
-   <link rel="stylesheet" href="styles/acheter.css">
+  <link rel="stylesheet" href="styles/acheter.css">
   <link rel="stylesheet" href="styles/confirmation.css">
 </head>
 <body>
-
 <?php include 'includes/navbar.php'; ?>
-
 <!-- Hero full-width, EN DEHORS du split content/chat -->
 <div id="spa-hero"></div>
-
 <!-- Split : contenu scrollable + chat fixe -->
 <div class="page-layout">
   <div class="page-content" id="main-content">
     <div id="spa-content">
       <div class="loading-placeholder">Chargement…</div>
     </div>
+    <?php include 'includes/footer.php'; ?>
   </div>
   <?php include 'includes/chat.php'; ?>
 </div>
-
 <script src="js/global.js"></script>
 <script src="js/resizer.js"></script>
-<script src="js/voice.js"></script>  
+<script src="js/voice.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/message-edit.js"></script>
 <script src="js/image_search.js"></script>

@@ -65,6 +65,6 @@ $error = $_GET['error'] ?? null;
 
   </div>
 </div>
-
+<?php include 'includes/footer.php'; ?>
 </body>
 </html>

@@ -20,11 +20,8 @@ if (strlen($texte) < 2) {
     exit;
 }
 
-$apiKey = defined('GROQ_API_KEY') ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: '');
-if (!$apiKey) {
-    echo json_encode(['success' => false, 'error' => 'api_key_manquante']);
-    exit;
-}
+// Utilise Ollama local au lieu de Groq (api.groq.com bloque par le proxy reseau)
+$ollamaHost = getenv('OLLAMA_HOST') ?: 'http://ollama:11434';
 
 // ── Ton selon la note ────────────────────────────────────────────
 $ton = "";
@@ -73,24 +70,24 @@ Règles ABSOLUES :
     ];
 }
 
-// ── Appel Groq ───────────────────────────────────────────────────
+// ── Appel Ollama local ────────────────────────────────────────────
 $payload = json_encode([
-    'model'       => 'llama-3.3-70b-versatile',
-    'temperature' => $mode === 'rewrite' ? 0.6 : 0.7,
-    'max_tokens'  => $mode === 'rewrite' ? 120 : 300,
-    'messages'    => $messages
+    'model'    => 'llama3.1:latest',
+    'messages' => $messages,
+    'stream'   => false,
+    'options'  => [
+        'temperature' => $mode === 'rewrite' ? 0.6 : 0.7,
+        'num_predict' => $mode === 'rewrite' ? 120 : 300,
+    ],
 ]);
 
-$ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
+$ch = curl_init($ollamaHost . '/api/chat');
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
     CURLOPT_POSTFIELDS     => $payload,
-    CURLOPT_HTTPHEADER     => [
-        'Content-Type: application/json',
-        'Authorization: Bearer ' . $apiKey
-    ],
-    CURLOPT_TIMEOUT => 8,
+    CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+    CURLOPT_TIMEOUT => 30,
 ]);
 
 $response = curl_exec($ch);
@@ -103,7 +100,7 @@ if (!$response || $httpCode !== 200) {
 }
 
 $apiData = json_decode($response, true);
-$raw     = trim($apiData['choices'][0]['message']['content'] ?? '');
+$raw     = trim($apiData['message']['content'] ?? '');
 $raw     = preg_replace('/```json|```/i', '', $raw);
 $parsed  = json_decode(trim($raw), true);
 

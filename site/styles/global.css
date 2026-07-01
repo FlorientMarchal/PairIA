@@ -2904,3 +2904,104 @@ nav {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ══════════════════════════════════════
+   FOOTER
+══════════════════════════════════════ */
+.site-footer {
+  background: var(--dark);
+  color: #a09488;
+  padding: 2.5rem 2rem 0;
+  margin-top: auto;
+}
+
+.footer-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.footer-brand .logo {
+  font-size: 1.1rem;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.footer-tagline {
+  font-size: 0.78rem;
+  color: #6b6058;
+  margin-top: 0.25rem;
+}
+
+.footer-info {
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+.footer-school span {
+  color: #c8b8a8;
+}
+
+.footer-stage {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+}
+
+.footer-dell {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.footer-contact-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #6b6058;
+  margin-bottom: 0.5rem;
+}
+
+.footer-mail {
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.footer-mail:hover {
+  border-color: var(--accent);
+}
+
+.footer-bottom {
+  text-align: center;
+  font-size: 0.72rem;
+  color: #4a4238;
+  padding: 0.9rem 0;
+}
+
+@media (max-width: 600px) {
+  .footer-inner {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .site-footer {
+    padding: 2rem 1.25rem 0;
+  }
+}
+
+/* ── Footer collé en bas quand peu de contenu ── */
+.page-content {
+  display: flex;
+  flex-direction: column;
+}
+
+#spa-content {
+  flex: 1;
+}
