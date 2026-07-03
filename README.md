@@ -3,7 +3,7 @@
 
 ---
 
-## 🇬🇧 English
+## EN English
 
 ### What is PairIA?
 
