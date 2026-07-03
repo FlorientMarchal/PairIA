@@ -9,6 +9,21 @@
 
 PairIA is a complete e-commerce platform for shoe retail, coupled with an AI conversational assistant. The entire system runs locally — no external paid API is required. It was built as a proof of concept to demonstrate what can be achieved with open source AI models deployed on-premise.
 
+---
+
+### Screenshots
+
+**Customer catalog with integrated chatbot**
+![Catalogue](screenshots/client.jpeg)
+
+**Chatbot features — search, comparison, image search, multilingual**
+![Chatbot](screenshots/chatboot.png)
+
+**Admin dashboard with AI assistant**
+![Admin](screenshots/admin.jpeg)
+
+---
+
 ### Features
 
 #### 🛍️ E-Commerce Website
@@ -181,6 +196,21 @@ Stage chez Dell Technologies Montpellier — 2026
 ### Qu'est-ce que PairIA ?
 
 PairIA est une plateforme e-commerce complète de vente de chaussures, couplée à un assistant conversationnel IA. L'ensemble du système fonctionne entièrement en local — aucune API externe payante n'est requise. Le projet a été réalisé comme démonstrateur pour illustrer ce qu'il est possible de produire avec des modèles open source déployés sur site.
+
+---
+
+### Captures d'écran
+
+**Catalogue client avec chatbot intégré**
+![Catalogue](screenshots/client.jpeg)
+
+**Fonctionnalités du chatbot — recherche, comparaison, recherche par image, multilingue**
+![Chatbot](screenshots/chatboot.png)
+
+**Interface administrateur avec assistant IA**
+![Admin](screenshots/admin.jpeg)
+
+---
 
 ### Fonctionnalités
 
